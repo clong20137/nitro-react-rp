@@ -1,0 +1,173 @@
+.police-call-view {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(32, 33, 37, 0.95);
+    border: 2px solid #000;
+    border-radius: 8px;
+    width: 500px;
+    font-family: 'Ubuntu', sans-serif;
+    z-index: 1000;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+    padding: 12px;
+    box-sizing: border-box;
+    animation: pop-in 0.3s ease-out;
+}
+
+@keyframes pop-in {
+    from {
+        transform: scale(0.9) translate(-50%, -50%);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1) translate(-50%, -50%);
+        opacity: 1;
+    }
+}
+
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 20px;
+    margin-bottom: 10px;
+}
+
+ .close-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            background-color: #de1f1f;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.5s;
+        }
+
+        .close-btn:hover {
+            background-color: #e83636;
+            transition: 0.5s ease;
+        }
+
+.call-body {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    position: relative;
+}
+
+.full-avatar {
+    width: 64px;
+    height: 85px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.call-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.username_request {
+    font-weight: bold;
+    font-size: 18px;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.message_request {
+    font-size: 14px;
+    color: #ddd;
+    margin-bottom: 6px;
+    word-wrap: break-word;
+}
+
+.room-link {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 13px;
+    font-weight:bold;
+    color: #fff;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.response-tag {
+    color: #0f0;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.habbo-action-button {
+    padding: 4px 12px;
+    font-size: 13px;
+    font-weight: bold;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.habbo-action-button.green {
+    background-color: #4caf50;
+    color: white;
+}
+
+.habbo-action-button.green:hover {
+    background-color: #45a045;
+}
+
+.habbo-action-button.red {
+    background-color: #e53935;
+    color: white;
+}
+
+.habbo-action-button.red:hover {
+    background-color: #d32f2f;
+}
+
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    padding: 0 8px;
+    font-size: 14px;
+    color: #fff;
+}
+
+.pagination button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+}
+.police-call-buttons {
+display: flex;
+justify-content: center;
+gap: 12px;
+margin: 8px auto 4px;
+}
+
+.police-call-buttons .habbo-action-button {
+padding: 4px 12px;
+font-size: 13px;
+}

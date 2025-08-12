@@ -1,0 +1,336 @@
+.create-gang-view {
+    position: absolute;
+    width: 560px;
+    max-width: calc(100vw - 24px);
+    background: #fff;
+    border: 1px solid #c3c3c3;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+    overflow: hidden;
+    top: 50%;
+    left: 50%;
+}
+
+.create-gang-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    font-weight: 700;
+    background: linear-gradient(180deg, #2E3546 0, #2E3546 50%, #1e2433 50%, #1e2433);
+
+    .close-button {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+    }
+}
+
+.create-gang-body-horizontal {
+    display: grid;
+    /* left | divider | middle | divider | right */
+    grid-template-columns: 1.2fr 10px 1fr 10px 1fr;
+    gap: 0;
+    align-items: start;
+    padding: 10px 12px;
+}
+
+.gang-divider {
+    width: 10px;
+}
+
+/* Colors column stays compact */
+.color-rows {
+    display: grid;
+    grid-template-columns: 1fr;
+    /* primary over secondary (or 1fr 1fr if you want them side-by-side) */
+    gap: 12px;
+}
+
+/* Preview column sizing */
+.gang-preview .preview-box {
+    width: 100%;
+}
+
+/* Mobile: stack all three */
+@media (max-width: 700px) {
+    .create-gang-body-horizontal {
+        grid-template-columns: 1fr;
+    }
+
+    .gang-divider {
+        display: none;
+    }
+}
+
+/* Left column (name + icons) */
+.gang-name-icon {
+    min-width: 0;
+
+    label {
+        display: block;
+        font-weight: 600;
+        margin: 6px 0 4px;
+    }
+
+    input[type="text"] {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid #c9c9c9;
+        border-radius: 4px;
+    }
+
+    .icon-selector {
+        margin-top: 8px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        max-height: 168px;
+        /* compact */
+        overflow: auto;
+    }
+
+    .icon-option {
+        border: 1px solid transparent;
+        border-radius: 4px;
+        padding: 4px;
+        cursor: pointer;
+
+        &.selected {
+            border-color: #6aa84f;
+        }
+
+        img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 6px;
+
+        .habbo-action-button {
+            padding: 2px 8px;
+        }
+    }
+}
+
+/* Divider */
+.gang-divider {
+    width: 12px;
+}
+
+/* Right column holds colors + preview stacked */
+.gang-preview,
+.gang-color-chooser {
+    min-width: 0;
+}
+
+/* Put Primary/Secondary in two columns, compact */
+.color-rows {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.color-block {
+    min-width: 0;
+
+    label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+}
+
+/* Swatch grid */
+.swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 18px);
+    /* 12 tiny columns */
+    gap: 6px;
+    max-height: 160px;
+    /* <= key: doesn’t grow full screen */
+    overflow: auto;
+    padding-right: 4px;
+    /* space for scrollbar */
+}
+
+.swatch {
+    width: 18px;
+    height: 18px;
+    border: 1px solid rgba(0, 0, 0, .2);
+    border-radius: 2px;
+    cursor: pointer;
+
+    &.selected {
+        outline: 2px solid #6aa84f;
+        outline-offset: 1px;
+    }
+}
+
+.swatch-loading {
+    grid-column: 1 / -1;
+    padding: 6px 0;
+    color: #777;
+    font-size: 12px;
+}
+
+/* Preview panel */
+.gang-preview .preview-box {
+    margin-top: 12px;
+    border: 1px solid #cfcfcf;
+    border-radius: 6px;
+    overflow: hidden;
+    color:#000;
+}
+
+.preview-colors {
+    height: 96px;
+    display: grid;
+    place-items: center;
+    position: relative;
+
+    .icon-overlay {
+        width: 56px;
+        height: 56px;
+        image-rendering: pixelated;
+    }
+}
+
+.gang-preview-name {
+    padding: 6px 8px;
+    font-weight: 700;
+    background: #f5f5f5;
+    border-top: 1px solid #e3e3e3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    color:#000;
+}
+
+.create-gang-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px 12px 12px;
+    border-top: 1px solid #e7e7e7;
+
+    .habbo-action-button.green {
+        padding: 6px 12px;
+        font-weight: 700;
+    }
+}
+
+/* Mobile stacking */
+@media (max-width: 700px) {
+    .create-gang-body-horizontal {
+        grid-template-columns: 1fr;
+    }
+
+    .gang-divider {
+        display: none;
+    }
+
+    .color-rows {
+        grid-template-columns: 1fr;
+        /* stack Primary / Secondary */
+    }
+
+    .swatch-grid {
+        grid-template-columns: repeat(10, 18px);
+        max-height: 140px;
+    }
+}
+
+/* ==== force consistent column height ==== */
+.create-gang-body-horizontal {
+    /* pick a height that looks good in your UI */
+    --gang-body-h: 260px;
+    /* tweak if you want taller/shorter */
+    height: var(--gang-body-h);
+    align-items: stretch;
+    /* columns match height */
+}
+
+/* make all three columns flex containers that fill the height */
+.gang-name-icon,
+.gang-color-chooser,
+.gang-preview {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    /* IMPORTANT: allow children to scroll */
+}
+
+/* LEFT — icons list fills remaining space and scrolls */
+.gang-name-icon .icon-selector {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    max-height: none;
+    /* override old cap */
+}
+
+/* MIDDLE — swatch panels fill & scroll */
+.color-rows {
+    flex: 1;
+    /* take full column height */
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* keep primary/secondary side-by-side */
+    gap: 12px;
+}
+
+.color-block {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.swatch-grid {
+    flex: 1;
+    /* fill block */
+    min-height: 0;
+    overflow: auto;
+    grid-template-columns: repeat(12, 18px);
+}
+
+/* RIGHT — preview fills full column height */
+.gang-preview .preview-box {
+    flex: 1;
+    /* fill column */
+    display: flex;
+    flex-direction: column;
+    margin-top: 0;
+    /* align to top like the others */
+}
+
+.preview-colors {
+    flex: 1;
+    /* big preview area */
+    display: grid;
+    place-items: center;
+}
+
+/* Mobile keeps stacking */
+@media (max-width: 700px) {
+    .create-gang-body-horizontal {
+        height: auto;
+    }
+
+    .gang-name-icon .icon-selector,
+    .swatch-grid {
+        max-height: 140px;
+    }
+
+    /* gentle caps for small screens */
+}

@@ -1,0 +1,321 @@
+.inventory-module {
+    position: absolute;
+    top: 100px;
+    left: 10%;
+    width: max-content;
+    background: #dfdfdf;
+    border: solid 2px #000;
+    border-radius: 10px;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
+    font-size: 12px;
+    color: #000000;
+    z-index: 9999;
+}
+
+.inventory-header {
+    position: relative;
+    /* allows absolute child positioning */
+    color: #ffffff;
+    background: linear-gradient(180deg, #2E3546 0, #2E3546 50%, #1e2433 50%, #1e2433);
+    font-weight: bold;
+    text-align: center;
+    font-size: 16px;
+    padding: 4px 30px 4px 10px;
+    /* padding-right for button space */
+    border-radius: 8px 8px 0px 0px;
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 8px;
+    text-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+
+.inventory-close {
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    background: repeating-linear-gradient(#f55041, #f55041, 50%, #c23027 0, #c23027);
+    transition: 0.5s;
+    border: 2px solid #921911;
+    box-shadow: 0 0 0 1.5px #fff, 0 4px 10px rgba(0, 0, 0, .25);
+    display: block;
+    //transition: transform .12s ease, background-color .12s ease, box-shadow .12s ease;
+
+    /* crisp X: two bars */
+    &::before,
+    &::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 12px;
+        height: 2px;
+        /* even px → crisp */
+        background: #fff;
+        border-radius: 1px;
+        transform-origin: center;
+    }
+
+    &::before {
+        transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &::after {
+        transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    &:hover {
+        background: repeating-linear-gradient(#f55749, #f55749, 50%, #d33a32 0, #d33a32);
+        transition: 0.5s;
+        //  transform: translateY(-1px);
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+}
+
+
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 0.2fr);
+    gap: 6px;
+    padding: 1px 6px 10px 6px;
+}
+
+.inventory-slot {
+    width: 48px;
+    height: 48px;
+    background-color: #7a7a7a;
+    border: 2px solid #000000;
+    border-radius: 5px;
+    box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 #000000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    position: relative;
+    transition: background-color 0.3s ease;
+}
+
+.inventory-slot:hover {
+    background-color: #8e8e8e;
+}
+
+.inventory-slot.active-weapon,
+.inventory-slot.active-shield,
+.inventory-slot.active-potion {
+    background-color: #c3c3c3;
+}
+
+.rarity-common {
+    background-color: #cbb490;
+}
+
+.rarity-uncommon {
+    background-color: #a8d08d;
+}
+
+.rarity-rare {
+    background-color: #6fa8dc;
+}
+
+.rarity-epic {
+    background-color: #8e7cc3;
+}
+
+.rarity-legendary {
+    background-color: #f4b942;
+}
+
+.quantity-label {
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 1px 4px;
+    font-size: 10px;
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.durability-bar {
+    position: absolute;
+    bottom: 2px;
+    left: 5%;
+    width: 90%;
+    height: 5px;
+    background-color: #555;
+    border: 1px solid #222;
+    border-radius: 3px;
+    overflow: hidden;
+
+    .durability-fill {
+        height: 100%;
+        background-color: #00cc00;
+        transition: width 0.3s ease;
+    }
+}
+
+/* Subtle scale while hovering a valid target */
+.inventory-slot.slot-over {
+    outline: 2px dashed #4caf50;
+    transform: scale(1.03);
+    transition: transform 120ms ease;
+}
+
+/* Success pulse when a drop lands */
+@keyframes slotPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, .7);
+    }
+
+    100% {
+        box-shadow: 0 0 0 12px rgba(76, 175, 80, 0);
+    }
+}
+
+.slot-drop-pulse {
+    animation: slotPulse .25s ease-out;
+}
+
+/* Optional: invalid shake */
+@keyframes slotShake {
+    0% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(-3px);
+    }
+
+    40% {
+        transform: translateX(3px);
+    }
+
+    60% {
+        transform: translateX(-2px);
+    }
+
+    80% {
+        transform: translateX(2px);
+    }
+
+    100% {
+        transform: translateX(0);
+    }
+}
+
+.slot-invalid {
+    outline: 2px dashed #e53935;
+    animation: slotShake .25s ease;
+}
+
+/* Make transforms look crisp */
+.inventory-slot {
+    will-change: transform, box-shadow;
+}
+
+.inventory-item-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+        max-width: 100%;
+        max-height: 100%;
+        pointer-events: none;
+    }
+
+    .item-tooltip {
+        position: absolute;
+        bottom: 110%;
+        left: 50%;
+        transform: translateX(-50%) translateY(10px);
+        opacity: 0;
+        background-color: #f9f3e7;
+        border: 1px solid #b89e5e;
+        color: #2b1f0f;
+        font-size: 11px;
+        padding: 6px 8px;
+        white-space: nowrap;
+        z-index: 999;
+        border-radius: 4px;
+        box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+        min-width: 120px;
+        max-width: 180px;
+        text-align: left;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        pointer-events: none;
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 5px;
+            border-style: solid;
+            border-color: #f9f3e7 transparent transparent transparent;
+        }
+    }
+
+    &:hover .item-tooltip {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.inventory-slot.slot-over {
+    outline: 2px dashed #4caf50;
+}
+
+/* While dragging an item, hide its tooltip so it can't overlap slots */
+.inventory-item-wrapper.dragging .item-tooltip {
+    display: none;
+}
+
+/* Optional: make drag/drop feel snappier */
+
+.inventory-slot.slot-invalid {
+    outline: 2px dashed #e53935;
+}
+
+.inventory-item-wrapper[draggable="true"] {
+    cursor: grab;
+}
+
+.inventory-item-wrapper[draggable="true"]:active {
+    transform: scale(1.04);
+    transition: transform 80ms ease;
+}
+
+
+.slot-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.slot-label {
+    font-size: 11px;
+    font-weight: bold;
+    margin-bottom: 2px;
+    color: #fff;
+    text-shadow: 0 0 2px #000;
+}
+
+.inventory-divider {
+    width: 100%;
+    height: 1px;
+    background-color: #444;
+    margin: 6px 0 6px 0;
+    grid-column: span 3;
+}

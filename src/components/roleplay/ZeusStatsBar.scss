@@ -1,0 +1,39 @@
+.zeus-health-bar-container {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    height: 30px;
+    background: #1a1a1a;
+    border: 2px solid gold;
+    border-radius: 10px;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+    overflow: hidden;
+    z-index: 100;
+}
+
+.zeus-health-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ffcc00, #ff9900, #cc6600);
+    transition: width 0.4s ease-in-out;
+    border-radius: 10px 0 0 10px;
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
+.zeus-health-bar-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-family: 'Trajan Pro', 'Cinzel', serif;
+    font-size: 16px;
+    text-shadow: 1px 1px 2px black;
+    pointer-events: none;
+}

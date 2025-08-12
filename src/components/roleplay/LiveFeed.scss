@@ -1,0 +1,67 @@
+.live-feed-container {
+    position: fixed;
+    top: 200px; // Adjust based on HUD height
+    right: 30px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+
+.live-feed-message {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: slideFadeIn 0.5s ease-out forwards;
+    transition: all 0.3s ease;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+      background: rgba(32, 33, 37, 0.9);
+    border-left: 4px solid #ccc;
+}
+
+.live-feed-message.police-call {
+
+   background: rgba(32, 33, 37, 0.9);
+}
+
+@keyframes slideFadeIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.avatar-head {
+    width: 32px;
+    height: 32px;
+    margin-right: 8px;
+    image-rendering: pixelated;
+}
+
+
+
+@keyframes fadeInOut {
+    0% {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    10% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    90% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
