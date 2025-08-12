@@ -1,15 +1,4 @@
-.corp-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(10, 12, 18, 0.65);
-    opacity: 0;
-    transition: opacity 200ms ease-out;
-    z-index: 998;
 
-    &.entered {
-        opacity: 1;
-    }
-}
 
 .corporations-view {
     width: 1000px;
@@ -18,7 +7,7 @@
     border: 1px solid #000;
     box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
     z-index: 1000;
-    border-radius: 6px;
+    border-radius: 8px;
     color: #000;
 
     &.enter {
