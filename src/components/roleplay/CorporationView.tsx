@@ -1,13 +1,24 @@
 import { FC, useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./CorporationsView.scss";
-// import { SendMessageComposer } from "../../api";
-import { GetCorporationMembersComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetCorporationMembersComposer";
+
 import { SendMessageComposer } from "../../api";
 
+// GET packets
+import { GetCorporationMembersComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetCorporationMembersComposer";
+import { GetCorporationRanksComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetCorporationRanksComposer";
 
+// Actions
+import { HireCorporationMemberComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/HireCorporationMemberComposer";
+import { PromoteCorporationMemberComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PromoteCorporationMemberComposer";
+import { DemoteCorporationMemberComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/DemoteCorporationMemberComposer";
+import { FireCorporationMemberComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/FireCorporationMemberComposer";
 
 interface CorporationsViewProps {
     onClose: () => void;
+    /** logged-in user id (to detect if user is a manager of the selected corp) */
+    currentUserId: number;
+    /** optional global staff override */
+    isStaff?: boolean;
 }
 
 interface Corporation {
@@ -21,37 +32,56 @@ interface Corporation {
 interface CorpMember {
     userId: number;
     username: string;
-    figure: string; // habbo figure string
-    rankId: number;
-    rankName: string;
-    rankOrder: number; // bigger = higher
-    pay?: number; // optional if you send it
-    weeklyShifts?: number;
-    totalShifts?: number;
-    lastSeenAgo?: string; // optional e.g. "7hrs ago"
-}
-
-interface RankGroup {
+    figure: string;
     rankId: number;
     rankName: string;
     rankOrder: number;
     pay?: number;
-    members: CorpMember[];
+    weeklyShifts?: number;
+    totalShifts?: number;
+    lastSeenAgo?: string;
+}
+
+interface RankMeta {
+    rankId: number;
+    rankName: string;
+    rankOrder: number;
+    pay?: number;
+    isManager?: boolean; // server should include this for visibility rules
 }
 
 type Pos = { x: number; y: number };
 const STORAGE_KEY = "olrp.corporations.pos";
 
-export const CorporationsView: FC<CorporationsViewProps> = ({ onClose }) => {
+export const CorporationsView: FC<CorporationsViewProps> = ({
+    onClose,
+    currentUserId,
+    isStaff = false,
+}) => {
+    // entrance animation
+    const [opening, setOpening] = useState(true);
+
+    // data
     const [loading, setLoading] = useState(true);
     const [corporations, setCorporations] = useState<Corporation[]>([]);
     const [selectedCorpId, setSelectedCorpId] = useState<number | null>(null);
 
-    // members state
     const [membersLoading, setMembersLoading] = useState(false);
-    const [rankGroups, setRankGroups] = useState<RankGroup[]>([]);
+    const [membersReady, setMembersReady] = useState(false);
+    const [members, setMembers] = useState<CorpMember[]>([]);
+    const [ranksByCorp, setRanksByCorp] = useState<Record<number, RankMeta[]>>(
+        {}
+    );
 
-    // Dragging state
+    // search/hire
+    const [memberSearch, setMemberSearch] = useState("");
+    const [hiring, setHiring] = useState(false);
+
+    // per-user busy state + refresh flash
+    const [busyUserIds, setBusyUserIds] = useState<Set<number>>(new Set());
+    const [refreshFlash, setRefreshFlash] = useState(false);
+
+    // drag/layout
     const [pos, setPos] = useState<Pos>({ x: 0, y: 0 });
     const posRef = useRef<Pos>(pos);
     useEffect(() => {
@@ -60,12 +90,71 @@ export const CorporationsView: FC<CorporationsViewProps> = ({ onClose }) => {
 
     const [dragging, setDragging] = useState(false);
     const dragOffsetRef = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
-    const sizeRef = useRef<{ w: number; h: number }>({ w: 650, h: 420 });
+    const sizeRef = useRef<{ w: number; h: number }>({ w: 1000, h: 540 });
 
     const rootRef = useRef<HTMLDivElement | null>(null);
     const headerRef = useRef<HTMLDivElement | null>(null);
 
-    // Measure for clamping
+    // helpers
+    const getCenteredPosition = (size: { w: number; h: number }): Pos => {
+        const vw = window.innerWidth,
+            vh = window.innerHeight;
+        return {
+            x: Math.max(0, Math.round((vw - size.w) / 2)),
+            y: Math.max(0, Math.round((vh - size.h) / 2)),
+        };
+    };
+    const clampToViewport = (p: Pos, size: { w: number; h: number }): Pos => {
+        const maxX = Math.max(0, window.innerWidth - size.w);
+        const maxY = Math.max(0, window.innerHeight - size.h);
+        return {
+            x: Math.min(Math.max(0, p.x), maxX),
+            y: Math.min(Math.max(0, p.y), maxY),
+        };
+    };
+    const safeGet = <T,>(key: string): T | null => {
+        try {
+            return JSON.parse(localStorage.getItem(key) || "null");
+        } catch {
+            return null;
+        }
+    };
+    const safeSet = <T,>(key: string, value: T) => {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch {}
+    };
+    const getIconUrl = (icon: string) =>
+        /^https?:\/\//i.test(icon) ? icon : `/icons/corporations/${icon}`;
+    const badgeTone = (stock?: number) => {
+        if (typeof stock !== "number") return "neutral";
+        if (stock <= 0) return "danger";
+        if (stock <= 5) return "warn";
+        return "success";
+    };
+    const avatarUrl = (figure: string) =>
+        `https://www.habbo.com/habbo-imaging/avatarimage?figure=${encodeURIComponent(
+            figure
+        )}&size=b&headonly=0&gesture=sml`;
+
+    const sortRanksDesc = (r: RankMeta[]) =>
+        [...r].sort((a, b) => b.rankOrder - a.rankOrder);
+    const groupMembersByRankId = (list: CorpMember[]) => {
+        const map = new Map<number, CorpMember[]>();
+        for (const m of list) {
+            if (!map.has(m.rankId)) map.set(m.rankId, []);
+            map.get(m.rankId)!.push(m);
+        }
+        return map;
+    };
+
+    // entrance flip
+    useEffect(() => {
+        const id = requestAnimationFrame(() => setOpening(false));
+        return () => cancelAnimationFrame(id);
+    }, []);
+
+    // layout watchers
     useLayoutEffect(() => {
         if (!rootRef.current) return;
         const ro = new ResizeObserver(([entry]) => {
@@ -77,7 +166,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({ onClose }) => {
         return () => ro.disconnect();
     }, []);
 
-    // Restore / center
     useEffect(() => {
         requestAnimationFrame(() => {
             const saved = safeGet<Pos>(STORAGE_KEY);
@@ -86,7 +174,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({ onClose }) => {
         });
     }, []);
 
-    // Re-clamp on resize
     useEffect(() => {
         const onResize = () =>
             setPos((p) => clampToViewport(p, sizeRef.current));
@@ -94,7 +181,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({ onClose }) => {
         return () => window.removeEventListener("resize", onResize);
     }, []);
 
-    // Corporations list (already working in your app)
+    // corporations list (DOM bridge) — attach listeners, hydrate from cache, then request
     useEffect(() => {
         const onCorps = (ev: Event) => {
             const detail: any = (ev as CustomEvent).detail;
@@ -110,7 +197,24 @@ export const CorporationsView: FC<CorporationsViewProps> = ({ onClose }) => {
             "corporations_list_result",
             onCorps as EventListener
         );
+
+        // hydrate from sticky cache if bridge saved it earlier
+        const cached = (window as any).__olrpCache?.corporations as
+            | Corporation[]
+            | undefined;
+        if (cached?.length) {
+            setCorporations(cached);
+            setLoading(false);
+        }
+
+        // then request on next tick so we never race the listener
+        const t = setTimeout(() => {
+            // Use whichever trigger your app expects. If you have a composer, call it here instead.
+            window.dispatchEvent(new CustomEvent("request_corporations_list"));
+        }, 0);
+
         return () => {
+            clearTimeout(t);
             window.removeEventListener(
                 "corporations_list_result",
                 onCorps as EventListener
@@ -122,14 +226,32 @@ export const CorporationsView: FC<CorporationsViewProps> = ({ onClose }) => {
         };
     }, []);
 
-    // Members result listener (DOM bridge version)
+    // auto-select first corporation once list arrives (prevents “click twice”)
+    useEffect(() => {
+        if (!loading && selectedCorpId == null && corporations.length > 0) {
+            handleSelectCorp(corporations[0].id);
+        }
+    }, [loading, corporations, selectedCorpId]);
+
+    // members result (DOM bridge)
     useEffect(() => {
         const onMembers = (ev: Event) => {
             const detail: any = (ev as CustomEvent).detail;
-            const members: CorpMember[] = detail?.members ?? detail ?? [];
-            const grouped = groupMembersByRank(members);
-            setRankGroups(grouped);
+            const raw: any[] = (detail?.members ?? detail ?? []) as any[];
+            const m: CorpMember[] = raw.map((row) => ({
+                ...row,
+                figure: row.figure ?? row.look ?? "",
+            }));
+            setMembers(m);
             setMembersLoading(false);
+
+            // trigger list entrance on next paint
+            setMembersReady(false);
+            requestAnimationFrame(() => setMembersReady(true));
+
+            // quick flash
+            setRefreshFlash(true);
+            setTimeout(() => setRefreshFlash(false), 180);
         };
         window.addEventListener(
             "corporation_members_result",
@@ -151,7 +273,38 @@ export const CorporationsView: FC<CorporationsViewProps> = ({ onClose }) => {
         };
     }, []);
 
-    // Drag
+    // ranks result (DOM bridge)
+    useEffect(() => {
+        const onRanks = (ev: Event) => {
+            const detail: any = (ev as CustomEvent).detail;
+            const { corporationId, ranks } = detail || {};
+            if (!corporationId || !Array.isArray(ranks)) return;
+            setRanksByCorp((prev) => ({
+                ...prev,
+                [corporationId]: ranks as RankMeta[],
+            }));
+        };
+        window.addEventListener(
+            "corporation_ranks_result",
+            onRanks as EventListener
+        );
+        document.addEventListener(
+            "corporation_ranks_result",
+            onRanks as EventListener
+        );
+        return () => {
+            window.removeEventListener(
+                "corporation_ranks_result",
+                onRanks as EventListener
+            );
+            document.removeEventListener(
+                "corporation_ranks_result",
+                onRanks as EventListener
+            );
+        };
+    }, []);
+
+    // drag
     useEffect(() => {
         const header = headerRef.current;
         if (!header || !rootRef.current) return;
@@ -167,7 +320,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({ onClose }) => {
             window.addEventListener("mousemove", onMouseMove);
             window.addEventListener("mouseup", onMouseUp);
         };
-
         const onMouseMove = (e: MouseEvent) => {
             const next = {
                 x: e.clientX - dragOffsetRef.current.dx,
@@ -175,7 +327,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({ onClose }) => {
             };
             setPos(clampToViewport(next, sizeRef.current));
         };
-
         const onMouseUp = () => {
             setDragging(false);
             document.body.classList.remove("no-select");
@@ -193,255 +344,440 @@ export const CorporationsView: FC<CorporationsViewProps> = ({ onClose }) => {
         };
     }, []);
 
-    // Click corp: set selection + request members
+    // request/refresh both lists
+    const refreshCorpData = (corpId: number) => {
+        try {
+            setMembersLoading(true);
+            setMembersReady(false);
+            SendMessageComposer(new GetCorporationMembersComposer(corpId));
+        } catch {}
+        try {
+            SendMessageComposer(new GetCorporationRanksComposer(corpId));
+        } catch {}
+    };
+
+    // interactions
     const handleSelectCorp = (corpId: number) => {
         setSelectedCorpId(corpId);
         setMembersLoading(true);
-        setRankGroups([]);
-
-        // Send the server request
-        try {
-           
-            SendMessageComposer(new GetCorporationMembersComposer(corpId));
-            console.log("[📤] GetCorporationMembersComposer sent:", corpId);
-        } catch (e) {
-            console.warn("Failed to send GetCorporationMembersComposer:", e);
-        }
-
-        // (optional) still fire your DOM bridge for any legacy listeners
-        window.dispatchEvent(
-            new CustomEvent("request_corporation_members", {
-                detail: { corporationId: corpId },
-            })
-        );
+        setMembersReady(false);
+        setMembers([]);
+        setMemberSearch("");
+        refreshCorpData(corpId);
     };
 
+    const handleHire = () => {
+        if (!selectedCorpId) return;
+        const username = memberSearch.trim();
+        if (!username) return;
+        setHiring(true);
+        try {
+            SendMessageComposer(
+                new HireCorporationMemberComposer(selectedCorpId, username)
+            );
+        } finally {
+            setMemberSearch("");
+            setTimeout(() => setHiring(false), 180);
+            refreshCorpData(selectedCorpId);
+        }
+    };
+
+    const withUserBusy = (userId: number, fn: () => void) => {
+        setBusyUserIds((prev) => new Set(prev).add(userId));
+        try {
+            fn();
+        } finally {
+            setTimeout(() => {
+                setBusyUserIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(userId);
+                    return next;
+                });
+            }, 180);
+        }
+    };
+
+    const handlePromote = (userId: number) => {
+        if (!selectedCorpId) return;
+        withUserBusy(userId, () => {
+            try {
+                SendMessageComposer(
+                    new PromoteCorporationMemberComposer(selectedCorpId, userId)
+                );
+            } finally {
+                refreshCorpData(selectedCorpId);
+            }
+        });
+    };
+    const handleDemote = (userId: number) => {
+        if (!selectedCorpId) return;
+        withUserBusy(userId, () => {
+            try {
+                SendMessageComposer(
+                    new DemoteCorporationMemberComposer(selectedCorpId, userId)
+                );
+            } finally {
+                refreshCorpData(selectedCorpId);
+            }
+        });
+    };
+    const handleFire = (userId: number) => {
+        if (!selectedCorpId) return;
+        withUserBusy(userId, () => {
+            try {
+                SendMessageComposer(
+                    new FireCorporationMemberComposer(selectedCorpId, userId)
+                );
+            } finally {
+                refreshCorpData(selectedCorpId);
+            }
+        });
+    };
+
+    // permissions
+    const currentRanks = selectedCorpId
+        ? sortRanksDesc(ranksByCorp[selectedCorpId] || [])
+        : [];
+    const membersByRank = groupMembersByRankId(members);
+
+    const userIsManagerInCorp = (() => {
+        if (!selectedCorpId) return false;
+        const my = members.find((m) => m.userId === currentUserId);
+        if (!my) return false;
+        const meta = (ranksByCorp[selectedCorpId] || []).find(
+            (r) => r.rankId === my.rankId
+        );
+        return !!meta?.isManager;
+    })();
+    const canManage = isStaff || userIsManagerInCorp;
+
     return (
-        <div
-            ref={rootRef}
-            className={`corporations-view ${dragging ? "dragging" : ""}`}
-            style={{ position: "fixed", left: `${pos.x}px`, top: `${pos.y}px` }}
-        >
+        <>
             <div
-                ref={headerRef}
-                className="corporations-header"
-                aria-grabbed={dragging}
+                ref={rootRef}
+                className={`corporations-view ${dragging ? "dragging" : ""} ${
+                    opening ? "enter" : "entered"
+                } ${refreshFlash ? "flash" : ""}`}
+                style={{
+                    position: "fixed",
+                    left: `${pos.x}px`,
+                    top: `${pos.y}px`,
+                }}
+                role="dialog"
+                aria-modal="true"
             >
-                <span>Corporations</span>
-                <button
-                    className="close-button"
-                    onClick={onClose}
-                    aria-label="Close"
+                <div
+                    ref={headerRef}
+                    className="corporations-header"
+                    aria-grabbed={dragging}
                 >
-                    ×
-                </button>
-            </div>
-
-            <div className="corporations-body">
-                <div className="corporations-list">
-                    <h3>Corporations</h3>
-
-                    {loading && <div className="loading">Loading...</div>}
-                    {!loading && corporations.length === 0 && (
-                        <div className="empty">No corporations found.</div>
-                    )}
-
-                    {!loading &&
-                        corporations.map((corp) => (
-                            <div
-                                key={corp.id}
-                                className={`corporation-item ${
-                                    selectedCorpId === corp.id ? "selected" : ""
-                                }`}
-                                onClick={() => handleSelectCorp(corp.id)}
-                            >
-                                <div className="icon">
-                                    {corp.icon ? (
-                                        <img
-                                            src={getIconUrl(corp.icon)}
-                                            alt=""
-                                            aria-hidden="true"
-                                        />
-                                    ) : (
-                                        <div className="placeholder">🏢</div>
-                                    )}
-                                </div>
-
-                                <div className="info">
-                                    <div className="name">{corp.name}</div>
-                                    {corp.desc && (
-                                        <div className="description">
-                                            {corp.desc}
-                                        </div>
-                                    )}
-                                    <div className="meta">
-                                        <span
-                                            className={`badge ${badgeTone(
-                                                corp.stock
-                                            )}`}
-                                        >
-                                            {corp.stock ?? 0} in stock
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                    <span>Corporations</span>
+                    <button
+                        className="close-button"
+                        onClick={onClose}
+                        aria-label="Close"
+                    >
+                        ×
+                    </button>
                 </div>
 
-                <div className="corp-divider" />
-
-                <div className="corporation-details">
-                    {selectedCorpId === null ? (
-                        <p className="no-corp-selected">
-                            Select a corporation to view employees
-                        </p>
-                    ) : membersLoading ? (
-                        <div className="loading">Loading members…</div>
-                    ) : rankGroups.length === 0 ? (
-                        <div className="empty">No members found.</div>
-                    ) : (
-                        <div className="corp-members">
-                            {rankGroups.map((group) => (
+                <div className="corporations-body">
+                    {/* LEFT: corp list */}
+                    <div className="corporations-list">
+                        <h3>Corporations</h3>
+                        {loading && <div className="loading">Loading...</div>}
+                        {!loading && corporations.length === 0 && (
+                            <div className="empty">No corporations found.</div>
+                        )}
+                        {!loading &&
+                            corporations.map((corp) => (
                                 <div
-                                    key={group.rankId}
-                                    className="rank-section"
+                                    key={corp.id}
+                                    className={`corporation-item ${
+                                        selectedCorpId === corp.id
+                                            ? "selected"
+                                            : ""
+                                    }`}
+                                    onClick={() => handleSelectCorp(corp.id)}
                                 >
-                                    <div className="rank-header">
-                                        <span className="rank-name">
-                                            {group.rankName.toUpperCase()}
-                                        </span>
-                                        {typeof group.pay === "number" && (
-                                            <span className="rank-pay">
-                                                ${group.pay}
-                                            </span>
+                                    <div className="icon">
+                                        {corp.icon ? (
+                                            <img
+                                                src={getIconUrl(corp.icon)}
+                                                alt=""
+                                                aria-hidden="true"
+                                            />
+                                        ) : (
+                                            <div className="placeholder">
+                                                🏢
+                                            </div>
                                         )}
                                     </div>
-
-                                    <div className="rank-members">
-                                        {group.members.map((m) => (
-                                            <div
-                                                key={m.userId}
-                                                className="member-card"
-                                            >
-                                                <div className="avatar">
-                                                    <img
-                                                        src={avatarUrl(
-                                                            m.figure
-                                                        )}
-                                                        alt=""
-                                                        aria-hidden="true"
-                                                    />
-                                                </div>
-                                                <div className="member-info">
-                                                    <div className="member-top">
-                                                        <span className="member-name">
-                                                            {m.username}
-                                                        </span>
-                                                        <span className="member-rank">
-                                                            {m.rankName}
-                                                        </span>
-                                                    </div>
-                                                    <div className="member-stats">
-                                                        {typeof m.weeklyShifts ===
-                                                            "number" && (
-                                                            <span className="stat">
-                                                                {m.weeklyShifts}{" "}
-                                                                Weekly Shifts
-                                                            </span>
-                                                        )}
-                                                        {typeof m.totalShifts ===
-                                                            "number" && (
-                                                            <span className="stat">
-                                                                {m.totalShifts}{" "}
-                                                                Total Shifts
-                                                            </span>
-                                                        )}
-                                                        {m.lastSeenAgo && (
-                                                            <span className="stat dim">
-                                                                {m.lastSeenAgo}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
+                                    <div className="info">
+                                        <div className="name">{corp.name}</div>
+                                        {!!corp.desc && (
+                                            <div className="description">
+                                                {corp.desc}
                                             </div>
-                                        ))}
+                                        )}
+                                        <div className="meta">
+                                            <span
+                                                className={`badge ${badgeTone(
+                                                    corp.stock
+                                                )}`}
+                                            >
+                                                {corp.stock ?? 0} in stock
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
-                        </div>
-                    )}
+                    </div>
+
+                    <div className="corp-divider" />
+
+                    {/* RIGHT: details */}
+                    <div className="corporation-details">
+                        {selectedCorpId === null ? (
+                            <p className="no-corp-selected">
+                                Select a corporation to view employees
+                            </p>
+                        ) : (
+                            <>
+                                {canManage && (
+                                    <div className="corp-actions">
+                                        <input
+                                            type="text"
+                                            className="corp-member-search"
+                                            placeholder="Type a username, then Hire"
+                                            value={memberSearch}
+                                            onChange={(e) =>
+                                                setMemberSearch(e.target.value)
+                                            }
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter")
+                                                    handleHire();
+                                            }}
+                                        />
+                                        <button
+                                            className="habbo-green-btn"
+                                            onClick={handleHire}
+                                            disabled={
+                                                hiring || !memberSearch.trim()
+                                            }
+                                            title="Hire at lowest rank"
+                                        >
+                                            {hiring ? "Hiring…" : "Hire"}
+                                        </button>
+                                    </div>
+                                )}
+
+                                {membersLoading && currentRanks.length === 0 ? (
+                                    <div className="members-skeleton">
+                                        <div className="skel-card" />
+                                        <div className="skel-card" />
+                                        <div className="skel-card" />
+                                        <div className="skel-card" />
+                                    </div>
+                                ) : currentRanks.length === 0 &&
+                                  members.length === 0 ? (
+                                    <div className="empty">
+                                        No ranks data yet.
+                                    </div>
+                                ) : (
+                                    <div
+                                        className={`corp-members ${
+                                            membersReady ? "ready" : ""
+                                        }`}
+                                    >
+                                        {(currentRanks.length > 0
+                                            ? currentRanks
+                                            : sortRanksDesc(
+                                                  Array.from(
+                                                      groupMembersByRankId(
+                                                          members
+                                                      ).entries()
+                                                  ).map(([rankId, arr]) => ({
+                                                      rankId,
+                                                      rankName:
+                                                          arr[0]?.rankName ??
+                                                          `Rank ${rankId}`,
+                                                      rankOrder:
+                                                          arr[0]?.rankOrder ??
+                                                          0,
+                                                      pay: arr[0]?.pay,
+                                                  }))
+                                              )
+                                        ).map((rank, idx) => {
+                                            const mlist =
+                                                membersByRank.get(
+                                                    rank.rankId
+                                                ) || [];
+                                            return (
+                                                <div
+                                                    key={rank.rankId}
+                                                    className="rank-section"
+                                                    style={{
+                                                        ["--rank-stagger" as any]:
+                                                            String(idx + 1),
+                                                    }}
+                                                >
+                                                    <div className="rank-header">
+                                                        <span className="rank-name">
+                                                            {rank.rankName.toUpperCase()}
+                                                        </span>
+                                                        {typeof rank.pay ===
+                                                            "number" && (
+                                                            <span className="rank-pay">
+                                                                ${rank.pay}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="rank-members">
+                                                        {mlist.length === 0 ? (
+                                                            <div className="no-rank-members dim">
+                                                                No members in
+                                                                this rank.
+                                                            </div>
+                                                        ) : (
+                                                            mlist.map((m) => {
+                                                                const busy =
+                                                                    busyUserIds.has(
+                                                                        m.userId
+                                                                    );
+                                                                const showActions =
+                                                                    isStaff ||
+                                                                    userIsManagerInCorp;
+                                                                return (
+                                                                    <div
+                                                                        key={
+                                                                            m.userId
+                                                                        }
+                                                                        className="member-card"
+                                                                    >
+                                                                        <div className="avatar">
+                                                                            <img
+                                                                                src={avatarUrl(
+                                                                                    m.figure
+                                                                                )}
+                                                                                alt=""
+                                                                                aria-hidden="true"
+                                                                                onError={(
+                                                                                    e
+                                                                                ) => {
+                                                                                    (
+                                                                                        e.currentTarget as HTMLImageElement
+                                                                                    ).src =
+                                                                                        "https://www.habbo.com/habbo-imaging/avatarimage?figure=hd-180-1.lg-280-110.sh-290-64&size=b&headonly=0&gesture=sml";
+                                                                                }}
+                                                                            />
+                                                                        </div>
+                                                                        <div className="member-info">
+                                                                            <div className="member-top">
+                                                                                <span className="member-name">
+                                                                                    {
+                                                                                        m.username
+                                                                                    }
+                                                                                </span>
+                                                                                <span className="member-rank">
+                                                                                    {
+                                                                                        m.rankName
+                                                                                    }
+                                                                                </span>
+                                                                            </div>
+
+                                                                            <div className="member-stats">
+                                                                                {typeof m.weeklyShifts ===
+                                                                                    "number" && (
+                                                                                    <span className="stat">
+                                                                                        {
+                                                                                            m.weeklyShifts
+                                                                                        }{" "}
+                                                                                        Weekly
+                                                                                        Shifts
+                                                                                    </span>
+                                                                                )}
+                                                                                {typeof m.totalShifts ===
+                                                                                    "number" && (
+                                                                                    <span className="stat">
+                                                                                        {
+                                                                                            m.totalShifts
+                                                                                        }{" "}
+                                                                                        Total
+                                                                                        Shifts
+                                                                                    </span>
+                                                                                )}
+                                                                                {m.lastSeenAgo && (
+                                                                                    <span className="stat dim">
+                                                                                        {
+                                                                                            m.lastSeenAgo
+                                                                                        }
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {showActions && (
+                                                                                <div className="member-actions">
+                                                                                    <button
+                                                                                        className="habbo-green-btn"
+                                                                                        onClick={() =>
+                                                                                            handlePromote(
+                                                                                                m.userId
+                                                                                            )
+                                                                                        }
+                                                                                        disabled={
+                                                                                            busy
+                                                                                        }
+                                                                                    >
+                                                                                        Promote
+                                                                                    </button>
+                                                                                    <button
+                                                                                        className="habbo-white-btn"
+                                                                                        onClick={() =>
+                                                                                            handleDemote(
+                                                                                                m.userId
+                                                                                            )
+                                                                                        }
+                                                                                        disabled={
+                                                                                            busy
+                                                                                        }
+                                                                                    >
+                                                                                        Demote
+                                                                                    </button>
+                                                                                    <button
+                                                                                        className="habbo-red-btn"
+                                                                                        onClick={() =>
+                                                                                            handleFire(
+                                                                                                m.userId
+                                                                                            )
+                                                                                        }
+                                                                                        disabled={
+                                                                                            busy
+                                                                                        }
+                                                                                    >
+                                                                                        Fire
+                                                                                    </button>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
-
-// ------------ helpers -------------
-function getCenteredPosition(size: { w: number; h: number }): Pos {
-    const vw = window.innerWidth,
-        vh = window.innerHeight;
-    return {
-        x: Math.max(0, Math.round((vw - size.w) / 2)),
-        y: Math.max(0, Math.round((vh - size.h) / 2)),
-    };
-}
-function clampToViewport(p: Pos, size: { w: number; h: number }): Pos {
-    const maxX = Math.max(0, window.innerWidth - size.w);
-    const maxY = Math.max(0, window.innerHeight - size.h);
-    return {
-        x: Math.min(Math.max(0, p.x), maxX),
-        y: Math.min(Math.max(0, p.y), maxY),
-    };
-}
-function safeGet<T>(key: string): T | null {
-    try {
-        return JSON.parse(localStorage.getItem(key) || "null");
-    } catch {
-        return null;
-    }
-}
-function safeSet<T>(key: string, value: T) {
-    try {
-        localStorage.setItem(key, JSON.stringify(value));
-    } catch {}
-}
-
-function getIconUrl(icon: string) {
-    if (/^https?:\/\//i.test(icon)) return icon;
-    return `/icons/corporations/${icon}`;
-}
-function badgeTone(stock?: number) {
-    if (typeof stock !== "number") return "neutral";
-    if (stock <= 0) return "danger";
-    if (stock <= 5) return "warn";
-    return "success";
-}
-function avatarUrl(figure: string) {
-    // Nitro avatar endpoint; adjust if different in your stack
-    return `/avatarimage?figure=${encodeURIComponent(
-        figure
-    )}&size=b&headonly=0&gesture=sml`;
-}
-
-function groupMembersByRank(members: CorpMember[]): RankGroup[] {
-    const byRank = new Map<number, RankGroup>();
-    for (const m of members) {
-        const key = m.rankId;
-        if (!byRank.has(key)) {
-            byRank.set(key, {
-                rankId: m.rankId,
-                rankName: m.rankName,
-                rankOrder: m.rankOrder,
-                pay: m.pay,
-                members: [],
-            });
-        }
-        byRank.get(key)!.members.push(m);
-    }
-    // Highest rank first (largest rank_order)
-    return Array.from(byRank.values()).sort(
-        (a, b) => b.rankOrder - a.rankOrder
-    );
-}
 
 export default CorporationsView;

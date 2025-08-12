@@ -110,7 +110,6 @@ export const LeftSidebarView: FC = () => {
                                 className="sidebar-icon inventory"
                                 title="Inventory"
                                 onClick={() => {
-                                 
                                     setShowInventory((prev) => !prev);
                                 }}
                             />
@@ -122,7 +121,6 @@ export const LeftSidebarView: FC = () => {
                                 className="sidebar-icon wanted"
                                 title="Wanted"
                                 onClick={() => {
-                                    
                                     SendMessageComposer(
                                         new GetWantedListComposer()
                                     ); // 👈 Send request
@@ -137,7 +135,6 @@ export const LeftSidebarView: FC = () => {
                                 className="sidebar-icon corps"
                                 title="Corporations"
                                 onClick={() => {
-                                    
                                     SendMessageComposer(
                                         new GetCorporationsComposer()
                                     );
@@ -151,7 +148,6 @@ export const LeftSidebarView: FC = () => {
                                 className="sidebar-icon skull"
                                 title="Gangs"
                                 onClick={() => {
-                                 
                                     handleGangClick();
                                 }}
                             />
@@ -164,8 +160,6 @@ export const LeftSidebarView: FC = () => {
                                 }`}
                                 title="Gang Chat Toggle"
                                 onClick={() => {
-                                    
-
                                     setIsGangChatEnabled((prev) => {
                                         const newState = !prev;
 
@@ -210,7 +204,12 @@ export const LeftSidebarView: FC = () => {
                 <WantedListView onClose={() => setShowWantedList(false)} />
             )}
             {showCorporations && (
-                <CorporationsView onClose={() => setShowCorporations(false)} />
+             
+                <CorporationsView
+                    onClose={() => setShowCorporations(false)}
+                    currentUserId={userId}
+                />
+                
             )}
             {gangMode === "create" && (
                 <CreateGangView onClose={() => setGangMode("none")} />
