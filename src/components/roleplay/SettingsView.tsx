@@ -6,15 +6,24 @@ interface SettingsViewProps {
 }
 
 export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
+    // Live Feed toggle
     const [liveFeed, setLiveFeed] = useState(() => {
         const stored = localStorage.getItem("liveFeedEnabled");
         return stored ? JSON.parse(stored) : true;
     });
+
+    // Gang Invites toggle
+    const [gangInvites, setGangInvites] = useState(() => {
+        const stored = localStorage.getItem("gangInvitesEnabled");
+        return stored ? JSON.parse(stored) : true;
+    });
+
+    // Position persistence
     const [position, setPosition] = useState<{ x: number; y: number }>(() => {
         const stored = localStorage.getItem("settingsPos");
         return stored ? JSON.parse(stored) : { x: 100, y: 100 };
     });
-    // refs for super-smooth dragging
+
     const rootRef = useRef<HTMLDivElement | null>(null);
     const startMouseRef = useRef<{ x: number; y: number } | null>(null);
     const startPosRef = useRef<{ x: number; y: number }>(position);
@@ -23,13 +32,10 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
     const draggingRef = useRef(false);
 
     useEffect(() => {
-        startPosRef.current = position; // keep in sync after commits
+        startPosRef.current = position;
     }, [position]);
 
-    const dragRef = useRef<{ dx: number; dy: number } | null>(null);
     const posRef = useRef<{ x: number; y: number }>(position);
-    const forceRender = useState(0)[1];
-
     useEffect(() => {
         posRef.current = position;
     }, [position]);
@@ -47,7 +53,6 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
         const dy = e.clientY - startMouseRef.current.y;
         deltaRef.current = { dx, dy };
 
-        // throttle via RAF
         if (rafRef.current == null) {
             rafRef.current = requestAnimationFrame(() => {
                 applyTransform();
@@ -55,11 +60,11 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
             });
         }
     };
+
     const onMouseUp = () => {
         if (!draggingRef.current) return;
         draggingRef.current = false;
 
-        // commit new position and clear transform
         const { dx, dy } = deltaRef.current;
         const committed = {
             x: startPosRef.current.x + dx,
@@ -74,7 +79,6 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
             document.body.classList.remove("dragging");
         }
 
-        // cleanup listeners
         window.removeEventListener("mousemove", onMouseMove);
         window.removeEventListener("mouseup", onMouseUp);
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -87,7 +91,6 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
         deltaRef.current = { dx: 0, dy: 0 };
 
         if (rootRef.current) {
-            // hint the browser for perf
             rootRef.current.style.willChange = "transform";
         }
         document.body.classList.add("dragging");
@@ -98,14 +101,23 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
 
     const saveSettings = () => {
         localStorage.setItem("liveFeedEnabled", JSON.stringify(liveFeed));
+        localStorage.setItem("gangInvitesEnabled", JSON.stringify(gangInvites));
+
         window.dispatchEvent(
             new CustomEvent("toggleLiveFeed", { detail: { enabled: liveFeed } })
         );
+        window.dispatchEvent(
+            new CustomEvent("toggleGangInvites", {
+                detail: { enabled: gangInvites },
+            })
+        );
+
         onClose();
     };
 
     return (
         <div
+            ref={rootRef}
             className="settings-view"
             style={{ left: posRef.current.x, top: posRef.current.y }}
         >
@@ -123,6 +135,16 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
                     id="liveFeed"
                     checked={liveFeed}
                     onChange={(e) => setLiveFeed(e.target.checked)}
+                />
+            </div>
+
+            <div className="setting-option">
+                <label htmlFor="gangInvites">Gang Invites</label>
+                <input
+                    type="checkbox"
+                    id="gangInvites"
+                    checked={gangInvites}
+                    onChange={(e) => setGangInvites(e.target.checked)}
                 />
             </div>
 

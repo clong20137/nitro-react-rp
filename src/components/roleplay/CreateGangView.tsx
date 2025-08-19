@@ -3,6 +3,7 @@ import "./CreateGangView.scss";
 import { SendMessageComposer } from "../../api";
 import { CreateGangComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CreateGangComposer";
 import { GetPartPaletteHexesComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetPartPaletteHExesComposer";
+
 type IconOpt = { name: string; src: string };
 
 const ICON_OPTIONS: IconOpt[] = [
@@ -61,7 +62,7 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
         (currentPage + 1) * ICONS_PER_PAGE
     );
 
-    // ---- DRAGGING STATE ----midd
+    // ---- DRAGGING STATE ----
     const [position, setPosition] = useState<{ x: number; y: number }>({
         x: 120,
         y: 120,
@@ -179,16 +180,35 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
             window.removeEventListener("palette_hexes_result", onHexes);
     }, []); // once
 
+    // ---- HELPERS ----
+    const iconKeyFromSrc = (src: string): string => {
+        const m = src.match(/\/([^\/]+)\.(gif|png)$/i);
+        return m ? m[1] : "";
+    };
+
+    const selectedIconSrc =
+        ICON_OPTIONS.find((i) => i.name === selectedIcon)?.src ?? "";
+    const selectedIconKey = iconKeyFromSrc(selectedIconSrc);
+
     // ---- ACTIONS ----
     const handleCreate = () => {
         if (name.length < 3)
             return setError("Gang name must be at least 3 characters.");
         if (name.length > 20)
             return setError("Gang name cannot exceed 20 characters.");
+        if (!selectedIconKey) return setError("Please select a gang icon.");
 
+        // NOTE: CreateGangComposer on the client should accept (name, primaryHex, secondaryHex, iconKey)
+        // If your server expects hexes without '#', that stripping should be handled inside the composer.
         SendMessageComposer(
-            new CreateGangComposer(name, primaryColor, secondaryColor)
+            new CreateGangComposer(
+                name,
+                primaryColor,
+                secondaryColor,
+                selectedIconKey
+            )
         );
+
         onClose();
     };
 
@@ -321,11 +341,7 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
                             }}
                         >
                             <img
-                                src={
-                                    ICON_OPTIONS.find(
-                                        (i) => i.name === selectedIcon
-                                    )?.src ?? ""
-                                }
+                                src={selectedIconSrc}
                                 alt=""
                                 className="icon-overlay"
                             />

@@ -1,71 +1,81 @@
 .settings-view {
-    position: absolute;
-    width: 300px;
-    background: rgba(32, 33, 37, 0.9);
-    border: solid 1px #000000;
-    border-radius: 0.5vw;
-    box-shadow: 2px 2px 0px #000000;
-    padding: 12px 16px 40px 16px;
-    font-size: 14px;
-    z-index: 9999;
-    transition: all 0.3s ease-in-out;
-
-    .settings-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-weight: bold;
-        font-size: 16px;
-        margin-bottom: 12px;
-        color: #fff;
-        cursor: move;
-
-        .close-button {
-            background: none;
-            border: none;
-            color: #ffffff;
-            background-color: #de1f1f;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: 0.5s;
-        }
-
-        .close-button:hover {
-            background-color: #e83636;
-        }
-    }
-
-    .setting-option {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 6px 0;
-        border-bottom: 1px solid #ccc;
-
-        &:last-child {
-            border-bottom: none;
-        }
-
-        label {
-            font-weight: 500;
-            color: #eee;
-        }
-
-        input[type="checkbox"] {
-            transform: scale(1.2);
-        }
-    }
-
-  .settings-footer {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    padding-top: 12px;
-    width: 100%;
-    display: flex;
-    justify-content: flex-end;
-    background: transparent;
-    border-top: 1px solid rgba(255, 255, 255, 0.1); // optional separator
+    position: fixed;
+    z-index: 1200;
+    width: 360px;
+    background: #e6e6e6;
+    border: 1px solid #000;
+    border-radius: 8px;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
+    user-select: none;
 }
+
+.settings-header {
+    background: linear-gradient(180deg, #2e3546 0, #2e3546 50%, #1e2433 50%, #1e2433);
+    color: #fff;
+    font-weight: 700;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px 8px 0 0;
+    cursor: grab;
+
+    span {
+        pointer-events: none;
+    }
+
+    .close-button {
+        margin-left: auto;
+        border: 1px solid #000;
+        border-bottom-width: 2px;
+        border-radius: 4px;
+        background: repeating-linear-gradient(#f55041, #f55041, 50%, #c23027 0, #c23027);
+        color: #fff;
+        font-weight: 800;
+        padding: 4px 8px;
+        cursor: pointer;
+    }
+}
+
+.settings-body {
+    padding: 12px;
+}
+
+.setting-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f6f6f6;
+    border: 1px solid #cfcfcf;
+    color:#000;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.actions {
+    margin-top: 16px;
+    text-align: right;
+}
+
+/* Button matches your bj-btn look */
+.habbo-action-button {
+    display: inline-block;
+    padding: 6px 12px;
+    border: 1px solid #000;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #fff 0, #fff 50%, #ccc 50%, #ccc);
+    font-weight: 700;
+    cursor: pointer;
+
+    &.green {
+        color: #fff;
+        background: linear-gradient(180deg, #3aa900 0, #3aa900 50%, #2d7d00 50%, #2d7d00);
+    }
+}
+
+/* Body helper while dragging */
+body.dragging {
+    cursor: grabbing !important;
+    user-select: none !important;
 }

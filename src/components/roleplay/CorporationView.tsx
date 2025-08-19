@@ -95,6 +95,9 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
     const rootRef = useRef<HTMLDivElement | null>(null);
     const headerRef = useRef<HTMLDivElement | null>(null);
 
+   
+  
+
     // helpers
     const getCenteredPosition = (size: { w: number; h: number }): Pos => {
         const vw = window.innerWidth,
