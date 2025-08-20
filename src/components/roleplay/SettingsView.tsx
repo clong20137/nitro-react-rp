@@ -25,19 +25,16 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
     });
 
     const rootRef = useRef<HTMLDivElement | null>(null);
+
     const startMouseRef = useRef<{ x: number; y: number } | null>(null);
     const startPosRef = useRef<{ x: number; y: number }>(position);
     const rafRef = useRef<number | null>(null);
     const deltaRef = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
     const draggingRef = useRef(false);
 
+    // Keep startPosRef in sync with the committed position
     useEffect(() => {
         startPosRef.current = position;
-    }, [position]);
-
-    const posRef = useRef<{ x: number; y: number }>(position);
-    useEffect(() => {
-        posRef.current = position;
     }, [position]);
 
     const applyTransform = () => {
@@ -61,6 +58,13 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
         }
     };
 
+    const cleanupListeners = () => {
+        window.removeEventListener("mousemove", onMouseMove as any);
+        window.removeEventListener("mouseup", onMouseUp as any);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+    };
+
     const onMouseUp = () => {
         if (!draggingRef.current) return;
         draggingRef.current = false;
@@ -70,19 +74,21 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
             x: startPosRef.current.x + dx,
             y: startPosRef.current.y + dy,
         };
+
+        // Commit new position to state + storage (triggers re-render with new left/top)
         setPosition(committed);
         localStorage.setItem("settingsPos", JSON.stringify(committed));
 
-        if (rootRef.current) {
-            rootRef.current.style.transform = "translate(0, 0)";
-            rootRef.current.style.willChange = "auto";
+        // Defer clearing transform until AFTER React paints new left/top
+        requestAnimationFrame(() => {
+            if (rootRef.current) {
+                rootRef.current.style.transform = "translate(0px, 0px)";
+                rootRef.current.style.willChange = "auto";
+            }
             document.body.classList.remove("dragging");
-        }
+        });
 
-        window.removeEventListener("mousemove", onMouseMove);
-        window.removeEventListener("mouseup", onMouseUp);
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
+        cleanupListeners();
     };
 
     const startDrag = (e: React.MouseEvent) => {
@@ -95,9 +101,21 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
         }
         document.body.classList.add("dragging");
 
-        window.addEventListener("mousemove", onMouseMove, { passive: true });
-        window.addEventListener("mouseup", onMouseUp);
+        // Passive is fine for mousemove (we don't call preventDefault)
+        window.addEventListener("mousemove", onMouseMove as any, {
+            passive: true,
+        });
+        window.addEventListener("mouseup", onMouseUp as any);
     };
+
+    useEffect(() => {
+        // Safety cleanup on unmount
+        return () => {
+            cleanupListeners();
+            document.body.classList.remove("dragging");
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const saveSettings = () => {
         localStorage.setItem("liveFeedEnabled", JSON.stringify(liveFeed));
@@ -119,7 +137,7 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
         <div
             ref={rootRef}
             className="settings-view"
-            style={{ left: posRef.current.x, top: posRef.current.y }}
+            style={{ left: position.x, top: position.y }}
         >
             <div className="settings-header" onMouseDown={startDrag}>
                 <span>Settings</span>
