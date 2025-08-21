@@ -13,6 +13,30 @@
     z-index: 100;
 }
 
+.opponent-anchor {
+    position: absolute;
+    left: calc(100% + 8px);
+    /* 8px gap to the right of your bar */
+    top: 0;
+}
+
+.stats-bar-container.opponent {
+    transform: scaleX(-1);
+    /* mirror the whole bar */
+}
+
+.stats-bar-container.opponent * {
+    transform: scaleX(-1);
+    /* un-mirror the inner content so text/icons look normal */
+}
+.stats-bar-container.opponent .avatar-head {
+}
+
+.stats-bar-container,
+.opponent-anchor {
+z-index: 2000;
+}
+
 .avatar-tooltip-wrapper {
     position: relative;
     display: inline-block;
@@ -211,7 +235,7 @@
             object-fit: cover;
             margin-top: 4px;
             margin-bottom: 5px;
-            margin-left:10px;
+            margin-left: 10px;
             cursor: pointer;
 
         }
@@ -443,6 +467,14 @@
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6)
 }
 
+/* host that holds your bar + opponent bar side-by-side */
+.stats-bar-host {
+    position: relative;
+    /* anchor */
+    width: fit-content;
+    /* shrink-wrap around bars */
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -514,7 +546,7 @@
 
 .call-police-input-box {
     margin-top: 6px;
-     background: rgba(32, 33, 37, 0.9);
+    background: rgba(32, 33, 37, 0.9);
     border: 1px solid #000000;
     padding: 8px;
     border-radius: 4px;
@@ -542,8 +574,8 @@
     resize: none;
     border-radius: 4px;
     padding: 4px;
-    background-color:#131313;
-    color:#FFF;
+    background-color: #131313;
+    color: #FFF;
     border: 1px solid #000000;
     margin-bottom: 4px;
 }

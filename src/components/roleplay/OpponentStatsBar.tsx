@@ -1,106 +1,93 @@
-import { FC, useEffect, useState } from "react";
-import "./StatsBar.scss";
+import { FC } from "react";
+import "./StatsBar.scss"; // reuse the same stylesheet
 
-interface OpponentStats {
-    userId: number;
-    username: string;
-    figure: string;
-    health: number;
-    maxHealth: number;
-    energy: number;
-    maxEnergy: number;
-    hunger: number;
-    maxHunger: number;
-    aggression: number;
+export interface OpponentStats {
+health: number; maxHealth: number;
+energy: number; maxEnergy: number;
+hunger: number; maxHunger: number;
+aggression: number;
+username: string;
+figure: string;
+xpPercent?: number;
+level: number;
+healthPercent?: number;
+energyPercent?: number;
+hungerPercent?: number;
 }
 
-export const OpponentStatsBar: FC = () => {
-    const [stats, setStats] = useState<OpponentStats | null>(null);
+const pct = (v: number, m: number) => (m <= 0 ? 0 : Math.round((v / m) * 100));
 
-    useEffect(() => {
-        const onInspect = (event: CustomEvent) => {
-            setStats(event.detail);
-        };
+export const OpponentStatsBar: FC<{
+data: OpponentStats;
+onClose?: () => void;
+}> = ({ data }) => {
+if (!data) return null;
 
-        window.addEventListener(
-            "user_inspect_stats",
-            onInspect as EventListener
-        );
+const aggressionSeconds = data.aggression / 1000;
+const aggressionPercent = Math.min((aggressionSeconds / 30) * 100, 100);
 
-        return () => {
-            window.removeEventListener(
-                "user_inspect_stats",
-                onInspect as EventListener
-            );
-        };
-    }, []);
+return (
+<div className="stats-bar-container opponent" data-testid="opponent-stats">
+<div className="stats-left">
+<div className="greek-circle">
+<div className="greek-xp-ring">
+<svg className="xp-ring-svg" viewBox="0 0 36 36">
+<path className="xp-ring-background"
+d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+<path className="xp-ring-progress"
+strokeDasharray={`${data.xpPercent ?? 0}, 100`}
+d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+</svg>
 
-    if (!stats) return null;
+<div className="avatar-tooltip-wrapper">
+<img
+className="avatar-head"
+src={`https://www.habbo.com/habbo-imaging/avatarimage?figure=${data.figure}&direction=4&head_direction=4&gesture=sml`}
+alt={data.username}
+/>
+</div>
 
-    return (
-        <div className="stats-bar opponent-stats-bar">
-            <div className="stats-header">
-                <span>{stats.username}</span>
-                <button className="close-btn" onClick={() => setStats(null)}>
-                    ✖
-                </button>
-            </div>
+<div className="level-badge">{data.level ?? 0}</div>
+</div>
+</div>
 
-            <div className="stat-row">
-                <span className="stat-label">Health</span>
-                <div className="stat-bar health">
-                    <div
-                        className="fill"
-                        style={{
-                            width: `${(stats.health / stats.maxHealth) * 100}%`,
-                        }}
-                    />
-                </div>
-                <span className="stat-value">
-                    {stats.health}/{stats.maxHealth}
-                </span>
-            </div>
+<div className="avatar-name-wrapper">
+<div className="avatar-name">{data.username}</div>
+<div className="avatar-level">Level: {data.level ?? 0}</div>
+</div>
+</div>
 
-            <div className="stat-row">
-                <span className="stat-label">Energy</span>
-                <div className="stat-bar energy">
-                    <div
-                        className="fill"
-                        style={{
-                            width: `${(stats.energy / stats.maxEnergy) * 100}%`,
-                        }}
-                    />
-                </div>
-                <span className="stat-value">
-                    {stats.energy}/{stats.maxEnergy}
-                </span>
-            </div>
+<div className="stats-right">
+<div className="stat">
+<div className="icons heart" />
+<div className="bar">
+<div className="fill health" style={{ width: `${pct(data.health, data.maxHealth)}%` }} />
+<div className="bar-text">{`${data.health} / ${data.maxHealth}`}</div>
+</div>
+</div>
 
-            <div className="stat-row">
-                <span className="stat-label">Hunger</span>
-                <div className="stat-bar hunger">
-                    <div
-                        className="fill"
-                        style={{
-                            width: `${(stats.hunger / stats.maxHunger) * 100}%`,
-                        }}
-                    />
-                </div>
-                <span className="stat-value">
-                    {stats.hunger}/{stats.maxHunger}
-                </span>
-            </div>
+<div className="stat">
+<div className="icons bolt" />
+<div className="bar">
+<div className="fill energy" style={{ width: `${pct(data.energy, data.maxEnergy)}%` }} />
+<div className="bar-text">{`${data.energy} / ${data.maxEnergy}`}</div>
+</div>
+</div>
 
-            <div className="stat-row">
-                <span className="stat-label">Aggression</span>
-                <div className="stat-bar aggression">
-                    <div
-                        className="fill"
-                        style={{ width: `${stats.aggression}%` }}
-                    />
-                </div>
-                <span className="stat-value">{stats.aggression}s</span>
-            </div>
-        </div>
-    );
+<div className="stat">
+<div className="icons apple" />
+<div className="bar">
+<div className="fill hunger" style={{ width: `${pct(data.hunger, data.maxHunger)}%` }} />
+<div className="bar-text">{`${data.hunger} / ${data.maxHunger}`}</div>
+</div>
+</div>
+
+<div className="aggression-bar-wrapper">
+<div className="aggression-fill" style={{ width: `${aggressionPercent}%` }} />
+</div>
+</div>
+</div>
+);
 };
+
+export default OpponentStatsBar;

@@ -38,9 +38,10 @@ interface GangRank {
     canAccessBank: boolean;
 }
 
-type IconOpt = { name: string; src: string };
+type IconOpt = { name: string; src: string; vip?: boolean };
 
 // EXACT icon options you shared
+
 const ICON_OPTIONS: IconOpt[] = [
     { name: "Swords", src: "/icons/badges/ALW09.gif" },
     { name: "Skull", src: "/icons/badges/DE10K.gif" },
@@ -71,6 +72,10 @@ const ICON_OPTIONS: IconOpt[] = [
     { name: "Lips", src: "/icons/badges/PTD74.gif" },
     { name: "Cow", src: "/icons/badges/TC792.gif" },
     { name: "Boxing Gloves", src: "/icons/badges/ITH03.gif" },
+    { name: "Black Cat", src: "/icons/badges/US530.gif" },
+    { name: "Golden Crown", src: "/icons/badges/FRH44.gif", vip: false },
+    { name: "Cowboy Hat", src: "/icons/badges/US515.gif", vip: false },
+    { name: "Pink Heart", src: "/icons/badges/DE21H.gif", vip: true },
 ];
 
 export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
@@ -93,11 +98,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
     const [gangMembers, setGangMembers] = useState<GangMember[]>([]);
     const [gangRanks, setGangRanks] = useState<GangRank[]>([]);
     const [collapsedRanks, setCollapsedRanks] = useState<number[]>([]);
-
-    // Drag position
-    const [positionReady, setPositionReady] = useState(false);
-    const [isDragging, setIsDragging] = useState(false);
-    const dragStart = useRef({ x: 0, y: 0 });
 
     // UI state
     const [showEditRoleModal, setShowEditRoleModal] = useState(false);
@@ -140,12 +140,25 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
     const [ccSwatches, setCcSwatches] = useState<string[]>([]);
     const ICONS_PER_PAGE = 16;
     const [iconsPage, setIconsPage] = useState(0);
+    const rootRef = useRef<HTMLDivElement>(null);
+    const dragStart = useRef({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
     const totalIconPages = Math.ceil(ICON_OPTIONS.length / ICONS_PER_PAGE);
     const visibleIcons = ICON_OPTIONS.slice(
         iconsPage * ICONS_PER_PAGE,
         (iconsPage + 1) * ICONS_PER_PAGE
     );
-
+    const [position, setPosition] = useState<{ x: number; y: number }>(() => {
+        try {
+            return (
+                JSON.parse(
+                    localStorage.getItem("gangs-detail-position") || ""
+                ) || { x: 100, y: 100 }
+            );
+        } catch {
+            return { x: 100, y: 100 };
+        }
+    });
     const iconKeyFromSrc = (src: string): string => {
         const m = src.match(/\/([^\/]+)\.(gif|png)$/i);
         return m ? m[1] : "";
@@ -256,13 +269,18 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
     }, []);
 
     // ===== Dragging =====
+    // start drag from header
     const handleMouseDown = (e: React.MouseEvent) => {
+        if (e.button !== 0) return; // left button only
+        e.preventDefault();
         setIsDragging(true);
         dragStart.current = {
             x: e.clientX - position.x,
             y: e.clientY - position.y,
         };
+        document.body.classList.add("is-dragging");
     };
+
     const handleMouseMove = (e: MouseEvent) => {
         if (isDragging) {
             const newPos = {
@@ -301,6 +319,95 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             }
         }
     }, [showEditRoleModal, editRoleId, gangRanks]);
+
+    const clamp = (v: number, min: number, max: number) =>
+        Math.min(Math.max(v, min), max);
+
+    const getClampedPos = (x: number, y: number, node?: HTMLElement | null) => {
+        const w = node?.offsetWidth ?? 650; // your panel width fallback
+        const h = node?.offsetHeight ?? 420; // fallback
+        const maxX = window.innerWidth - w - 8;
+        const maxY = window.innerHeight - h - 8;
+        return {
+            x: clamp(x, 8, Math.max(8, maxX)),
+            y: clamp(y, 8, Math.max(8, maxY)),
+        };
+    };
+
+    const [positionReady, setPositionReady] = useState(false);
+
+    // sanitize saved pos on mount
+    useEffect(() => {
+        const saved = localStorage.getItem("gangs-detail-position");
+        if (saved) {
+            try {
+                const p = JSON.parse(saved);
+                const clamped = getClampedPos(
+                    p.x ?? 100,
+                    p.y ?? 100,
+                    rootRef.current
+                );
+                setPosition(clamped);
+                localStorage.setItem(
+                    "gangs-detail-position",
+                    JSON.stringify(clamped)
+                );
+            } catch {
+                // ignore bad JSON
+            }
+        } else {
+            // center once if no saved pos
+            const w = rootRef.current?.offsetWidth ?? 650;
+            const h = rootRef.current?.offsetHeight ?? 420;
+            const centered = getClampedPos(
+                Math.round((window.innerWidth - w) / 2),
+                Math.round((window.innerHeight - h) / 2),
+                rootRef.current
+            );
+            setPosition(centered);
+        }
+        setPositionReady(true);
+    }, []);
+
+    // single global move/up handler
+    useEffect(() => {
+        if (!isDragging) return;
+
+        const onMove = (e: MouseEvent) => {
+            const next = getClampedPos(
+                e.clientX - dragStart.current.x,
+                e.clientY - dragStart.current.y,
+                rootRef.current
+            );
+            setPosition(next);
+        };
+
+        const onUp = () => {
+            setIsDragging(false);
+            document.body.classList.remove("is-dragging");
+            // persist clamped position
+            localStorage.setItem(
+                "gangs-detail-position",
+                JSON.stringify(position)
+            );
+        };
+
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+        return () => {
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", onUp);
+        };
+    }, [isDragging, position]);
+
+    // keep within bounds on resize too
+    useEffect(() => {
+        const onResize = () => {
+            setPosition((p) => getClampedPos(p.x, p.y, rootRef.current));
+        };
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, []);
 
     const handleEditRoleSubmit = () => {
         if (!editRoleId) return;
@@ -378,18 +485,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                 : [...prev, rankOrder]
         );
     };
-
-    const [position, setPosition] = useState<{ x: number; y: number }>(() => {
-        try {
-            return (
-                JSON.parse(
-                    localStorage.getItem("gangs-detail-position") || ""
-                ) || { x: 100, y: 100 }
-            );
-        } catch {
-            return { x: 100, y: 100 };
-        }
-    });
 
     useEffect(() => {
         const onMove = (e: MouseEvent) => {
@@ -494,6 +589,28 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                 {activeTab === "info" && (
                     <div className="info-tab">
                         <div className="info-section gang-header">
+                            <div className="gang-banner">
+                                <div className="gang-banner-left">
+                                    <img
+                                        src={
+                                            gangIcon
+                                                ? gangIcon
+                                                : "/icons/badges/default.gif"
+                                        }
+                                        alt="Gang Logo"
+                                        className="gang-banner-icon"
+                                    />
+                                    <div className="gang-banner-text">
+                                        <div className="gang-banner-name">
+                                            {gangName || "Gang Name"}
+                                        </div>
+                                        <div className="gang-banner-rank">
+                                            Rank: {gangRank || "Placeholder"}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="gang-colors-large">
                                 <div
                                     className="primary-color"
@@ -1279,19 +1396,47 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                         const isSelected =
                                             key.toUpperCase() ===
                                             (gangIcon || "").toUpperCase();
+                                        const isLocked =
+                                            !!icon.vip && gangRank < 2;
+
+                                        const clickIcon = () => {
+                                            if (isLocked) {
+                                                // small toast-style notify via Nitro alert or your own:
+                                                window.dispatchEvent(
+                                                    new CustomEvent(
+                                                        "nitro_alert",
+                                                        {
+                                                            detail: "VIP icons unlock at Rank 2.",
+                                                        }
+                                                    )
+                                                );
+                                                return;
+                                            }
+                                            setGangIcon(key);
+                                        };
+
                                         return (
                                             <div
                                                 key={icon.name}
                                                 className={`icon-option ${
                                                     isSelected ? "selected" : ""
-                                                }`}
-                                                onClick={() => setGangIcon(key)}
-                                                title={icon.name}
+                                                } ${isLocked ? "locked" : ""}`}
+                                                onClick={clickIcon}
+                                                title={
+                                                    isLocked
+                                                        ? `${icon.name} (VIP – Rank 2+)`
+                                                        : icon.name
+                                                }
                                             >
                                                 <img
                                                     src={icon.src}
                                                     alt={icon.name}
                                                 />
+                                                {isLocked && (
+                                                    <span className="vip-tag">
+                                                        VIP
+                                                    </span>
+                                                )}
                                             </div>
                                         );
                                     })}

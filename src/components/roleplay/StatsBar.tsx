@@ -39,7 +39,7 @@ export const StatsBar: FC = () => {
     );
 
     // End //
-
+    
     const [health, setHealth] = useState<number>(0);
     const [maxHealth, setMaxHealth] = useState<number>(100);
     const [passive, setPassive] = useState(false);
