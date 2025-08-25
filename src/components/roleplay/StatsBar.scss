@@ -17,24 +17,24 @@
     position: absolute;
     left: calc(100% + 8px);
     /* 8px gap to the right of your bar */
-    top: 0;
+    top: -20px;
 }
 
 .stats-bar-container.opponent {
-    transform: scaleX(-1);
+ 
     /* mirror the whole bar */
 }
 
 .stats-bar-container.opponent * {
-    transform: scaleX(-1);
+    
     /* un-mirror the inner content so text/icons look normal */
 }
-.stats-bar-container.opponent .avatar-head {
-}
+
+.stats-bar-container.opponent .avatar-head {}
 
 .stats-bar-container,
 .opponent-anchor {
-z-index: 2000;
+    z-index: 2000;
 }
 
 .avatar-tooltip-wrapper {
@@ -114,7 +114,7 @@ z-index: 2000;
         .stat-bar {
             flex-grow: 1;
             height: 8px;
-            border-radius: 4px;
+            border-radius: 2px;
             background: #444;
             margin: 0 6px;
             overflow: hidden;
@@ -125,15 +125,15 @@ z-index: 2000;
             }
 
             &.health .fill {
-                background: red;
+                background:linear-gradient(180deg, #b82626, #b82626 50%, #ca3333 0, #ca3333)
             }
 
             &.energy .fill {
-                background: yellow;
+                background:linear-gradient(180deg, #f1c40f, #f1c40f 50%, #f5d65a 0, #f5d65a)
             }
 
             &.hunger .fill {
-                background: cyan;
+                background: linear-gradient(180deg, #13affe, #13affe 50%, #4bc1fe 0, #4bc1fe)
             }
 
             &.aggression .fill {
@@ -335,18 +335,18 @@ z-index: 2000;
 .fill {
     height: 100%;
     transition: width 0.3s ease;
-    border-radius: 6px;
+    border-radius: 2px;
 
     &.health {
-        background-color: #e74c3c;
+    background:linear-gradient(180deg, #b82626, #b82626 50%, #ca3333 0, #ca3333)
     }
 
     &.energy {
-        background-color: #f1c40f;
+        background:linear-gradient(180deg, #f1c40f, #f1c40f 50%, #f5d65a 0, #f5d65a)
     }
 
     &.hunger {
-        background-color: #13affe;
+        background: linear-gradient(180deg, #13affe, #13affe 50%, #4bc1fe 0, #4bc1fe)
     }
 }
 

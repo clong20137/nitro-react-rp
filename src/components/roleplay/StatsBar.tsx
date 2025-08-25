@@ -16,25 +16,9 @@ import { UpdateWorkStatusEvent } from "@nitrots/nitro-renderer/src/nitro/communi
 import { Nitro } from "@nitrots/nitro-renderer";
 import { NitroEvent } from "@nitrots/nitro-renderer";
 
-interface OpponentStats {
-    health: number;
-    maxHealth: number;
-    energy: number;
-    maxEnergy: number;
-    hunger: number;
-    maxHunger: number;
-    aggression: number;
-    username: string;
-    figure: string;
-    xpPercent: number;
-    level: number;
-    healthPercent: number;
-    energyPercent: number;
-    hungerPercent: number;
-}
 
 export const StatsBar: FC = () => {
-    const [OpponentStats, setOpponentStats] = useState<OpponentStats | null>(
+    const [OpponentStats, setOpponentStats] = useState< | null>(
         null
     );
 
@@ -188,21 +172,7 @@ export const StatsBar: FC = () => {
         return () =>
             window.removeEventListener("user_stats_update", handleStatsUpdate);
     }, []);
-    useEffect(() => {
-        const handleInspectStats = (event: Event) => {
-            const customEvent = event as CustomEvent<OpponentStats>;
 
-            // 👇 Only update opponent stats, do NOT touch main stats
-            setOpponentStats(customEvent.detail);
-        };
-
-        window.addEventListener("user_inspect_stats", handleInspectStats);
-        return () =>
-            window.removeEventListener(
-                "user_inspect_stats",
-                handleInspectStats
-            );
-    }, []);
 
     useEffect(() => {
         const handler = (e: CustomEvent) => {

@@ -10,7 +10,6 @@ import { LeftSidebarView } from "../roleplay/LeftSideBarView";
 import { RoomSpectatorView } from "./spectator/RoomSpectatorView";
 import { RoomWidgetsView } from "./widgets/RoomWidgetsView";
 import ZeusStatsBar from "../roleplay/ZeusStatsBar";
-import { OpponentStatsBar } from "../roleplay/OpponentStatsBar";
 import StatsBar from "../roleplay/StatsBar";
 import { PoliceCallView } from "../roleplay/PoliceCallView";
 import { GatheringProgressBar } from "../roleplay/GatheringProgressBar";
