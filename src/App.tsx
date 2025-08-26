@@ -40,7 +40,7 @@ import { PoliceCallView } from "./components/roleplay/PoliceCallView";
 import { Stats } from "fs";
 import BlackjackView from "./components/roleplay/BlackJackView";
 import MarketplaceView from "./components/roleplay/MarketplaceView";
-import { OpponentStatsOverlay } from "./components/roleplay/OpponentStatsOverlay";
+import OpponentStatsOverlay from "./components/roleplay/OpponentStatsOverlay";
 
 NitroVersion.UI_VERSION = GetUIVersion();
 
