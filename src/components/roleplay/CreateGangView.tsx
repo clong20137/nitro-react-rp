@@ -40,6 +40,7 @@ const ICON_OPTIONS: IconOpt[] = [
     { name: "Golden Crown", src: "/icons/badges/FRH44.gif" },
     { name: "Cowboy Hat", src: "/icons/badges/US515.gif" },
     { name: "Dog", src: "/icons/badges/US484.gif" },
+    { name: "Pink Heart", src: "/icons/badges/DE21H.gif" },
 ];
 
 interface CreateGangViewProps {

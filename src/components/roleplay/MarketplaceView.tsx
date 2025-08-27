@@ -428,7 +428,7 @@ export const MarketplaceView: FC = () => {
     const refresh = () => {
         setLoading(true);
         try {
-           // SendMessageComposer(new MarketplaceRequestMyListingsComposer());
+            // SendMessageComposer(new MarketplaceRequestMyListingsComposer());
         } catch {}
     };
 
@@ -487,9 +487,9 @@ export const MarketplaceView: FC = () => {
 
     const createListing = (price: number, inventoryId: number, qty: number) => {
         try {
-          //  SendMessageComposer(
-               // new MarketplaceCreateListingComposer(price, inventoryId, qty)
-          //  );
+            //  SendMessageComposer(
+            // new MarketplaceCreateListingComposer(price, inventoryId, qty)
+            //  );
         } finally {
             setShowCreate(false);
             setTimeout(refresh, 400);

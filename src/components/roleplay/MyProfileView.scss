@@ -3,43 +3,43 @@
     top: 60px;
     left: 50%;
     transform: translateX(-50%);
-    width: 800px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
-    background: #e0ddd5;
-    color:#000;
+    width: 750px;
+    box-shadow: 0 2px 0 rgba(0,0,0,.45);
+    border:solid 1px #000;
+    background: #eaece7;
+    color: #000;
     z-index: 9999;
-    font-family: 'Verdana', sans-serif;
-    border-radius:8px;
-    color:000;
+    border-radius: 8px;
+    color: 000;
 }
 
 .profile-header {
-    background: linear-gradient(180deg, #2E3546 0, #2E3546, 50%, #1e2433 50%, #1e2433);
+    background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
     color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 8px 12px;
     font-weight: bold;
-    font-size: 16px;
-    border-radius:8px 8px 0px 0px;
+    font-size: 20px;
+    border-radius: 8px 8px 0px 0px;
 }
 
 .close-btn {
     background: none;
     border: none;
     color: white;
-    background-color: #de1f1f;
-   
-    font-size: 18px;
+    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
+    font-size: 20px;
     cursor: pointer;
-    border-radius:5px;
-    transition:0.5s;
-    border:solid 2px #FFF;
+    border-radius: 5px;
+    transition: 0.5s;
+    border: solid 2px #FFF;
 }
+
 .close-btn:hover {
-    background-color: #e93131;
-    transition:0.5s;
+    background: repeating-linear-gradient(#f55749, #f55749 50%, #d33a32 0, #d33a32);
+    transition: 0.5s;
 }
 
 .profile-body {
@@ -49,14 +49,15 @@
 
 }
 
-.profile-left, .profile-right {
+.profile-left,
+.profile-right {
     flex: 1;
 }
 
 .avatar-section {
-    padding:1vw;
-    background-color:#d8d5cc;
-    border-radius:8px;
+    padding: 1vw;
+    background-color: #e2dcc0;
+    border-radius: 8px;
 
 }
 
@@ -75,14 +76,160 @@
     color: #555;
 }
 
+.profile-left .avatar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+
+    .avatar-frame {
+        position: relative;
+        padding: 4px;
+        border-radius: 8px;
+
+        .profile-avatar {
+            display: block;
+            width: 86px;
+            height: 110px;
+            image-rendering: pixelated;
+            background: #fff;
+            border-radius: 6px;
+        }
+
+        .gang-badge {
+            position: absolute;
+            right: -6px;
+            bottom: -6px;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: #fff;
+        }
+    }
+
+    .username {
+        font-weight: 700;
+    }
+
+    .motto {
+        font-style: italic;
+        color: #666;
+        font-size: 12px;
+        text-align: center;
+        max-width: 160px;
+    }
+}
+
+.info-section {
+    display: grid;
+    gap: 6px;
+}
+
+.work-status {
+    font-weight: 700;
+    text-align: center;
+
+    &.green {
+        color: #27ae60;
+    }
+
+    &.red {
+        color: #c0392b;
+    }
+}
+
+.corp-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: #f6f7fb;
+    border: 1px solid #e5e7f0;
+    border-radius: 6px;
+    padding:10px;
+    margin:10px;
+
+    img {
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+    }
+
+    .corp-lines {
+        line-height: 1.1;
+
+        .corp-title {
+            font-weight: 700;
+        }
+
+        .corp-sub {
+            font-size: 12px;
+            color: #666;
+        }
+    }
+}
+
+.gang-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding:10px;
+
+    img {
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+    }
+
+    .muted {
+        color: #888;
+    }
+}
+
+.skill-bar-wrapper {
+    background: #e9edf3;
+    height: 20px;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.skill-bar-fill {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #fff;
+}
+
+.upgrade-btn {
+    margin-left: 6px;
+    width: 24px;
+    height: 24px;
+    font-weight: 700;
+}
+
+.xp-bar {
+    background: #f3f3f3;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+
+    .xp-fill {
+        height: 100%;
+        background: linear-gradient(180deg,#0154aa,#0154aa 50%,#024b7c 0,#024b7c);
+    }
+}
+
+
 .info-section {
     margin-top: 10px;
     font-size: 13px;
     display: flex;
     flex-direction: column;
     gap: 4px;
-    background-color:#d8d5cc;
-    border-radius:8px;
+    background-color: #e1dcbf;
+    border-radius: 8px;
 }
 
 .work-status.red {
@@ -91,6 +238,9 @@
 
 .level-xp {
     font-size: 14px;
+    background: #e1dcbf;
+    border-radius:8px;
+    padding:8px;
 }
 
 .xp-bar {
@@ -98,20 +248,24 @@
     height: 20px;
     margin: 6px 0;
     position: relative;
-    border-radius:2px;
+    border-radius: 2px;
 
 }
 
 .xp-fill {
     height: 100%;
-    background: linear-gradient(180deg, #2E3546 0, #2E3546, 50%, #1e2433 50%, #1e2433);
-    border-radius:2px;
+    background: linear-gradient(180deg,#bd9426,#bd9426 50%,#cdb267 0,#cdb267);
+    border-radius: 2px;
 }
 
 .skills {
     margin-top: 10px;
-    font-size: 13px;
+    font-size: 14px;
+    padding:8px;
+    background:#dfdcc3;
+    border-radius:8px;
 }
+
 .skill-row {
     display: flex;
     align-items: center;
@@ -128,20 +282,20 @@
 .skill-bar-wrapper {
     position: relative;
     flex: 1;
-    height: 20px;
+    height: 24px;
     background-color: #d8d5cb;
     border-radius: 2px;
     overflow: hidden;
 }
 
 .skill-bar-fill {
-    background: linear-gradient(180deg, #2E3546 0, #2E3546, 50%, #1e2433 50%, #1e2433);
+    background: linear-gradient(180deg,#bd9426,#bd9426 50%,#cdb267 0,#cdb267);
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: width 0.3s ease;
-    border-radius:2px;
+    border-radius: 2px;
 }
 
 .skill-bar-text {
@@ -150,16 +304,19 @@
     color: #fff;
     pointer-events: none;
 }
+
 .points-left {
-    background-color: #1A7AEB;
-    padding:3px;
-    width:110px;
-    margin-top:10px;
-    border-radius:5px;
+    background-color: #eaece7;
+    text-align: center;
+    padding: 5px;
+    font-weight: 700;
+    width: 110px;
+    margin-top: 10px;
+    border-radius: 5px;
 }
 
 .upgrade-btn {
-    background-color: #40e459;
+    background-color: linear-gradient(180deg, #0154aa, #0154aa 50%, #024b7c 0, #024b7c);
     color: #fff;
     font-weight: bold;
     border: none;
@@ -170,16 +327,18 @@
 }
 
 .upgrade-btn:hover {
-    background-color: #22a44a;
+    background-color: linear-gradient(180deg, #0b63c1, #0b63c1 50%, #0a5a90 0, #0a5a90);
 }
+
 .stat-badge {
-    background-color:#d8d5cb;
-    border-radius:5px;
-    padding:3px;
-    font-size:12px;
-    font-weight:600;
-    color:#000;
+    background-color: #e1dcbf;
+    border-radius: 5px;
+    padding: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #000;
 }
+
 .upgrade-btn {
     background: #3c9e4d;
     color: white;
@@ -196,4 +355,143 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 4px;
+}
+
+/* Avatar frame with gang and status */
+.avatar-frame {
+    position: relative;
+    padding: 4px;
+    border-radius: 8px;
+
+    .profile-avatar {
+        display: block;
+        width: 86px;
+        height: 110px;
+        image-rendering: pixelated;
+        background: #fff;
+        border-radius: 6px;
+    }
+
+    .avatar-section .avatar-block {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        /* avatar | gang card */
+        align-items: start;
+        gap: 10px;
+    }
+
+    /* Reuse your existing .profile-left .avatar-section .avatar-frame rules;
+we only add the presence-badge placement. */
+    .profile-left .avatar-section .avatar-frame {
+        position: relative;
+
+        .presence-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 32px;
+            height: 16px;
+            image-rendering: pixelated;
+        }
+    }
+
+    /* Compact card that sits to the right of the avatar */
+    .gang-card {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        background: #d8d5cc;
+        /* matches your info-section tone */
+        border-radius: 8px;
+        padding: 8px;
+        min-width: 120px;
+    }
+
+    .gang-title-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .gang-name {
+            font-weight: 700;
+        }
+
+        .gang-id {
+            font-size: 12px;
+            color: #666;
+        }
+    }
+
+    .gang-swatches {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .swatch {
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+        }
+    }
+
+    /* Optional: make left column slightly tighter on small widths */
+    @media (max-width: 860px) {
+        .avatar-section .avatar-block {
+            grid-template-columns: 86px 1fr;
+            /* avatar width + gang card */
+        }
+    }
+
+
+    /* Online/offline badge */
+    .status-badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        width: 28px;
+        height: 14px;
+        background-size: cover;
+        background-repeat: no-repeat;
+
+        &.online {
+            //background-image: url('../../icons/user_online.png');
+            background-image: url('../../icons/user_online.gif');
+            //background: green;
+            //border-radius:50%;
+        }
+
+        &.offline {
+            // background-image: url('../../icons/user_offline.png');
+            background-image: url('../../icons/user_offline.gif');
+            // background: red;
+            // border-radius:50%;
+        }
+    }
+
+    /* Gang colors beside avatar */
+    .gang-colors {
+        position: absolute;
+        left: 100%;
+        /* right side of avatar */
+        top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-left: 8px;
+
+        .color-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border: 1px solid #000;
+        }
+
+        .gang-name {
+            margin-top: 6px;
+            font-weight: 700;
+            font-size: 12px;
+            text-align: center;
+        }
+    }
 }

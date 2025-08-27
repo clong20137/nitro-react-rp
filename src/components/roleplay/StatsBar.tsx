@@ -3,84 +3,92 @@ import { GetSessionDataManager } from "../../api";
 import "./StatsBar.scss";
 import { XPGainPopup } from "./XPGainPopup";
 import { MyProfileView } from "./MyProfileView";
-import { setDefaultResultOrder } from "dns";
-import {
-    AvatarImage,
-    SetTargetedOfferStateComposer,
-} from "@nitrots/nitro-renderer";
 import { StartWorkComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/StartWorkComposer";
 import { SendMessageComposer } from "../../api";
 import { CallPoliceComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CallPoliceComposer";
 import { PassiveModeComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PassiveModeComposer";
-import { UpdateWorkStatusEvent } from "@nitrots/nitro-renderer/src/nitro/communication/messages/incoming/roleplay/UpdateWorkStatusEvent";
-import { Nitro } from "@nitrots/nitro-renderer";
-import { NitroEvent } from "@nitrots/nitro-renderer";
-
 
 export const StatsBar: FC = () => {
-    const [OpponentStats, setOpponentStats] = useState< | null>(
-        null
-    );
+    const [OpponentStats, setOpponentStats] = useState<any | null>(null);
 
-    // End //
-    
-    const [health, setHealth] = useState<number>(0);
-    const [maxHealth, setMaxHealth] = useState<number>(100);
+    const [health, setHealth] = useState(0);
+    const [maxHealth, setMaxHealth] = useState(100);
     const [passive, setPassive] = useState(false);
 
-    const [energy, setEnergy] = useState<number>(0);
-    const [maxEnergy, setMaxEnergy] = useState<number>(100);
+    const [energy, setEnergy] = useState(0);
+    const [maxEnergy, setMaxEnergy] = useState(100);
 
-    const [hunger, setHunger] = useState<number>(0);
-    const [maxHunger, setMaxHunger] = useState<number>(100);
+    const [hunger, setHunger] = useState(0);
+    const [maxHunger, setMaxHunger] = useState(100);
 
-    const [aggression, setAggression] = useState<number>(0);
-    const [strength, setStrength] = useState<number>(0);
-    const [stamina, setStaminaLevel] = useState<number>(0);
-    const [hunger_level, setHungerLevel] = useState<number>(0);
-    const [gathering, setGatheringLevel] = useState<number>(0);
+    const [aggression, setAggression] = useState(0);
+    const [strength, setStrength] = useState(0);
+    const [stamina, setStaminaLevel] = useState(0);
+    const [hunger_level, setHungerLevel] = useState(0);
+    const [gathering, setGatheringLevel] = useState(0);
     const figure = GetSessionDataManager().figure;
     const username = GetSessionDataManager().userName;
-    const [isAggressive, setAggressive] = useState<boolean>(false);
+    const [isAggressive, setAggressive] = useState(false);
+
+    // —— gang + corp/profile meta we’ll pass to <MyProfileView> ——
     const [gangName, setGangName] = useState<string>();
+    const [gangId, setGangId] = useState<number | undefined>(undefined);
+    const [gangIconKey, setGangIconKey] = useState<string | undefined>(
+        undefined
+    );
+    const [gangPrimaryColor, setGangPrimaryColor] = useState<
+        string | undefined
+    >(undefined);
+    const [gangSecondaryColor, setGangSecondaryColor] = useState<
+        string | undefined
+    >(undefined);
+
+    const [jobTitle, setJobTitle] = useState<string | undefined>(undefined);
+    const [corporationName, setCorporationName] = useState<string | undefined>(
+        undefined
+    );
+    const [corporationIconUrl, setCorporationIconUrl] = useState<
+        string | undefined
+    >(undefined);
+    const [motto, setMotto] = useState<string | undefined>(undefined);
+    const [isOnline, setIsOnline] = useState<boolean>(true);
 
     const [showCallPoliceInput, setShowCallPoliceInput] = useState(false);
     const [callPoliceMessage, setCallPoliceMessage] = useState("");
 
     const aggressionSeconds = aggression / 1000;
     const aggressionPercent = Math.min((aggressionSeconds / 30) * 100, 100);
+
     const [isWorking, setIsWorking] = useState(false);
-    const [xp, setXp] = useState<number>(0);
-    const [maxXP, setMaxXP] = useState<number>(100);
-    const [level, setLevel] = useState<number>(0);
-    const [points, setPoints] = useState<number>(0);
-    const [defense, setDefense] = useState<number>(0);
-    const [punches_thrown, setPunchesThrown] = useState<number>(0);
-    const [punches_landed, setPunchesLanded] = useState<number>(0);
-    const [damage_inflicted, setDamageInflicted] = useState<number>(0);
-    const [damage_received, setDamageReceived] = useState<number>(0);
-    const [shifts_worked, setShiftsWorked] = useState<number>(0);
-    const [kills, setKills] = useState<number>(0);
-    const [deaths, setDeaths] = useState<number>(0);
-    const [arrests, setArrests] = useState<number>(0);
+    const [working, setWorking] = useState(false);
+
+    const [xp, setXp] = useState(0);
+    const [maxXP, setMaxXP] = useState(100);
+    const [level, setLevel] = useState(0);
+    const [points, setPoints] = useState(0);
+    const [defense, setDefense] = useState(0);
+    const [punches_thrown, setPunchesThrown] = useState(0);
+    const [punches_landed, setPunchesLanded] = useState(0);
+    const [damage_inflicted, setDamageInflicted] = useState(0);
+    const [damage_received, setDamageReceived] = useState(0);
+    const [shifts_worked, setShiftsWorked] = useState(0);
+    const [kills, setKills] = useState(0);
+    const [deaths, setDeaths] = useState(0);
+    const [arrests, setArrests] = useState(0);
     const [lastXp, setLastXp] = useState(xp);
     const [xpGained, setXpGained] = useState<number | null>(null);
     const [showXPTooltip, setShowXPTooltip] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
-    const [healthlevel, setHealthLevel] = useState<number>(0);
+    const [healthlevel, setHealthLevel] = useState(0);
     const [cooldown, setCooldown] = useState(0);
     const [showCallInput, setShowCallInput] = useState(false);
     const [callMessage, setCallMessage] = useState("");
 
-    const handleCloseOpponentStats = () => {
-        setOpponentStats(null); // or however you're hiding it
-    };
-
     const togglePassive = () => {
         setPassive((prev) => {
-            const newState = !prev;
-            SendMessageComposer(new PassiveModeComposer(newState));
-            return newState;
+            const next = !prev;
+            SendMessageComposer(new PassiveModeComposer(next));
+            return next;
         });
     };
 
@@ -90,9 +98,7 @@ export const StatsBar: FC = () => {
             setTimeout(() => setXpGained(null), 1500);
         }
         setLastXp(xp);
-    }, [xp]);
-
-    const [working, setWorking] = useState(false);
+    }, [xp, lastXp]);
 
     const toggleWork = () => {
         SendMessageComposer(new StartWorkComposer(!working));
@@ -134,17 +140,12 @@ export const StatsBar: FC = () => {
 
             const stats = customEvent.detail;
 
-            console.log("[📥] Stats received in listener:", stats);
-
             setHealth(stats.health);
             setMaxHealth(stats.maxHealth);
-
             setEnergy(stats.energy);
             setMaxEnergy(stats.maxEnergy);
-
             setHunger(stats.hunger);
             setMaxHunger(stats.maxHunger);
-
             setAggression(stats.aggression);
             setXp(stats.xp);
             setMaxXP(stats.maxXP);
@@ -165,7 +166,7 @@ export const StatsBar: FC = () => {
             setArrests(stats.arrests);
             setHealthLevel(stats.healthlevel);
             setAggressive(stats.isAggressive);
-            setWorking(stats.working);
+            setIsWorking(stats.working);
             setGangName(stats.gangName);
         };
         window.addEventListener("user_stats_update", handleStatsUpdate);
@@ -173,68 +174,92 @@ export const StatsBar: FC = () => {
             window.removeEventListener("user_stats_update", handleStatsUpdate);
     }, []);
 
-
+    // —— NEW: listen once for gang colors/icon/id (same event your Gangs UI fires) ——
     useEffect(() => {
-        const handler = (e: CustomEvent) => {
-            const isWorking = e.detail?.isWorking;
-            setIsWorking(isWorking); // update your button label
+        const onGangStatus = (ev: any) => {
+            const d = ev?.detail || {};
+            if (typeof d.gangName === "string") setGangName(d.gangName);
+            if (typeof d.gangId === "number") setGangId(d.gangId);
+
+            const norm = (v?: string) =>
+                !v
+                    ? undefined
+                    : v.startsWith("#")
+                    ? v.toUpperCase()
+                    : `#${String(v).toUpperCase()}`;
+
+            setGangPrimaryColor(norm(d.primaryColor));
+            setGangSecondaryColor(norm(d.secondaryColor));
+
+            let key = (d.iconKey ?? d.icon ?? "").toString().trim();
+            if (!key && typeof d.iconUrl === "string") {
+                const m = d.iconUrl.match(/\/([A-Z0-9]+)\.(gif|png)$/i);
+                if (m) key = m[1];
+            }
+            if (key) setGangIconKey(key.toUpperCase());
         };
-
-        window.addEventListener("work_status_update", handler as EventListener);
-
+        window.addEventListener("gang_status_result", onGangStatus);
         return () =>
-            window.removeEventListener(
-                "work_status_update",
-                handler as EventListener
-            );
+            window.removeEventListener("gang_status_result", onGangStatus);
     }, []);
-    const percent = (value: number, max: number) => {
-        if (max === 0) return 0;
-        return Math.round((value / max) * 100);
-    };
+
+    // —— NEW: simple meta hook (adjust names to your real event/fields) ——
+    useEffect(() => {
+        const onProfileMeta = (ev: any) => {
+            const d = ev?.detail || {};
+            if (typeof d.motto === "string") setMotto(d.motto);
+            if (typeof d.jobTitle === "string") setJobTitle(d.jobTitle);
+            if (typeof d.corporationName === "string")
+                setCorporationName(d.corporationName);
+            if (typeof d.corporationIconUrl === "string")
+                setCorporationIconUrl(d.corporationIconUrl);
+            if (typeof d.isOnline === "boolean") setIsOnline(d.isOnline);
+        };
+        // use whatever your server fires; these are safe listeners
+        window.addEventListener("user_profile_meta", onProfileMeta);
+        window.addEventListener("job_status_result", onProfileMeta);
+        return () => {
+            window.removeEventListener("user_profile_meta", onProfileMeta);
+            window.removeEventListener("job_status_result", onProfileMeta);
+        };
+    }, []);
+
+    const percent = (value: number, max: number) =>
+        max === 0 ? 0 : Math.round((value / max) * 100);
 
     useEffect(() => {
-        const handleOpponentStatsUpdate = (event: CustomEvent) => {
-            const data = event.detail;
-            setOpponentStats(data);
-        };
-
+        const handleOpponentStatsUpdate = (event: CustomEvent) =>
+            setOpponentStats(event.detail);
         window.addEventListener(
             "user_inspect_stats",
             handleOpponentStatsUpdate as EventListener
         );
-
-        return () => {
+        return () =>
             window.removeEventListener(
                 "user_inspect_stats",
                 handleOpponentStatsUpdate as EventListener
             );
-        };
     }, []);
+
     useEffect(() => {
         if (cooldown > 0) {
             const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
             return () => clearTimeout(timer);
         }
     }, [cooldown]);
+
     const triggerPoliceCall = () => {
         if (cooldown > 0 || !callMessage.trim()) return;
 
-        const username = GetSessionDataManager().userName;
-        const avatar = GetSessionDataManager().figure;
+        const u = GetSessionDataManager().userName;
+        const a = GetSessionDataManager().figure;
 
-        // Send packet to server
-        SendMessageComposer(
-            new CallPoliceComposer(username, avatar, callMessage.trim())
-        );
-
-        // Optional: Optimistically update local feed (if desired)
-        // addLiveFeedMessage({ id: Date.now(), username, figure: avatar, text: '[911] ' + callMessage, isPoliceCall: true });
-
+        SendMessageComposer(new CallPoliceComposer(u, a, callMessage.trim()));
         setCallMessage("");
         setShowCallInput(false);
         setCooldown(30);
     };
+
     return (
         <div className="stats-bar-container">
             <div className="stats-left">
@@ -248,6 +273,7 @@ export const StatsBar: FC = () => {
                     />
                     {xpGained && <XPGainPopup amount={xpGained} />}
                 </div>
+
                 <div className="greek-circle">
                     <div className="greek-xp-ring">
                         <svg className="xp-ring-svg" viewBox="0 0 36 36">
@@ -264,10 +290,7 @@ export const StatsBar: FC = () => {
 
                         <div
                             className="avatar-tooltip-wrapper"
-                            onClick={() => {
-                                console.log("Avatar clicked");
-                                setShowProfile((prev) => !prev);
-                            }}
+                            onClick={() => setShowProfile((p) => !p)}
                             onMouseEnter={() => setShowXPTooltip(true)}
                             onMouseLeave={() => setShowXPTooltip(false)}
                         >
@@ -283,9 +306,10 @@ export const StatsBar: FC = () => {
                             )}
                         </div>
 
-                        <div className="level-badge">5</div>
+                        <div className="level-badge">{level}</div>
                     </div>
                 </div>
+
                 <div className="avatar-name-wrapper">
                     <div className="avatar-name">{username}</div>
                     <div className="avatar-level">Level: {level}</div>
@@ -332,116 +356,47 @@ export const StatsBar: FC = () => {
                         style={{ width: `${aggressionPercent}%` }}
                     />
                 </div>
-                <div className="work-toggle-wrapper">
-                    <button
-                        className={`work-toggle-btn ${
-                            isWorking ? "stop" : "start"
-                        }`}
-                        onClick={toggleWork}
-                        disabled={isAggressive}
-                    >
-                        {working ? "CLOCK OUT" : "CLOCK IN"}
-                    </button>
-                    <button
-                        className={`work-toggle-btn ${
-                            passive ? "Aggressive" : "Passive"
-                        }`}
-                        onClick={togglePassive}
-                    >
-                        {passive ? "Passive" : "Aggressive"}
-                    </button>
-                    <div style={{ position: "relative" }}>
-                        <div className="call-police-wrapper">
-                            <button
-                                className={`habbo-action-button red ${
-                                    cooldown > 0 ? "disabled" : ""
-                                }`}
-                                onClick={() => setShowCallInput(!showCallInput)}
-                                disabled={cooldown > 0}
-                            >
-                                {cooldown > 0 ? (
-                                    <div className="cooldown-circle">
-                                        <svg
-                                            viewBox="0 0 36 36"
-                                            className="cooldown-svg"
-                                        >
-                                            <path
-                                                className="circle-bg"
-                                                d="M18 2.0845
-a 15.9155 15.9155 0 0 1 0 31.831
-a 15.9155 15.9155 0 0 1 0 -31.831"
-                                            />
-                                            <path
-                                                className="circle-progress"
-                                                strokeDasharray={`${
-                                                    (cooldown / 30) * 100
-                                                }, 100`}
-                                                d="M18 2.0845
-a 15.9155 15.9155 0 0 1 0 31.831
-a 15.9155 15.9155 0 0 1 0 -31.831"
-                                            />
-                                        </svg>
-                                        <span className="cooldown-text">
-                                            {cooldown}
-                                        </span>
-                                    </div>
-                                ) : (
-                                    "Call Police"
-                                )}
-                            </button>
-                        </div>
 
-                        {showCallInput && cooldown === 0 && (
-                            <div className="call-police-input-box">
-                                <div className="arrow-up" />
-                                <textarea
-                                    maxLength={200}
-                                    placeholder="What's your emergency?"
-                                    value={callMessage}
-                                    onChange={(e) =>
-                                        setCallMessage(e.target.value)
-                                    }
-                                />
-                                <button
-                                    onClick={triggerPoliceCall}
-                                    className="habbo-action-button green"
-                                >
-                                    Send Call
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                
             </div>
+
             {showProfile && (
                 <MyProfileView
                     onClose={() => setShowProfile(false)}
+                    isOnline={isOnline}
                     stats={{
-                        kills: kills,
-                        deaths: deaths,
+                        kills,
+                        deaths,
                         punches: punches_thrown,
                         damageGiven: damage_inflicted,
                         damageReceived: damage_received,
-                        strength: strength,
-                        stamina: stamina,
+                        strength,
+                        stamina,
                         energy: 2,
                         hunger: 0,
-                        xp: xp,
-                        maxXP: maxXP,
-                        level: level,
-                        points: points,
-                        defense: defense,
-                        hunger_level: hunger_level,
-                        gathering: gathering,
-                        username: username,
-                        figure: figure,
-                        healthlevel: healthlevel,
-                        gangName: gangName,
+                        xp,
+                        maxXP,
+                        level,
+                        points,
+                        defense,
+                        hungerLevel: hunger_level,
+                        gathering,
+                        username,
+                        figure,
+                        healthlevel,
+                        // NEW — pass these so profile doesn’t default to black
+                        gangName,
+                        gangId,
+                        gangIconKey: gangIconKey,
+                        gangPrimaryColor,
+                        gangSecondaryColor,
+                        motto,
+                        jobTitle,
+                        corporationName,
+                        corporationIconUrl,
+                        isOnline,
                     }}
-                    onUpgrade={(stat) => {
-                        console.log("Upgrade stat:", stat);
-                        // Send a packet or trigger backend logic
-                    }}
+                    onUpgrade={(stat) => console.log("Upgrade stat:", stat)}
                 />
             )}
         </div>
