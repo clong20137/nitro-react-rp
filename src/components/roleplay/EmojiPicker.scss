@@ -1,0 +1,32 @@
+.emoji-popover {
+    position: absolute;
+    bottom: 44px;
+    /* sits above the chat bar */
+    right: 8px;
+    width: 260px;
+    max-height: 220px;
+    padding: 6px;
+    border-radius: 8px;
+    background: rgba(30, 32, 38, 0.95);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+    overflow: auto;
+    z-index: 1000;
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 6px;
+}
+
+.emoji-btn {
+    font-size: 20px;
+    line-height: 1;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.emoji-btn:hover {
+    background: rgba(255, 255, 255, .08);
+}

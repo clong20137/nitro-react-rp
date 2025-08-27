@@ -57,9 +57,9 @@ export const GatheringProgressBar = () => {
     if (!visible) return null;
 
     return (
-        <div className="gathering-bar-vertical-wrapper">
+        <div className="gathering-bar-horizontal-wrapper">
             <div
-                className="gathering-bar-vertical"
+                className="gathering-bar-horizontal"
                 style={{ height: `${progress}%` }}
             />
         </div>

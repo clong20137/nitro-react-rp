@@ -51,7 +51,7 @@ export const ItemOfferPopupView: FC<Props> = ({ data, onAccept, onDeny }) => {
                     </div>
                 </div>
                 <div className="item-offer-buttons">
-                    <button className="habbo-action-button green" onClick={handleAccept}>Accept</button>
+                    <button className="habbo-action-button gold" onClick={handleAccept}>Accept</button>
                     <button className="habbo-action-button red" onClick={handleDeny}>Deny</button>
                 </div>
             </div>

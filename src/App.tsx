@@ -18,7 +18,13 @@ import {
     GetNitroInstance,
     GetUIVersion,
 } from "./api";
-import { Base, TransitionAnimation, TransitionAnimationTypes } from "./common";
+import {
+    Base,
+    TransitionAnimation,
+    TransitionAnimationTypes,
+    LayoutProgressBar,
+    Text,
+} from "./common";
 import { LoadingView } from "./components/loading/LoadingView";
 import { MainView } from "./components/main/MainView";
 
@@ -50,6 +56,10 @@ export const App: FC<{}> = (props) => {
     const [message, setMessage] = useState("Getting Ready");
     const [percent, setPercent] = useState(0);
     const [imageRendering, setImageRendering] = useState<boolean>(true);
+
+    /* NEW: in-client disconnect overlay state */
+    const [dcVisible, setDcVisible] = useState(false);
+    const [dcSeconds, setDcSeconds] = useState(15);
 
     if (!GetNitroInstance()) {
         //@ts-ignore
@@ -105,6 +115,9 @@ export const App: FC<{}> = (props) => {
             case NitroCommunicationDemoEvent.CONNECTION_ERROR:
                 setIsError(true);
                 setMessage("Connection Error");
+                /* show the in-client disconnect overlay */
+                setDcVisible(true);
+                setDcSeconds(15);
                 return;
             case NitroCommunicationDemoEvent.CONNECTION_CLOSED:
                 //if(GetNitroInstance().roomEngine) GetNitroInstance().roomEngine.dispose();
@@ -112,6 +125,10 @@ export const App: FC<{}> = (props) => {
                 setMessage("Connection Error");
 
                 HabboWebTools.send(-1, "client.init.handshake.fail");
+
+                /* show the in-client disconnect overlay */
+                setDcVisible(true);
+                setDcSeconds(15);
                 return;
             case RoomEngineEvent.ENGINE_INITIALIZED:
                 setPercent((prevValue) => prevValue + 20);
@@ -164,9 +181,11 @@ export const App: FC<{}> = (props) => {
     useLocalizationEvent(NitroLocalizationEvent.LOADED, handler);
     useConfigurationEvent(ConfigurationEvent.LOADED, handler);
     useConfigurationEvent(ConfigurationEvent.FAILED, handler);
+
     useEffect(() => {
         initEventBridge();
     }, []);
+
     useEffect(() => {
         if (!WebGL.isWebGLAvailable()) {
             DispatchUiEvent(new NitroEvent(Nitro.WEBGL_UNAVAILABLE));
@@ -185,6 +204,21 @@ export const App: FC<{}> = (props) => {
             window.removeEventListener("resize", resize);
         };
     }, []);
+
+    /* NEW: countdown driver for the disconnect overlay */
+    useEffect(() => {
+        if (!dcVisible) return;
+
+        if (dcSeconds <= 0) {
+            window.location.reload();
+            return;
+        }
+
+        const id = setTimeout(() => setDcSeconds((s) => s - 1), 1000);
+        return () => clearTimeout(id);
+    }, [dcVisible, dcSeconds]);
+
+    const reloadNow = () => window.location.reload();
 
     return (
         <PreloadProvider>
@@ -206,17 +240,89 @@ export const App: FC<{}> = (props) => {
                 >
                     <MainView />
                 </TransitionAnimation>
-
                 <Base id="draggable-windows-container" />
                 {isReady && <StatsBar></StatsBar>}
                 <OpponentStatsOverlay></OpponentStatsOverlay>
-                <LiveFeed></LiveFeed> /
-                <BlackjackView></BlackjackView>
+                <LiveFeed></LiveFeed> /<BlackjackView></BlackjackView>
                 <MarketplaceView></MarketplaceView>
-             
                 <PoliceCallView
                     onTaxi={() => console.log("Taxi to caller room")}
                 />
+                {/* NEW: In-client disconnect overlay (no Blade dependency) */}
+                {dcVisible && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            inset: 0,
+                            zIndex: 99999,
+                            display: "grid",
+                            placeItems: "center",
+                            background: "rgba(0,0,0,.55)",
+                            backdropFilter: "blur(2px)",
+                        }}
+                    >
+                        <div
+                            style={{
+                                width: "min(640px, 80vw)",
+                                padding: "18px 20px",
+                                borderRadius: 10,
+                                background:
+                                    "linear-gradient(180deg, rgba(20,24,36,.6), rgba(20,24,36,.35))",
+                                border: "2px solid rgba(138,107,46,.9)",
+                                boxShadow:
+                                    "0 8px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06)",
+                                textAlign: "center",
+                                color: "#fff",
+                            }}
+                        >
+                            <div
+                                style={{
+                                    marginBottom: 8,
+                                    fontSize: 18,
+                                    fontWeight: 700,
+                                }}
+                            >
+                                Whoops! It seems like you have been
+                                disconnected…
+                            </div>
+
+                            <Text variant="white">
+                                Reloading in {dcSeconds}s
+                            </Text>
+
+                            {/* Use the same gold loader styling by reusing your class */}
+                            <LayoutProgressBar
+                                progress={((15 - dcSeconds) / 15) * 100}
+                                className="mt-2 large oly-progress"
+                            />
+
+                            <div
+                                style={{
+                                    marginTop: 12,
+                                    display: "flex",
+                                    gap: 8,
+                                    justifyContent: "center",
+                                }}
+                            >
+                                <button
+                                    onClick={reloadNow}
+                                    style={{
+                                        padding: "8px 14px",
+                                        fontWeight: 700,
+                                        borderRadius: 6,
+                                        border: "none",
+                                        cursor: "pointer",
+                                        background:
+                                            "linear-gradient(180deg,#bd9426,#bd9426 50%,#cdb267 0,#cdb267)",
+                                        color: "#111",
+                                    }}
+                                >
+                                    Reload now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </Base>
         </PreloadProvider>
     );

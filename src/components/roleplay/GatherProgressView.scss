@@ -1,18 +1,18 @@
-.gathering-bar-vertical-wrapper {
-    position: absolute;
-    top: 30px; // align with your StatsBar
-    left: 350px; // shift it to the right of StatsBar
-    width: 12px;
-    height: 145px;
-     background-color: rgb(101, 172, 239);
-    border-radius: 4px;
-    overflow: hidden;
-    z-index: 999;
+.gathering-bar-horizontal-wrapper {
+position: absolute;
+top: 30px; // adjust where you want it
+left: 350px; // adjust to align under your right-side buttons
+height: 12px;
+width: 145px;
+background-color: rgba(32, 33, 37, 0.9); // dark track
+border-radius: 4px;
+overflow: hidden;
+z-index: 999;
 }
 
-.gathering-bar-vertical {
-    width: 100%;
-   
-      background: rgba(32, 33, 37, 0.9);
-    transition: height 0.1s linear;
+.gathering-bar-horizontal {
+height: 100%;
+width: 0%; // start empty
+background: rgb(101, 172, 239); // blue fill
+transition: width 0.1s linear;
 }
