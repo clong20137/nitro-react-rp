@@ -243,7 +243,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
         >
             <div className="profile-header" onMouseDown={startDrag}>
                 <div className="title">Profile</div>
-                <button className="close-btn" onClick={onClose}>
+                <button className="close-button" onClick={onClose}>
                     ✖
                 </button>
             </div>

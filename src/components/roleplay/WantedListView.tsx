@@ -166,7 +166,7 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
                 style={{ cursor: "grab", userSelect: "none" }}
             >
                 <span>Wanted List</span>
-                <button onClick={onClose} className="close-btn">
+                <button onClick={onClose} className="close-button">
                     ✖
                 </button>
             </div>
