@@ -44,14 +44,13 @@
     .emoji-btn {
         width: 28px;
         height: 28px;
-        border-radius: 6px;
-        border: 1px solid #e5e5e5;
         background: #fff;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-
+        border:none;
+        font-size:28px;
         /* keep the grow subtle so it doesn’t hit the border as much */
         transition: transform .12s ease, background-color .12s ease, box-shadow .12s ease;
         transform-origin: center center;
@@ -100,11 +99,11 @@
 }
 
 .emoji-cell {
-    width: 26px;
-    height: 26px;
+    width: 32px;
+    height: 32px;
     border: 1px solid #e3e3e3;
     border-radius: 6px;
-    font-size: 18px;
+    font-size: 24px;
     background: #fff;
     cursor: pointer;
     display: inline-flex;

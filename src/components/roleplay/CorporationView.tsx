@@ -95,10 +95,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
     const rootRef = useRef<HTMLDivElement | null>(null);
     const headerRef = useRef<HTMLDivElement | null>(null);
 
-   
-  
-
-    // helpers
+    // --- helpers --------------------------------------------------------------
     const getCenteredPosition = (size: { w: number; h: number }): Pos => {
         const vw = window.innerWidth,
             vh = window.innerHeight;
@@ -212,7 +209,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
 
         // then request on next tick so we never race the listener
         const t = setTimeout(() => {
-            // Use whichever trigger your app expects. If you have a composer, call it here instead.
+            // If you also use a Composer for this list, call it here instead.
             window.dispatchEvent(new CustomEvent("request_corporations_list"));
         }, 0);
 
@@ -225,6 +222,101 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
             document.removeEventListener(
                 "corporations_list_result",
                 onCorps as EventListener
+            );
+        };
+    }, []);
+
+    // 🔴 LIVE STOCK UPDATES (single + bulk) — IMMEDIATE UI SYNC
+    useEffect(() => {
+        // update helper (keeps identity stable for untouched items)
+        const applyStockPatch = (
+            id: number,
+            patch: { stock?: number; delta?: number }
+        ) => {
+            setCorporations((prev) =>
+                prev.map((c) => {
+                    if (c.id !== id) return c;
+                    const curr = typeof c.stock === "number" ? c.stock : 0;
+                    const next =
+                        typeof patch.stock === "number"
+                            ? patch.stock
+                            : Math.max(0, curr + (patch.delta ?? 0));
+                    if (next === c.stock) return c; // no-op
+                    return { ...c, stock: next };
+                })
+            );
+        };
+
+        const onOne = (ev: Event) => {
+            const d: any = (ev as CustomEvent).detail || {};
+            const corporationId = Number(d.corporationId ?? d.id);
+            if (!corporationId) return;
+            applyStockPatch(corporationId, { stock: d.stock, delta: d.delta });
+        };
+
+        const onBulk = (ev: Event) => {
+            const d: any = (ev as CustomEvent).detail || {};
+            const arr: any[] = Array.isArray(d)
+                ? d
+                : Array.isArray(d.updates)
+                ? d.updates
+                : [];
+            if (!arr.length) return;
+            setCorporations((prev) => {
+                // build quick map for O(1) access
+                const patchMap = new Map<number, number>();
+                for (const row of arr) {
+                    const id = Number(row.id ?? row.corporationId);
+                    if (!id) continue;
+                    const val =
+                        typeof row.stock === "number" ? row.stock : undefined;
+                    if (typeof val === "number") patchMap.set(id, val);
+                }
+                if (!patchMap.size) return prev;
+                let changed = false;
+                const next = prev.map((c) => {
+                    const v = patchMap.get(c.id);
+                    if (typeof v !== "number" || v === c.stock) return c;
+                    changed = true;
+                    return { ...c, stock: v };
+                });
+                return changed ? next : prev;
+            });
+        };
+
+        window.addEventListener(
+            "corporation_stock_update",
+            onOne as EventListener
+        );
+        document.addEventListener(
+            "corporation_stock_update",
+            onOne as EventListener
+        );
+        window.addEventListener(
+            "corporations_stock_bulk",
+            onBulk as EventListener
+        );
+        document.addEventListener(
+            "corporations_stock_bulk",
+            onBulk as EventListener
+        );
+
+        return () => {
+            window.removeEventListener(
+                "corporation_stock_update",
+                onOne as EventListener
+            );
+            document.removeEventListener(
+                "corporation_stock_update",
+                onOne as EventListener
+            );
+            window.removeEventListener(
+                "corporations_stock_bulk",
+                onBulk as EventListener
+            );
+            document.removeEventListener(
+                "corporations_stock_bulk",
+                onBulk as EventListener
             );
         };
     }, []);
@@ -356,6 +448,10 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         } catch {}
         try {
             SendMessageComposer(new GetCorporationRanksComposer(corpId));
+        } catch {}
+        // also refresh corporations list so stock badges stay in sync if server prefers snapshots
+        try {
+            window.dispatchEvent(new CustomEvent("request_corporations_list"));
         } catch {}
     };
 

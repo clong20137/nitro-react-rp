@@ -4,49 +4,48 @@
     left: 50%;
     transform: translateX(-50%);
     width: 750px;
-    box-shadow: 0 2px 0 rgba(0,0,0,.45);
-    border:solid 1px #000;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
+    border: solid 1px #000;
     background: #eaece7;
     color: #000;
     z-index: 9999;
     border-radius: 8px;
-    color: 000;
 }
 
+/* ---------- Header ---------- */
 .profile-header {
     background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
-    color: white;
+    color: #fff;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 8px 12px;
     font-weight: bold;
     font-size: 20px;
-    border-radius: 8px 8px 0px 0px;
+    border-radius: 8px 8px 0 0;
 }
 
-.close-btn {
-    background: none;
-    border: none;
-    color: white;
+.close-btn,
+.close-button {
+    /* alias for your TSX class */
     background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
-    font-size: 20px;
-    cursor: pointer;
+    border: 2px solid #fff;
     border-radius: 5px;
-    transition: 0.5s;
-    border: solid 2px #FFF;
+    font-size: 20px;
+    color: #fff;
+    cursor: pointer;
+    transition: 0.2s;
+
+    &:hover {
+        background: repeating-linear-gradient(#f55749, #f55749 50%, #d33a32 0, #d33a32);
+    }
 }
 
-.close-btn:hover {
-    background: repeating-linear-gradient(#f55749, #f55749 50%, #d33a32 0, #d33a32);
-    transition: 0.5s;
-}
-
+/* ---------- Body layout ---------- */
 .profile-body {
     display: flex;
-    padding: 12px;
     gap: 20px;
-
+    padding: 12px;
 }
 
 .profile-left,
@@ -54,29 +53,12 @@
     flex: 1;
 }
 
+/* ===================== AVATAR / LEFT COLUMN ===================== */
+
 .avatar-section {
     padding: 1vw;
-    background-color: #e2dcc0;
+    background: #e2dcc0;
     border-radius: 8px;
-
-}
-
-.profile-avatar {
-    width: 60px;
-    height: 100px;
-}
-
-.username {
-    font-weight: bold;
-    font-size: 16px;
-}
-
-.status {
-    font-size: 13px;
-    color: #555;
-}
-
-.profile-left .avatar-section {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -94,6 +76,15 @@
             image-rendering: pixelated;
             background: #fff;
             border-radius: 6px;
+        }
+
+        .presence-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 32px;
+            height: 16px;
+            image-rendering: pixelated;
         }
 
         .gang-badge {
@@ -120,9 +111,15 @@
     }
 }
 
+/* card stack under avatar */
 .info-section {
     display: grid;
     gap: 6px;
+    margin-top: 10px;
+    font-size: 13px;
+    background: #e1dcbf;
+    border-radius: 8px;
+    padding: 6px;
 }
 
 .work-status {
@@ -142,12 +139,11 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 8px;
     background: #f6f7fb;
     border: 1px solid #e5e7f0;
     border-radius: 6px;
-    padding:10px;
-    margin:10px;
+    padding: 10px;
+    margin: 10px;
 
     img {
         width: 22px;
@@ -156,8 +152,6 @@
     }
 
     .corp-lines {
-        line-height: 1.1;
-
         .corp-title {
             font-weight: 700;
         }
@@ -169,101 +163,129 @@
     }
 }
 
+/* gang line + split color pill like you asked */
 .gang-line {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding:10px;
-
-    img {
-        width: 18px;
-        height: 18px;
-        border-radius: 4px;
-    }
+    padding: 10px;
 
     .muted {
         color: #888;
     }
-}
 
-.skill-bar-wrapper {
-    background: #e9edf3;
-    height: 20px;
-    border-radius: 6px;
-    overflow: hidden;
-}
+    .gang-color-split-box {
+        position: relative;
+        width: 34px;
+        height: 20px;
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, .25);
+        display: inline-block;
 
-.skill-bar-fill {
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    color: #fff;
-}
+        .color-half {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 50%;
+        }
 
-.upgrade-btn {
-    margin-left: 6px;
-    width: 24px;
-    height: 24px;
-    font-weight: 700;
-}
+        .left {
+            left: 0;
+        }
 
-.xp-bar {
-    background: #f3f3f3;
-    height: 12px;
-    border-radius: 6px;
-    overflow: hidden;
+        .right {
+            right: 0;
+        }
 
-    .xp-fill {
-        height: 100%;
-        background: linear-gradient(180deg,#0154aa,#0154aa 50%,#024b7c 0,#024b7c);
+        .gang-icon {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 16px;
+            height: 16px;
+            image-rendering: pixelated;
+        }
     }
 }
 
+/* ===================== RIGHT COLUMN ===================== */
 
-.info-section {
-    margin-top: 10px;
-    font-size: 13px;
+/* Tabs like the Navigator (centered) */
+.profile-tabs {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    background-color: #e1dcbf;
-    border-radius: 8px;
+    justify-content: center;
+    gap: 6px;
+    margin: 8px 0 0px;
+
+
+    .tab-btn {
+        min-width: 120px;
+        padding: 10px 16px;
+        border: 1px solid #8e7a38;
+        border-bottom: none;
+        background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
+        color: #FFF;
+        font-weight: 700;
+        text-align: center;
+        border-radius: 8px 8px 0 0;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6);
+        cursor: pointer;
+
+        &.active {
+    
+            background:#f1eedb;
+              color: #2b2b2b;
+        }
+    }
 }
 
-.work-status.red {
-    color: red;
+.tab-content {
+    background: #f0ecda;
+    border-radius: 0 8px 8px 8px;
+    padding: 10px;
 }
 
+/* Level & XP */
 .level-xp {
     font-size: 14px;
     background: #e1dcbf;
-    border-radius:8px;
-    padding:8px;
+    border-radius: 8px;
+    padding: 8px;
+
+    .xp-bar {
+        background: #d8d5cc;
+        height: 20px;
+        margin: 6px 0;
+        border-radius: 2px;
+        overflow: hidden;
+
+        .xp-fill {
+            height: 100%;
+            background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
+            border-radius: 2px;
+        }
+    }
+
+    .points-left {
+        background: #eaece7;
+        text-align: center;
+        padding: 5px;
+        font-weight: 700;
+        width: 110px;
+        margin-top: 10px;
+        border-radius: 5px;
+    }
 }
 
-.xp-bar {
-    background: #d8d5cc;
-    height: 20px;
-    margin: 6px 0;
-    position: relative;
-    border-radius: 2px;
-
-}
-
-.xp-fill {
-    height: 100%;
-    background: linear-gradient(180deg,#bd9426,#bd9426 50%,#cdb267 0,#cdb267);
-    border-radius: 2px;
-}
-
+/* Skills */
 .skills {
     margin-top: 10px;
     font-size: 14px;
-    padding:8px;
-    background:#dfdcc3;
-    border-radius:8px;
+    padding: 8px;
+    background: #dfdcc3;
+    border-radius: 8px;
 }
 
 .skill-row {
@@ -275,223 +297,145 @@
 
 .skill-name {
     width: 150px;
-    font-weight: bold;
-    color: #000000;
-}
-
-.skill-bar-wrapper {
-    position: relative;
-    flex: 1;
-    height: 24px;
-    background-color: #d8d5cb;
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.skill-bar-fill {
-    background: linear-gradient(180deg,#bd9426,#bd9426 50%,#cdb267 0,#cdb267);
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: width 0.3s ease;
-    border-radius: 2px;
-}
-
-.skill-bar-text {
-    font-size: 10px;
-    font-weight: bold;
-    color: #fff;
-    pointer-events: none;
-}
-
-.points-left {
-    background-color: #eaece7;
-    text-align: center;
-    padding: 5px;
     font-weight: 700;
-    width: 110px;
-    margin-top: 10px;
-    border-radius: 5px;
-}
-
-.upgrade-btn {
-    background-color: linear-gradient(180deg, #0154aa, #0154aa 50%, #024b7c 0, #024b7c);
-    color: #fff;
-    font-weight: bold;
-    border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.upgrade-btn:hover {
-    background-color: linear-gradient(180deg, #0b63c1, #0b63c1 50%, #0a5a90 0, #0a5a90);
-}
-
-.stat-badge {
-    background-color: #e1dcbf;
-    border-radius: 5px;
-    padding: 3px;
-    font-size: 12px;
-    font-weight: 600;
     color: #000;
 }
 
+.skill-bar-wrapper {
+    flex: 1;
+    height: 24px;
+    background: #d8d5cb;
+    border-radius: 2px;
+    overflow: hidden;
+
+    .skill-bar-fill {
+        background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: width .3s ease;
+        border-radius: 2px;
+
+        .skill-bar-text {
+            font-size: 10px;
+            font-weight: 700;
+            color: #fff;
+        }
+    }
+}
+
 .upgrade-btn {
+    margin-left: 6px;
     background: #3c9e4d;
-    color: white;
+    color: #fff;
     border: none;
     border-radius: 4px;
     padding: 2px 6px;
+    font-weight: 700;
     cursor: pointer;
-    font-weight: bold;
 }
 
+/* Totals */
 .stats-breakdown {
     margin-top: 15px;
     font-size: 13px;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 4px;
+
+    .stat-badge {
+        background: #e1dcbf;
+        border-radius: 5px;
+        padding: 3px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #000;
+    }
 }
 
-/* Avatar frame with gang and status */
-.avatar-frame {
-    position: relative;
-    padding: 4px;
+/* ===================== ACHIEVEMENTS TAB ===================== */
+
+.achievements-panel {
+    background: #dfdcc3;
     border-radius: 8px;
+    padding: 8px;
+}
 
-    .profile-avatar {
-        display: block;
-        width: 86px;
-        height: 110px;
+.achievements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ach-row {
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    grid-template-rows: auto auto;
+    /* title/reward + progress */
+    column-gap: 10px;
+    row-gap: 4px;
+    align-items: center;
+    background: #f6f7fb;
+    border: 1px solid #e5e7f0;
+    border-radius: 6px;
+    padding: 8px;
+
+    .ach-icon {
+        grid-row: 1 / span 2;
+        width: 42px;
+        height: 42px;
         image-rendering: pixelated;
+        border-radius: 4px;
         background: #fff;
-        border-radius: 6px;
     }
 
-    .avatar-section .avatar-block {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        /* avatar | gang card */
-        align-items: start;
+    .ach-line {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
         gap: 10px;
-    }
 
-    /* Reuse your existing .profile-left .avatar-section .avatar-frame rules;
-we only add the presence-badge placement. */
-    .profile-left .avatar-section .avatar-frame {
-        position: relative;
-
-        .presence-badge {
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            width: 32px;
-            height: 16px;
-            image-rendering: pixelated;
-        }
-    }
-
-    /* Compact card that sits to the right of the avatar */
-    .gang-card {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        background: #d8d5cc;
-        /* matches your info-section tone */
-        border-radius: 8px;
-        padding: 8px;
-        min-width: 120px;
-    }
-
-    .gang-title-row {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-
-        .gang-name {
+        .ach-title {
             font-weight: 700;
         }
 
-        .gang-id {
+        .ach-reward {
             font-size: 12px;
             color: #666;
         }
     }
 
-    .gang-swatches {
-        display: flex;
-        align-items: center;
-        gap: 6px;
+    .ach-progress {
+        .ach-bar {
+            background: #e9edf3;
+            height: 16px;
+            border-radius: 6px;
+            overflow: hidden;
 
-        .swatch {
-            width: 22px;
-            height: 22px;
-            border-radius: 4px;
-            border: 1px solid rgba(0, 0, 0, 0.15);
+            .ach-fill {
+                height: 100%;
+                width: 0%;
+                background: linear-gradient(180deg, #0154aa, #0154aa 50%, #024b7c 0, #024b7c);
+            }
+        }
+
+        .ach-text {
+            font-size: 11px;
+            color: #555;
+            margin-top: 2px;
         }
     }
+}
 
-    /* Optional: make left column slightly tighter on small widths */
-    @media (max-width: 860px) {
-        .avatar-section .avatar-block {
-            grid-template-columns: 86px 1fr;
-            /* avatar width + gang card */
-        }
+/* ===================== MISC / RESPONSIVE ===================== */
+
+@media (max-width: 860px) {
+    .profile-container {
+        width: 92vw;
     }
 
-
-    /* Online/offline badge */
-    .status-badge {
-        position: absolute;
-        top: -6px;
-        right: -6px;
-        width: 28px;
-        height: 14px;
-        background-size: cover;
-        background-repeat: no-repeat;
-
-        &.online {
-            //background-image: url('../../icons/user_online.png');
-            background-image: url('../../icons/user_online.gif');
-            //background: green;
-            //border-radius:50%;
-        }
-
-        &.offline {
-            // background-image: url('../../icons/user_offline.png');
-            background-image: url('../../icons/user_offline.gif');
-            // background: red;
-            // border-radius:50%;
-        }
-    }
-
-    /* Gang colors beside avatar */
-    .gang-colors {
-        position: absolute;
-        left: 100%;
-        /* right side of avatar */
-        top: 10px;
-        display: flex;
+    .profile-body {
         flex-direction: column;
-        gap: 4px;
-        margin-left: 8px;
-
-        .color-box {
-            width: 20px;
-            height: 20px;
-            border-radius: 3px;
-            border: 1px solid #000;
-        }
-
-        .gang-name {
-            margin-top: 6px;
-            font-weight: 700;
-            font-size: 12px;
-            text-align: center;
-        }
     }
 }
