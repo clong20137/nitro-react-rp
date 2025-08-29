@@ -1,23 +1,20 @@
 .create-gang-view {
-    position: fixed;
-    /* center properly */
-    top: 50%;
-    left: 50%;
     transform: translate(-50%, -50%);
     z-index: 9999;
 
-    max-width: 92vw;
-    /* keep inside viewport */
     width: 880px;
-    /* nice desktop width */
+    max-width: 92vw;
+    /* keep the modal inside the viewport height; header/footer stay visible */
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+
     background: #fff;
+    color: #000;
     border: 1px solid #000;
     border-radius: 8px;
     box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
     overflow: hidden;
-
-    color: #000;
-    /* default text color */
 }
 
 .create-gang-header {
@@ -29,47 +26,41 @@
     font-size: 20px;
     background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
     color: #fff;
-    /* ← white header text */
-
-    .c-button {
-        appearance: none;
-        border: 0;
-        background: transparent;
-        font-size: 16px;
-        line-height: 1;
-        cursor: pointer;
-        color: #fff;
-        /* white close icon */
-    }
 }
 
-/* ---------- 3-column layout (L|M|R) ---------- */
+.create-gang-header .c-button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    color: #fff;
+}
+
+/* ---------- 3-column layout (L | M | R) ---------- */
 /* L = icons (fixed) | M = swatches (flex) | R = preview (fixed) */
 .create-gang-body-horizontal {
     display: grid;
-    grid-template-columns:
-        164px
-        /* left fixed */
-        12px
-        /* divider */
-        minmax(360px, 1fr)
-        /* middle flex (never < 360px) */
-        12px
-        /* divider */
-        240px;
-    /* right fixed */
+    grid-template-columns: 136px 8px minmax(360px, 1fr) 8px 200px;
+    /* tighter spacing */
     gap: 0;
     align-items: stretch;
     padding: 10px 12px;
 
-    /* ensure children never overflow their column */
-    &>* {
+    /* the body area scrolls if content exceeds max-height */
+    overflow: auto;
+    /* smooth iOS scrolling */
+    -webkit-overflow-scrolling: touch;
+
+    /* keep children from overflowing their cell */
+    >* {
         min-width: 0;
     }
 }
 
 .gang-divider {
-    width: 12px;
+    width: 8px;
 }
 
 /* ---------- LEFT: name + icons ---------- */
@@ -78,60 +69,60 @@
     flex-direction: column;
     min-width: 0;
     overflow: hidden;
+}
 
-    label {
-        display: block;
-        font-weight: 600;
-        margin: 6px 0 4px;
-    }
+.gang-name-icon label {
+    display: block;
+    font-weight: 600;
+    margin: 6px 0 4px;
+}
 
-    input[type="text"] {
-        width: 100%;
-        padding: 6px 8px;
-        border: 1px solid #c9c9c9;
-        border-radius: 4px;
-    }
+.gang-name-icon input[type="text"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #c9c9c9;
+    border-radius: 4px;
+}
 
-    .icon-selector {
-        /* fills the remaining height and scrolls */
-        margin-top: 8px;
-        flex: 1;
-        min-height: 0;
-        overflow: auto;
+.gang-name-icon .icon-selector {
+    margin-top: 8px;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
 
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 6px;
-    }
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
 
-    .icon-option {
-        border: 1px solid transparent;
-        border-radius: 4px;
-        padding: 4px;
-        cursor: pointer;
+.gang-name-icon .icon-option {
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 4px;
+    cursor: pointer;
+}
 
-        &.selected {
-            border-color: #6aa84f;
-        }
+.gang-name-icon .icon-option.selected {
+    border-color: #6aa84f;
+}
 
-        img {
-            width: 100%;
-            height: auto;
-            display: block;
-            image-rendering: pixelated;
-        }
-    }
+.gang-name-icon .icon-option img {
+    width: 100%;
+    height: auto;
+    display: block;
+    image-rendering: pixelated;
+}
 
-    .pagination-controls {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 6px;
+.gang-name-icon .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
 
-        .habbo-action-button {
-            padding: 2px 8px;
-        }
-    }
+.gang-name-icon .pagination-controls .habbo-action-button {
+    padding: 2px 8px;
 }
 
 /* ---------- MIDDLE: color swatches ---------- */
@@ -142,9 +133,9 @@
 }
 
 .color-rows {
-    /* two blocks side-by-side, each scrolls internally */
     display: grid;
     grid-template-columns: 1fr 1fr;
+    /* primary | secondary side by side */
     gap: 12px;
     min-height: 0;
 }
@@ -153,28 +144,25 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-
-    label {
-        display: block;
-        font-weight: 600;
-        margin-bottom: 6px;
-    }
 }
 
+.color-block label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+/* swatches scroll inside the middle column */
 .swatch-grid {
-    /* ← keeps all swatches visible, even vertically */
     flex: 1;
-    /* fill block height */
     min-height: 0;
     overflow: auto;
-    /* scroll within the middle column */
+    -webkit-overflow-scrolling: touch;
     padding-right: 4px;
 
     display: grid;
     grid-auto-rows: 20px;
-    /* consistent row height */
     grid-template-columns: repeat(14, 22px);
-    /* wider cells */
     gap: 6px;
 }
 
@@ -184,11 +172,11 @@
     border: 1px solid rgba(0, 0, 0, .2);
     border-radius: 2px;
     cursor: pointer;
+}
 
-    &.selected {
-        outline: 2px solid #6aa84f;
-        outline-offset: 1px;
-    }
+.swatch.selected {
+    outline: 2px solid #6aa84f;
+    outline-offset: 1px;
 }
 
 .swatch-loading {
@@ -203,44 +191,44 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
-    width: 240px;
+    width: 200px;
     /* match grid fixed column */
+}
 
-    .preview-box {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        border: 1px solid #cfcfcf;
-        border-radius: 6px;
-        overflow: hidden;
-        margin-top: 0;
-        color: #000;
-        background: #fff;
-    }
+.gang-preview .preview-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #cfcfcf;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 0;
+    color: #000;
+    background: #fff;
+}
 
-    .preview-colors {
-        flex: 1;
-        display: grid;
-        place-items: center;
-        position: relative;
+.gang-preview .preview-colors {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    position: relative;
+}
 
-        .icon-overlay {
-            width: 56px;
-            height: 56px;
-            image-rendering: pixelated;
-        }
-    }
+.gang-preview .preview-colors .icon-overlay {
+    width: 56px;
+    height: 56px;
+    image-rendering: pixelated;
+}
 
-    .gang-preview-name {
-        padding: 6px 8px;
-        font-weight: 700;
-        background: #f5f5f5;
-        border-top: 1px solid #e3e3e3;
-        color: #000;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+.gang-preview .gang-preview-name {
+    padding: 6px 8px;
+    font-weight: 700;
+    background: #f5f5f5;
+    border-top: 1px solid #e3e3e3;
+    color: #000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* ---------- footer ---------- */
@@ -250,22 +238,21 @@
     gap: 8px;
     padding: 10px 12px 12px;
     border-top: 1px solid #e7e7e7;
-
-    .habbo-action-button.green {
-        padding: 6px 12px;
-        font-weight: 700;
-    }
 }
 
-/* ---------- Small screens: stack ---------- */
+.create-gang-footer .habbo-action-button.green {
+    padding: 6px 12px;
+    font-weight: 700;
+}
+
+/* ---------- Medium screens ---------- */
 @media (max-width: 900px) {
     .create-gang-view {
         width: 720px;
     }
 
     .create-gang-body-horizontal {
-        grid-template-columns:
-            148px 10px minmax(320px, 1fr) 10px 220px;
+        grid-template-columns: 132px 8px minmax(320px, 1fr) 8px 188px;
     }
 
     .swatch-grid {
@@ -273,6 +260,7 @@
     }
 }
 
+/* ---------- Tablets & small laptops ---------- */
 @media (max-width: 700px) {
     .create-gang-view {
         width: 94vw;
@@ -292,12 +280,59 @@
         grid-template-columns: 1fr;
     }
 
+    /* primary then secondary */
     .swatch-grid {
-        grid-template-columns: repeat(10, 22px);
-        max-height: 200px;
+        grid-template-columns: repeat(12, 22px);
+        max-height: 240px;
     }
 
     .gang-preview {
         width: auto;
+    }
+}
+
+/* ---------- iPhone 16 Pro / Pro Max (430px wide) ---------- */
+@media (max-width: 450px) {
+    .create-gang-view {
+        width: 96vw;
+        max-height: 88vh;
+        /* a bit shorter on iOS to avoid bars */
+    }
+
+    .create-gang-header {
+        padding: 6px 10px;
+        font-size: 18px;
+    }
+
+    .create-gang-body-horizontal {
+        padding: 8px 10px;
+    }
+
+    .gang-name-icon input[type="text"] {
+        padding: 5px 8px;
+    }
+
+    /* smaller swatches to fit comfortably */
+    .swatch-grid {
+        grid-auto-rows: 18px;
+        grid-template-columns: repeat(10, 18px);
+        gap: 5px;
+    }
+
+    .swatch {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* make icon grid taller and scrollable */
+    .gang-name-icon .icon-selector {
+        max-height: 260px;
+    }
+}
+
+/* ---------- Very small phones (fallback) ---------- */
+@media (max-width: 360px) {
+    .swatch-grid {
+        grid-template-columns: repeat(9, 18px);
     }
 }

@@ -487,3 +487,207 @@
     background-color: #007c17;
     border-color: #003d0b;
 }
+
+/* ===== right-side HUD: responsive tweaks ===== */
+
+/* Wide tablets / small laptops */
+@media (max-width: 1024px) {
+    .nitro-right-side {
+        right: max(10px, env(safe-area-inset-right));
+        top: max(6px, env(safe-area-inset-top));
+        max-width: 220px;
+        min-width: 220px;
+    }
+
+    .right-status-panel {
+        width: 230px;
+        padding: 8px;
+        gap: 6px;
+    }
+
+    .rs-mini {
+        font-size: 11px;
+        padding: 5px 8px;
+    }
+
+    .rs-card {
+        grid-column-gap: 8px;
+        grid-row-gap: 8px;
+    }
+
+    .qbtn {
+        width: 30px;
+        height: 30px;
+    }
+}
+
+/* Tablets & large phones (portrait) */
+@media (max-width: 768px) {
+    .nitro-right-side {
+        right: max(8px, env(safe-area-inset-right));
+        top: max(8px, env(safe-area-inset-top));
+        max-width: min(48vw, 220px);
+        min-width: auto;
+        z-index: 12;
+    }
+
+    .right-status-panel {
+        width: min(48vw, 220px);
+        padding: 8px;
+        border-radius: 8px;
+    }
+
+    /* Compact header row */
+    .rs-mini {
+        padding: 6px 8px;
+        font-size: 11px;
+
+        .rs-time,
+        .rs-credits {
+            gap: 4px;
+        }
+
+        .ico-gear {
+            width: 22px;
+            height: 22px;
+        }
+    }
+
+    /* Stack card content when space is tight */
+    .rs-card {
+        grid-template-columns: 1fr;
+        grid-row-gap: 8px;
+    }
+
+    .rs-counter {
+        justify-self: start;
+    }
+
+    /* Quick actions row: space-evenly → wrap gracefully */
+    .rs-quick {
+        gap: 8px;
+        padding: 6px;
+        flex-wrap: wrap;
+    }
+
+    /* Touch targets a bit larger */
+    .qbtn {
+        width: 34px;
+        height: 34px;
+    }
+
+    .cooldown-svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    .cooldown-text {
+        font-size: 10px;
+    }
+}
+
+/* Phones (≤480px) */
+@media (max-width: 480px) {
+
+    /* Pin tighter to edge, respect notches */
+    .nitro-right-side,
+    .nitro-right-compact {
+        right: max(6px, env(safe-area-inset-right));
+        top: max(6px, env(safe-area-inset-top));
+        width: min(86vw, 240px);
+    }
+
+    .right-status-panel {
+        width: 100%;
+        padding: 8px;
+        gap: 6px;
+    }
+
+    .right-status-buttons {
+        gap: 6px;
+
+        .right-btn {
+            padding: 4px 6px;
+            font-size: 11px;
+        }
+    }
+
+    /* Mini bar text shrinks & truncates */
+    .rs-mini {
+        font-size: 10px;
+
+        .rs-time,
+        .rs-credits {
+            gap: 4px;
+        }
+    }
+
+    /* Title ellipsis to avoid overflow */
+    .rs-title {
+        min-width: 0;
+
+        .rs-title-text {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+
+    /* Quick buttons: bigger tap area but keep row compact */
+    .qbtn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .qbtn:active {
+        transform: translateY(0);
+    }
+
+    /* avoid jumpy press on mobile */
+
+    /* Popover keeps on-screen */
+    .q-pop {
+        right: 0;
+        left: auto;
+        transform: translateX(-6px);
+        width: min(78vw, 220px);
+    }
+}
+
+/* Very short screens (e.g., landscape phones) */
+@media (max-height: 480px) and (orientation: landscape) {
+
+    .nitro-right-side,
+    .nitro-right-compact {
+        top: max(4px, env(safe-area-inset-top));
+    }
+
+    .right-status-panel {
+        max-height: calc(100vh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .rs-quick {
+        gap: 6px;
+        padding: 4px 6px;
+    }
+
+    .qbtn {
+        width: 30px;
+        height: 30px;
+    }
+}
+
+/* Accessibility: reduce motion if requested */
+@media (prefers-reduced-motion: reduce) {
+
+    .qbtn,
+    .ico-gear,
+    .rs-mini,
+    .rs-card,
+    .rs-quick {
+        transition: none !important;
+    }
+}

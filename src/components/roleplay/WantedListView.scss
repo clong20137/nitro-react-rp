@@ -11,10 +11,10 @@
 }
 
 .wanted-header {
-    background: linear-gradient(180deg,#bd9426,#bd9426 50%,#cdb267 0,#cdb267);
+    background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
     color: #fff;
     padding: 8px 10px;
-    font-size:20px;
+    font-size: 20px;
     font-weight: bold;
     display: flex;
     justify-content: space-between;
@@ -22,7 +22,6 @@
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
 }
-
 
 .close-btn {
     cursor: pointer;
@@ -45,7 +44,7 @@
     max-height: 400px;
     overflow-y: auto;
     padding: 10px;
-    color:#000;
+    color: #000;
 }
 
 .wanted-entry {
@@ -71,8 +70,7 @@
 .username {
     font-weight: bold;
     margin-bottom: 4px;
-    color:#000;
-
+    color: #000;
 }
 
 .charges {
@@ -84,12 +82,61 @@
 .wanted-stars {
     font-size: 24px;
     color: orange;
+}
 
-    .filled {
-        color: orange;
+.wanted-stars .filled {
+    color: orange;
+}
+
+.wanted-stars .empty {
+    color: #bbb;
+}
+
+/* ========================= */
+/* 📱 Mobile Friendly (iPhone 16 Pro Max ~430px width) */
+/* ========================= */
+@media (max-width: 480px) {
+    .wanted-list-view {
+        width: 90%;
+        left: 50%;
+        top: 100px;
+        transform: translateX(-50%);
+        font-size: 14px;
     }
 
-    .empty {
-        color: #bbb;
+    .wanted-header {
+        font-size: 16px;
+        padding: 6px 8px;
+    }
+
+    .wanted-content {
+        max-height: 60vh;
+        padding: 8px;
+    }
+
+    .wanted-entry {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 8px 0;
+    }
+
+    .avatar img {
+        width: 36px;
+        height: 36px;
+        margin-right: 0;
+        margin-bottom: 4px;
+    }
+
+    .username {
+        font-size: 14px;
+    }
+
+    .charges {
+        font-size: 12px;
+    }
+
+    .wanted-stars {
+        font-size: 18px;
     }
 }

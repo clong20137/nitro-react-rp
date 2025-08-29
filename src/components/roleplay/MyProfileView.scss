@@ -234,9 +234,9 @@
         cursor: pointer;
 
         &.active {
-    
-            background:#f1eedb;
-              color: #2b2b2b;
+
+            background: #f1eedb;
+            color: #2b2b2b;
         }
     }
 }
@@ -437,5 +437,208 @@
 
     .profile-body {
         flex-direction: column;
+    }
+}
+
+/* iPhone 16 Pro / Pro Max portrait (logical 430 x 932) */
+@media only screen and (max-width: 430px) and (max-height: 932px) {
+    .profile-container {
+        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        left: 50%;
+        transform: translateX(-50%);
+        width: 94vw;
+        border-radius: 6px;
+    }
+
+    .profile-header {
+        font-size: 16px;
+        padding: 8px 10px;
+    }
+
+    .close-btn,
+    .close-button {
+        font-size: 16px;
+        padding: 2px 8px;
+    }
+
+    .profile-body {
+        flex-direction: column;
+        gap: 12px;
+        padding: 10px;
+    }
+
+    .avatar-section {
+        gap: 6px;
+        padding: 10px;
+    }
+
+    .avatar-section .avatar-frame .profile-avatar {
+        width: 64px;
+        height: 82px;
+        border-radius: 6px;
+    }
+
+    .avatar-section .avatar-frame .presence-badge {
+        width: 24px;
+        height: 12px;
+        top: -4px;
+        right: -4px;
+    }
+
+    .avatar-section .avatar-frame .gang-badge {
+        width: 22px;
+        height: 22px;
+        right: -4px;
+        bottom: -4px;
+    }
+
+    .avatar-section .motto {
+        max-width: 70vw;
+        font-size: 11px;
+    }
+
+    .info-section {
+        padding: 6px;
+        gap: 6px;
+        font-size: 12px;
+    }
+
+    .corp-card {
+        margin: 8px 6px;
+        padding: 8px;
+    }
+
+    .corp-card img {
+        width: 20px;
+        height: 20px;
+    }
+
+    .gang-line {
+        padding: 8px;
+    }
+
+    .gang-line .gang-color-split-box {
+        width: 30px;
+        height: 18px;
+    }
+
+    .gang-line .gang-color-split-box .gang-icon {
+        width: 14px;
+        height: 14px;
+    }
+
+    /* Tabs */
+    .profile-tabs {
+        margin-top: 6px;
+        gap: 4px;
+        padding: 0 6px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .profile-tabs .tab-btn {
+        min-width: 110px;
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+
+    .tab-content {
+        padding: 8px;
+        border-radius: 0 6px 6px 6px;
+    }
+
+    /* Level / XP */
+    .level-xp {
+        padding: 8px;
+        font-size: 13px;
+    }
+
+    .level-xp .xp-bar {
+        height: 16px;
+        margin: 6px 0;
+    }
+
+    .level-xp .points-left {
+        width: auto;
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+
+    /* Skills */
+    .skills {
+        padding: 8px;
+        font-size: 13px;
+    }
+
+    .skill-row {
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .skill-name {
+        width: 120px;
+        font-size: 13px;
+    }
+
+    .skill-bar-wrapper {
+        height: 18px;
+    }
+
+    .skill-bar-wrapper .skill-bar-fill .skill-bar-text {
+        font-size: 9px;
+    }
+
+    .upgrade-btn {
+        padding: 2px 6px;
+        font-size: 12px;
+    }
+
+    /* Totals */
+    .stats-breakdown {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+
+    .stats-breakdown .stat-badge {
+        font-size: 11px;
+        padding: 4px;
+    }
+
+    /* Achievements */
+    .achievements-panel {
+        padding: 8px;
+    }
+
+    .ach-row {
+        column-gap: 8px;
+        padding: 8px;
+    }
+
+    .ach-row .ach-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .ach-row .ach-progress .ach-bar {
+        height: 14px;
+    }
+
+    .ach-row .ach-line .ach-reward {
+        font-size: 11px;
+    }
+
+    .ach-row .ach-progress .ach-text {
+        font-size: 10px;
+    }
+}
+
+/* Tiny phones fallback (just in case 390–414 widths are used) */
+@media only screen and (max-width: 400px) {
+    .profile-container {
+        width: 96vw;
+    }
+
+    .profile-tabs .tab-btn {
+        min-width: 100px;
     }
 }

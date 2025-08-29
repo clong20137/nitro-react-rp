@@ -1,5 +1,3 @@
-
-
 .corporations-view {
     width: 1000px;
     position: fixed;
@@ -59,8 +57,8 @@
 
 /* ========= Header ========= */
 .corporations-header {
-    background: linear-gradient(180deg,#bd9426,#bd9426 50%,#cdb267 0,#cdb267);
-    font-size:20px;
+    background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
+    font-size: 20px;
     color: #fff;
     font-weight: 700;
     padding: 8px 12px;
@@ -112,9 +110,9 @@
     /* Left column */
     .corporations-list {
         padding-right: 12px;
-        overflow-y:auto;
-        max-height:500px;
-        margin-bottom:40px;
+        overflow-y: auto;
+        max-height: 500px;
+        margin-bottom: 40px;
 
 
         .corporation-item {
@@ -225,8 +223,8 @@
     .corporation-details {
         padding-left: 12px;
         overflow-y: auto;
-        max-height:500px;
-        padding-bottom:40px;
+        max-height: 500px;
+        padding-bottom: 40px;
 
         .no-corp-selected {
             color: #555;
@@ -440,7 +438,7 @@
     color: #fff;
     text-shadow: 1px 1px 0 #0a5d0a;
     background: linear-gradient(180deg, #3aa900 0, #3aa900 50%, #2d7d00 50%, #2d7d00);
-    box-shadow:inset 0 1px 0 hsla(0,0%,100%,.4),inset 0 -1px 0 rgba(0,0,0,.2),2px 2px 0 #222;
+    box-shadow: inset 0 1px 0 hsla(0, 0%, 100%, .4), inset 0 -1px 0 rgba(0, 0, 0, .2), 2px 2px 0 #222;
 
     &:hover {
         background: linear-gradient(180deg, #42b604 0, #42b604 50%, #399205 50%, #399205);
@@ -514,5 +512,182 @@
 
     100% {
         background-position: 0 0;
+    }
+}
+
+/* =========================
+Mobile / Small screens
+- Primary catch-all (≤ 460px)
+- iOS safe areas
+- Portrait / Landscape tweaks
+========================= */
+
+/* Catch-all small phones (covers iPhone Pro/Pro Max CSS widths) */
+@media screen and (max-width: 460px) {
+    .corporations-view {
+        width: min(92vw, 430px);
+        left: 50% !important;
+        /* center horizontally */
+        top: max(8svh, 16px) !important;
+        /* keep off the notch */
+        transform: translateX(-50%);
+        /* center */
+        border-radius: 10px;
+        margin: 0 12px;
+    }
+
+    .corporations-header {
+        font-size: 18px;
+        padding: 10px 12px;
+    }
+
+    .corporations-body {
+        /* Stack into a single column */
+        grid-template-columns: 1fr !important;
+        gap: 8px;
+        max-height: calc(100svh - 170px);
+        /* header + padding */
+        overflow: auto;
+        padding: 10px;
+    }
+
+    .corporations-body .corp-divider {
+        display: none;
+    }
+
+    .corporations-body .corporations-list {
+        padding-right: 0;
+        max-height: 40svh;
+        margin-bottom: 8px;
+    }
+
+    .corporations-body .corporation-details {
+        padding-left: 0;
+        max-height: none;
+        padding-bottom: 12px;
+    }
+
+    .corporations-body .corporation-details .corp-actions {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .corporations-body .corporation-details .corp-actions .corp-member-search {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    /* Cards: tighten a bit on phones */
+    .corporations-body .corporations-list .corporation-item {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .corporations-body .corporations-list .corporation-item .icon {
+        width: 36px;
+        height: 36px;
+        flex: 0 0 36px;
+    }
+
+    .corporations-body .corporations-list .corporation-item .icon img {
+        width: 28px;
+        height: 28px;
+    }
+
+    .corporations-body .corporations-list .corporation-item .info .name {
+        font-size: 15px;
+    }
+
+    .corporations-body .corporations-list .corporation-item .info .description {
+        font-size: 12px;
+    }
+
+    /* Right column details */
+    .corporations-body .corporation-details .rank-members {
+        grid-template-columns: 1fr !important;
+    }
+
+    .corporations-body .corporation-details .member-card {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .corporations-body .corporation-details .member-card .avatar {
+        width: 42px;
+        height: 56px;
+    }
+
+    .corporations-body .corporation-details .member-card .avatar img {
+        width: 42px;
+        height: 56px;
+    }
+
+    .corporations-body .corporation-details .member-card .member-info .member-top {
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .corporations-body .corporation-details .member-card .member-info .member-top .member-name {
+        font-size: 14px;
+    }
+
+    .corporations-body .corporation-details .member-card .member-info .member-stats {
+        gap: 6px;
+    }
+
+    /* Skeleton grid condensed */
+    .members-skeleton {
+        grid-template-columns: 1fr !important;
+        gap: 8px;
+    }
+}
+
+/* iOS safe area padding (dynamic island / home indicator) */
+@supports (padding: max(0px)) {
+    @media screen and (max-width: 460px) {
+        .corporations-view {
+            /* protect from top/bottom safe areas */
+            margin-top: max(12px, env(safe-area-inset-top));
+            margin-bottom: max(12px, env(safe-area-inset-bottom));
+        }
+    }
+}
+
+/* Portrait-specific refinements */
+@media screen and (max-width: 460px) and (orientation: portrait) {
+    .corporations-view {
+        width: 94vw;
+    }
+
+    .corporations-body {
+        max-height: calc(100svh - 160px);
+    }
+}
+
+/* Landscape-specific refinements (short height: keep content scrollable) */
+@media screen and (max-width: 812px) and (orientation: landscape) {
+    .corporations-view {
+        width: 96vw;
+        left: 50% !important;
+        transform: translateX(-50%);
+        top: 8px !important;
+    }
+
+    .corporations-body {
+        max-height: calc(100svh - 120px);
+        grid-template-columns: 1fr !important;
+        /* stack in tight landscape too */
+    }
+
+    .corporations-body .corp-divider {
+        display: none;
+    }
+}
+
+/* High-DPI iPhones (Pro/Pro Max) — explicit WebKit hint */
+@media screen and (-webkit-min-device-pixel-ratio: 3) and (max-width: 460px) {
+    .corporations-view {
+        /* slight width tweak for the Pro Max CSS width buckets */
+        width: min(92vw, 430px);
     }
 }

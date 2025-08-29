@@ -249,7 +249,7 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                 onTouchStart={onHeaderTouchStart}
             >
                 Inventory
-                <div className="close-button" onClick={onClose}>
+                <div className="inventory-close" onClick={onClose}>
                     ✖
                 </div>
             </div>
