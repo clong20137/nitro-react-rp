@@ -2,93 +2,58 @@ import { useEffect, useRef, useState } from "react";
 import "./GatherProgressView.scss";
 
 export const GatheringProgressBar = () => {
-    const [progress, setProgress] = useState(0); // 0..100
     const [visible, setVisible] = useState(false);
+    const [durationMs, setDurationMs] = useState(60000);
+    const [animKey, setAnimKey] = useState(0); // bump to restart CSS animation
 
-    // animation / clock refs
-    const rafRef = useRef<number | null>(null);
-    const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const startRef = useRef<number>(0);
-    const durationRef = useRef<number>(60000);
+    const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // ensure clean stop
-    const stopTimers = () => {
-        if (rafRef.current) {
-            cancelAnimationFrame(rafRef.current);
-            rafRef.current = null;
-        }
-        if (tickRef.current) {
-            clearInterval(tickRef.current);
-            tickRef.current = null;
+    const clearHideTimer = () => {
+        if (hideTimerRef.current) {
+            clearTimeout(hideTimerRef.current);
+            hideTimerRef.current = null;
         }
     };
 
     useEffect(() => {
-        const animate = () => {
-            const now = performance.now();
-            const elapsed = now - startRef.current;
-            const pct = Math.max(
-                0,
-                Math.min((elapsed / durationRef.current) * 100, 100)
-            );
-            setProgress(pct);
-
-            if (elapsed < durationRef.current) {
-                rafRef.current = requestAnimationFrame(animate);
-            } else {
-                stopTimers();
-                setVisible(false);
-                setProgress(0);
-            }
-        };
-
-        const tick = () => {
-            // keep progress advancing even if rAF is throttled
-            const now = performance.now();
-            const elapsed = now - startRef.current;
-            const pct = Math.max(
-                0,
-                Math.min((elapsed / durationRef.current) * 100, 100)
-            );
-            setProgress(pct);
-            if (elapsed >= durationRef.current) {
-                stopTimers();
-                setVisible(false);
-                setProgress(0);
-            }
-        };
-
         const handleStart = (e: any) => {
             const raw = e?.detail?.duration;
-            const dur = typeof raw === "number" ? raw : parseInt(raw, 10);
+            const dur =
+                typeof raw === "number"
+                    ? raw
+                    : raw != null
+                    ? parseInt(String(raw), 10)
+                    : NaN;
+
             if (!Number.isFinite(dur) || dur <= 0) return;
 
-            durationRef.current = dur;
-            startRef.current = performance.now();
-
-            stopTimers();
-            setProgress(0);
+            clearHideTimer();
+            setDurationMs(dur);
             setVisible(true);
 
-            // kick both: rAF for smoothness, interval as “anti-throttle” heartbeat
-            rafRef.current = requestAnimationFrame(animate);
-            tickRef.current = setInterval(tick, 100);
+            // bump the key to force the CSS animation to restart from 0%
+            setAnimKey((k) => (k + 1) & 0xffff);
+
+            // hard stop (and hide) at the end of duration
+            hideTimerRef.current = setTimeout(() => {
+                setVisible(false);
+            }, dur);
         };
 
         const handleCancel = () => {
-            stopTimers();
+            clearHideTimer();
+            // hide immediately and bump key so if we start again, it restarts from 0
             setVisible(false);
-            setProgress(0);
+            setAnimKey((k) => (k + 1) & 0xffff);
         };
 
-        // listen to your client events (fired when 4012 arrives)
         window.addEventListener("gather_progress", handleStart);
         window.addEventListener("gather_cancel", handleCancel);
 
         return () => {
             window.removeEventListener("gather_progress", handleStart);
             window.removeEventListener("gather_cancel", handleCancel);
-            stopTimers();
+            clearHideTimer();
         };
     }, []);
 
@@ -96,9 +61,11 @@ export const GatheringProgressBar = () => {
 
     return (
         <div className="gathering-bar-horizontal-wrapper">
+            {/* key forces animation restart; CSS var sets duration */}
             <div
+                key={animKey}
                 className="gathering-bar-horizontal"
-                style={{ width: `${progress}%` }} // horizontal fill
+                style={{ ["--gather-dur" as any]: `${durationMs}ms` }}
             />
         </div>
     );

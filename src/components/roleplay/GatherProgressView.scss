@@ -1,27 +1,37 @@
-
-
 /* GatherProgressView.scss */
+
+/* track */
 .gathering-bar-horizontal-wrapper {
     position: absolute;
-    top: 170px; // adjust where you want it
-    right: -90px; // adjust to align under your right-side buttons
+    top: 170px;
+    right: -90px;
     transform: translateX(-50%);
     width: 220px;
-    /* track length */
     height: 20px;
-    /* track thickness */
     background: rgba(255, 255, 255, .2);
     border: 1px solid rgba(255, 255, 255, .35);
     border-radius: 2px;
     overflow: hidden;
     z-index: 9999;
+    pointer-events: none;
 }
 
+/* fill */
 .gathering-bar-horizontal {
-    height: 100%;
-    /* fixed height; width animates */
     width: 0%;
-      background: linear-gradient(180deg, #f1c40f, #f1c40f 50%, #f5d65a 0, #f5d65a);
-    transition: width 80ms linear;
-    /* keeps in sync with RAF without jank */
+    height: 100%;
+    background: linear-gradient(180deg, #f1c40f, #f1c40f 50%, #f5d65a 0, #f5d65a);
+    /* animate width from 0 → 100% over --gather-dur */
+    animation: gather-fill var(--gather-dur, 60000ms) linear forwards;
+    will-change: width;
+}
+
+@keyframes gather-fill {
+    from {
+        width: 0%;
+    }
+
+    to {
+        width: 100%;
+    }
 }
