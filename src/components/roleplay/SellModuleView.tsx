@@ -110,7 +110,7 @@ export const SellModuleView: FC = () => {
     return (
         <div className={`sell-module ${animateIn ? "pop-in" : ""}`}>
             <div className="sell-header" onMouseDown={handleMouseDown}>
-                <h4>🛒 Sell Items</h4>
+                <h4>Sell Items</h4>
                 <button className="close-btn" onClick={() => setVisible(false)}>
                     ✖
                 </button>
@@ -120,7 +120,7 @@ export const SellModuleView: FC = () => {
                 <div className="sell-list">
                     {inventory
                         .filter(
-                            (item) => item.item_id === 11 || item.item_id === 10
+                            (item) => item.item_id === 11 || item.item_id === 14
                         ) // Only show crops
                         .map((item) => (
                             <div key={item.item_id} className="sell-item-row">
@@ -141,13 +141,7 @@ export const SellModuleView: FC = () => {
                                     >
                                         Sell
                                     </button>
-                                    <button
-                                        className="habbo-action-button red"
-                                        disabled={item.quantity <= 0}
-                                        onClick={() => handleSellAll(item)}
-                                    >
-                                        Sell All
-                                    </button>
+                                    
                                 </div>
                             </div>
                         ))}

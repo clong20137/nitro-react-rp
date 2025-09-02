@@ -1,56 +1,73 @@
 import { useEffect, useRef, useState } from "react";
 import "./GatherProgressView.scss";
 
+type GatherEvt = CustomEvent<{ duration: number }>;
+
 export const GatheringProgressBar = () => {
-    const [progress, setProgress] = useState(0);
+    const [progress, setProgress] = useState(0); // 0..100
     const [visible, setVisible] = useState(false);
-    const intervalRef = useRef<number | null>(null);
+    const rafRef = useRef<number | null>(null);
+    const runIdRef = useRef(0); // prevents overlap glitches
 
     useEffect(() => {
-        let start = 0;
-        let duration = 60000;
+        const startAnim = (duration: number) => {
+            // reject silly values
+            const dur = Math.max(50, Number(duration) || 0);
+            const start = performance.now();
+            const myRunId = ++runIdRef.current;
 
-        const handleGatherStart = (e: any) => {
-            if (typeof e.detail?.duration === "number")
-                duration = e.detail.duration;
-            else return; // or optionally log a warning
-            start = performance.now();
             setProgress(0);
             setVisible(true);
 
-            const animate = (now: number) => {
+            const tick = (now: number) => {
+                // if a newer run started, stop this one
+                if (myRunId !== runIdRef.current) return;
+
                 const elapsed = now - start;
-                const pct = Math.min((elapsed / duration) * 100, 100);
+                const pct = Math.min((elapsed / dur) * 100, 100);
                 setProgress(pct);
 
-                if (elapsed < duration) {
-                    intervalRef.current = requestAnimationFrame(animate);
+                if (pct < 100) {
+                    rafRef.current = requestAnimationFrame(tick);
                 } else {
-                    intervalRef.current = null;
+                    rafRef.current = null;
                     setVisible(false);
                 }
             };
 
-            if (intervalRef.current) cancelAnimationFrame(intervalRef.current);
-            intervalRef.current = requestAnimationFrame(animate);
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+            rafRef.current = requestAnimationFrame(tick);
         };
 
-        const handleGatherCancel = () => {
-            if (intervalRef.current) {
-                cancelAnimationFrame(intervalRef.current);
-                intervalRef.current = null;
+        const onGatherProgress = (e: Event) => {
+            const detail = (e as GatherEvt).detail;
+            if (!detail || typeof detail.duration !== "number") return;
+            startAnim(detail.duration);
+        };
+
+        const onGatherCancel = () => {
+            runIdRef.current++; // invalidate any running animation
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
             }
-            setVisible(false); // <== instantly hides bar
+            setVisible(false);
             setProgress(0);
         };
 
-        window.addEventListener("gather_progress", handleGatherStart);
-        window.addEventListener("gather_cancel", handleGatherCancel);
+        window.addEventListener(
+            "gather_progress",
+            onGatherProgress as EventListener
+        );
+        window.addEventListener("gather_cancel", onGatherCancel);
 
         return () => {
-            window.removeEventListener("gather_progress", handleGatherStart);
-            window.removeEventListener("gather_cancel", handleGatherCancel);
-            if (intervalRef.current) cancelAnimationFrame(intervalRef.current);
+            window.removeEventListener(
+                "gather_progress",
+                onGatherProgress as EventListener
+            );
+            window.removeEventListener("gather_cancel", onGatherCancel);
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
         };
     }, []);
 
@@ -60,7 +77,12 @@ export const GatheringProgressBar = () => {
         <div className="gathering-bar-horizontal-wrapper">
             <div
                 className="gathering-bar-horizontal"
-                style={{ height: `${progress}%` }}
+                // ✅ HORIZONTAL bars animate WIDTH, not height
+                style={{ width: `${progress}%` }}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(progress)}
+                role="progressbar"
             />
         </div>
     );
