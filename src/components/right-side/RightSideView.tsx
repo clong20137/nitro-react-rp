@@ -11,10 +11,32 @@ type VRoomDetail = {
     type: string; // "safe", "combat", etc.
     credits?: number;
     userCount?: number;
+
+    // NEW: these arrive from VirtualRoomInfoComposer
+    inGameTime?: string; // "HH:mm"
+    phase?: "DAY" | "DUSK" | "NIGHT" | "DAWN";
+};
+
+type TimeOfDayDetail = {
+    time: string; // "HH:mm"
+    phase: "DAY" | "DUSK" | "NIGHT" | "DAWN";
+};
+
+const fmt12h = (hhmm: string) => {
+    // expect "HH:mm"
+    const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
+    if (Number.isNaN(h) || Number.isNaN(m)) return "—:— —";
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = h % 12 || 12;
+    const mm = String(m).padStart(2, "0");
+    return `${h12}:${mm} ${ampm}`;
 };
 
 export const RightSideView: FC<{}> = () => {
     const [gameTime, setGameTime] = useState("—:— —");
+    const [phase, setPhase] = useState<"DAY" | "DUSK" | "NIGHT" | "DAWN">(
+        "DAY"
+    );
     const [onlineUsers, setOnlineUsers] = useState<number>(0);
     const [virtualName, setVirtualName] = useState("Loading…");
     const [virtualId, setVirtualId] = useState<number>(0);
@@ -30,27 +52,34 @@ export const RightSideView: FC<{}> = () => {
     const [callMsg, setCallMsg] = useState("");
 
     useEffect(() => {
-        // clock
-        const setNow = () => {
-            const now = new Date();
-            const h24 = now.getHours();
-            const m = now.getMinutes().toString().padStart(2, "0");
-            const ampm = h24 >= 12 ? "PM" : "AM";
-            const h12 = h24 % 12 || 12;
-            setGameTime(`${h12}:${m} ${ampm}`);
-        };
-        setNow();
-        const t = setInterval(setNow, 20_000);
-
+        // SERVER-DRIVEN CLOCK (no local Date())
         const handleVRoomInfo = (e: any) => {
             const detail = e.detail as VRoomDetail;
             if (!detail) return;
+
             setVirtualName(detail.name);
             setVirtualId(detail.virtualRoomId);
             setVirtualType(detail.type || "default");
             if (typeof detail.credits === "number") setCredits(detail.credits);
             if (typeof detail.userCount === "number")
                 setOnlineUsers(detail.userCount);
+
+            // seed time/phase on enter or virtual-room change
+            if (detail.inGameTime) setGameTime(fmt12h(detail.inGameTime));
+            if (detail.phase) setPhase(detail.phase);
+        };
+
+        type TimeOfDayDetail = {
+            hhmm: string; // "HH:mm"
+            phase: "DAY" | "DUSK" | "NIGHT" | "DAWN";
+        };
+
+        // periodic push from TimeOfDayComposer
+        const handleTimeOfDay = (e: any) => {
+            const d = e?.detail as TimeOfDayDetail;
+            if (!d) return;
+            setGameTime(fmt12h(d.hhmm)); // ✅ use hhmm
+            setPhase(d.phase);
         };
 
         const handleCreditUpdate = (e: any) => {
@@ -61,15 +90,16 @@ export const RightSideView: FC<{}> = () => {
         const onWork = (e: any) => setWorking(!!e?.detail?.isWorking);
 
         window.addEventListener("virtual_room_info_update", handleVRoomInfo);
+        window.addEventListener("time_of_day_update", handleTimeOfDay); // <— NEW
         window.addEventListener("credit_balance_update", handleCreditUpdate);
         window.addEventListener("work_status_update", onWork as EventListener);
 
         return () => {
-            clearInterval(t);
             window.removeEventListener(
                 "virtual_room_info_update",
                 handleVRoomInfo
             );
+            window.removeEventListener("time_of_day_update", handleTimeOfDay); // <— NEW
             window.removeEventListener(
                 "credit_balance_update",
                 handleCreditUpdate
@@ -111,7 +141,7 @@ export const RightSideView: FC<{}> = () => {
     };
 
     return (
-        <div className="nitro-right-compact">
+        <div className={`nitro-right-compact phase-${phase.toLowerCase()}`}>
             {/* top mini bar (time • credits • gear) */}
             <div className="rs-mini">
                 <div className="rs-time">
@@ -128,8 +158,6 @@ export const RightSideView: FC<{}> = () => {
                     onClick={() => setShowSettings(true)}
                 />
             </div>
-
-            
 
             {/* zone / virtual room card */}
             <div className="rs-card">
@@ -152,10 +180,9 @@ export const RightSideView: FC<{}> = () => {
                 <SettingsView onClose={() => setShowSettings(false)} />
             )}
 
-            {/* NEW: Quick-action row with background-image buttons */}
+            {/* Quick actions */}
             <div className="rs-quick">
-
-                 {/* Call Police */}
+                {/* Call Police */}
                 <div className="qcall-wrap">
                     <button
                         className={`qbtn police ${
@@ -215,6 +242,7 @@ export const RightSideView: FC<{}> = () => {
                         </div>
                     )}
                 </div>
+
                 {/* Clock In / Out */}
                 <button
                     className={`qbtn work ${working ? "on" : ""}`}
@@ -232,11 +260,7 @@ export const RightSideView: FC<{}> = () => {
                     onClick={togglePassive}
                     aria-label="Toggle Aggressive / Passive"
                 />
-
-               
             </div>
         </div>
-
-        
     );
 };
