@@ -18,21 +18,27 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
         return stored ? JSON.parse(stored) : true;
     });
 
-    // Position persistence
+    // ✅ NEW: Disable Context Menu toggle
+    const [contextMenuDisabled, setContextMenuDisabled] = useState<boolean>(
+        () => {
+            const stored = localStorage.getItem("contextMenuDisabled");
+            return stored ? JSON.parse(stored) : false;
+        }
+    );
+
+    // Position persistence (unchanged)
     const [position, setPosition] = useState<{ x: number; y: number }>(() => {
         const stored = localStorage.getItem("settingsPos");
         return stored ? JSON.parse(stored) : { x: 100, y: 100 };
     });
 
     const rootRef = useRef<HTMLDivElement | null>(null);
-
     const startMouseRef = useRef<{ x: number; y: number } | null>(null);
     const startPosRef = useRef<{ x: number; y: number }>(position);
     const rafRef = useRef<number | null>(null);
     const deltaRef = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
     const draggingRef = useRef(false);
 
-    // Keep startPosRef in sync with the committed position
     useEffect(() => {
         startPosRef.current = position;
     }, [position]);
@@ -45,11 +51,9 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
 
     const onMouseMove = (e: MouseEvent) => {
         if (!draggingRef.current || !startMouseRef.current) return;
-
         const dx = e.clientX - startMouseRef.current.x;
         const dy = e.clientY - startMouseRef.current.y;
         deltaRef.current = { dx, dy };
-
         if (rafRef.current == null) {
             rafRef.current = requestAnimationFrame(() => {
                 applyTransform();
@@ -74,12 +78,9 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
             x: startPosRef.current.x + dx,
             y: startPosRef.current.y + dy,
         };
-
-        // Commit new position to state + storage (triggers re-render with new left/top)
         setPosition(committed);
         localStorage.setItem("settingsPos", JSON.stringify(committed));
 
-        // Defer clearing transform until AFTER React paints new left/top
         requestAnimationFrame(() => {
             if (rootRef.current) {
                 rootRef.current.style.transform = "translate(0px, 0px)";
@@ -95,13 +96,8 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
         draggingRef.current = true;
         startMouseRef.current = { x: e.clientX, y: e.clientY };
         deltaRef.current = { dx: 0, dy: 0 };
-
-        if (rootRef.current) {
-            rootRef.current.style.willChange = "transform";
-        }
+        if (rootRef.current) rootRef.current.style.willChange = "transform";
         document.body.classList.add("dragging");
-
-        // Passive is fine for mousemove (we don't call preventDefault)
         window.addEventListener("mousemove", onMouseMove as any, {
             passive: true,
         });
@@ -109,18 +105,21 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
     };
 
     useEffect(() => {
-        // Safety cleanup on unmount
         return () => {
             cleanupListeners();
             document.body.classList.remove("dragging");
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const saveSettings = () => {
         localStorage.setItem("liveFeedEnabled", JSON.stringify(liveFeed));
         localStorage.setItem("gangInvitesEnabled", JSON.stringify(gangInvites));
+        localStorage.setItem(
+            "contextMenuDisabled",
+            JSON.stringify(contextMenuDisabled)
+        ); // ✅ persist
 
+        // Broadcast changes
         window.dispatchEvent(
             new CustomEvent("toggleLiveFeed", { detail: { enabled: liveFeed } })
         );
@@ -129,6 +128,11 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
                 detail: { enabled: gangInvites },
             })
         );
+        window.dispatchEvent(
+            new CustomEvent("toggleContextMenu", {
+                detail: { disabled: contextMenuDisabled },
+            })
+        ); // ✅ notify UIs
 
         onClose();
     };
@@ -163,6 +167,17 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
                     id="gangInvites"
                     checked={gangInvites}
                     onChange={(e) => setGangInvites(e.target.checked)}
+                />
+            </div>
+
+            {/* ✅ NEW: Disable Context Menu */}
+            <div className="setting-option">
+                <label htmlFor="disableContextMenu">Disable Context Menu</label>
+                <input
+                    type="checkbox"
+                    id="disableContextMenu"
+                    checked={contextMenuDisabled}
+                    onChange={(e) => setContextMenuDisabled(e.target.checked)}
                 />
             </div>
 

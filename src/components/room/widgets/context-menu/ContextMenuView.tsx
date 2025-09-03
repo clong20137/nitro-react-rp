@@ -25,8 +25,7 @@ import { Base, BaseProps } from "../../../../common";
 import { ContextMenuCaretView } from "./ContextMenuCaretView";
 import { InspectUserStatsComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/InspectUserStatsComposer";
 import { GetSessionDataManager } from "../../../../api";
-import { stringify } from "querystring";
-import { GetRoomEngine } from "../../../../api";
+
 interface ContextMenuViewProps extends BaseProps<HTMLDivElement> {
     objectId: number;
     category: number;
@@ -36,8 +35,8 @@ interface ContextMenuViewProps extends BaseProps<HTMLDivElement> {
     collapsable?: boolean;
 }
 
-const LOCATION_STACK_SIZE: number = 25;
-const BUBBLE_DROP_SPEED: number = 3;
+const LOCATION_STACK_SIZE = 25;
+const BUBBLE_DROP_SPEED = 3;
 const FADE_DELAY = 5000;
 const FADE_LENGTH = 75;
 const SPACE_AROUND_EDGES = 10;
@@ -62,6 +61,34 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         ...rest
     } = props;
 
+    // ✅ NEW: respect the user’s “Disable Context Menu” setting
+    const [contextMenuDisabled, setContextMenuDisabled] = useState<boolean>(
+        () => {
+            const stored = localStorage.getItem("contextMenuDisabled");
+            return stored ? JSON.parse(stored) : false;
+        }
+    );
+
+    // Keep in sync if settings change while open
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const det = (e as CustomEvent)?.detail;
+            if (!det) return;
+            const disabled = !!det.disabled;
+            setContextMenuDisabled(disabled);
+            if (disabled && onClose) onClose(); // close immediately if toggled on
+        };
+        window.addEventListener("toggleContextMenu", handler as EventListener);
+        return () =>
+            window.removeEventListener(
+                "toggleContextMenu",
+                handler as EventListener
+            );
+    }, [onClose]);
+
+    // If disabled → do not render the context menu at all
+    if (contextMenuDisabled) return null;
+
     const [pos, setPos] = useState<{ x: number; y: number }>({
         x: null,
         y: null,
@@ -70,15 +97,8 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         GetRoomSession().userDataManager.getUserDataByIndex(objectId);
 
     const toggleStats = () => {
-        if (objectId <= 0) return;
-
+        if (objectId <= 0 || !userData) return;
         SendMessageComposer(new InspectUserStatsComposer(userData.webID));
-        console.log(
-            `[Inspect] Sending InspectUserStatsComposer for objectId: ${userData}`
-        );
-        console.log(
-            `[Inspect] Sending InspectUserStatsComposer for objectId: ${userData.webID}`
-        );
     };
 
     const [opacity, setOpacity] = useState(1);
@@ -90,13 +110,11 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         (time: number) => {
             if (!isFading) return;
             FADE_TIME += time;
-
             const newOpacity = 1 - FADE_TIME / FADE_LENGTH;
             if (newOpacity <= 0) {
-                onClose();
-                return false;
+                onClose?.();
+                return;
             }
-
             setOpacity(newOpacity);
         },
         [isFading, onClose]
@@ -108,7 +126,6 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
                 return;
 
             let offset = -elementRef.current.offsetHeight;
-
             if (
                 userType > -1 &&
                 (userType === RoomObjectType.USER ||
@@ -122,14 +139,11 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
 
             FIXED_STACK.addValue(location.y - bounds.top);
             let maxStack = FIXED_STACK.getMax();
-
             if (maxStack < MAX_STACK - BUBBLE_DROP_SPEED)
                 maxStack = MAX_STACK - BUBBLE_DROP_SPEED;
-
             MAX_STACK = maxStack;
 
             const deltaY = location.y - maxStack;
-
             let x = Math.floor(location.x - elementRef.current.offsetWidth / 2);
             let y = Math.floor(deltaY + offset);
 
@@ -170,7 +184,6 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
     useEffect(() => {
         const update = (time: number) => {
             if (!elementRef.current) return;
-
             updateFade(time);
 
             const bounds = GetRoomObjectBounds(
@@ -184,14 +197,11 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
                 category
             );
 
-            if (bounds && location) {
-                updatePosition(bounds, location);
-            }
+            if (bounds && location) updatePosition(bounds, location);
         };
 
         const ticker = GetTicker();
         ticker.add(update);
-
         return () => {
             ticker.remove(update);
         };
@@ -213,18 +223,13 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         FADE_TIME = 1;
     }, []);
 
-    // ✅ Auto-fire inspect event on context menu open
+    // Auto-fire inspect for other users only
     useEffect(() => {
         if (userType !== RoomObjectType.USER) return;
-
         const currentUserId = GetSessionDataManager().userId;
-
-        if (objectId === currentUserId) return; // 👈 prevent inspecting yourself
-        console.log(
-            "Packet sent from ContextMenu.tsx for " + currentUserId + ""
-        );
-        toggleStats(); // send inspect packet for other users only
-    }, [objectId, userType]);
+        if (!userData || userData.webID === currentUserId) return;
+        toggleStats();
+    }, [objectId, userType, userData]);
 
     return (
         <Base
@@ -245,21 +250,13 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
                                 new CustomEvent("user_inspect_stats", {
                                     detail: {
                                         userId: objectId,
-                                        username: "Opponent",
-                                        figure: "hr-100.hd-180-1.ch-255-66.lg-275-82",
-                                        health: 45,
-                                        maxHealth: 100,
-                                        energy: 70,
-                                        maxEnergy: 100,
-                                        hunger: 20,
-                                        maxHunger: 100,
-                                        aggression: 35,
+                                        // ... your payload
                                     },
                                 })
                             );
                             setIsCollapsed(true);
                         }}
-                    ></div>
+                    />
                 </>
             )}
 

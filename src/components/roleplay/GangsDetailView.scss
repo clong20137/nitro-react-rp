@@ -696,6 +696,7 @@
     display: grid;
     grid-template-columns: repeat(8, 24px);
     gap: 6px;
+    max-height:200px;
 }
 
 .swatch {
