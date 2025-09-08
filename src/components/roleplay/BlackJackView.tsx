@@ -1,915 +1,554 @@
-import React, {
-    FC,
-    useEffect,
-    useLayoutEffect,
-    useMemo,
-    useRef,
-    useState,
-} from "react";
+import React, { FC, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot, Root } from "react-dom/client";
 import "./BlackjackView.scss";
 
-/* real composers */
+/* ----- composers ----- */
 import { SendMessageComposer } from "../../api";
-import { BlackJackJoinComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackJackJoinComposer";
-import { BlackJackLeaveComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackJackLeaveComposer";
-import { BlackJackBetComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackJackBetComposer";
-import { BlackJackActionComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackJackActionComposer";
-import { BlackjackDealComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackJackDealComposer";
+import { BlackjackLeaveComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackjackLeaveComposer";
+import { BlackjackAcceptComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackjackAcceptComposer";
+import { BlackjackDeclineComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackjackDeclineComposer";
+import { BlackjackHitComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackjackHitComposer";
+import { BlackjackStandComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackjackStandComposer";
+import { BlackjackDoubleComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackjackDoubleComposer";
+import { BlackjackSplitComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackjackSplitComposer";
+import { BlackjackInsuranceComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackjackInsuranceComposer";
 
-/* ========================= bootstrap ========================= */
-const MOUNT_ID = "olrp-blackjack-root";
-let blackjackRoot: Root | null = null;
-let mounted = false;
+/* ----- send helpers ----- */
+const leave = () => SendMessageComposer(new BlackjackLeaveComposer());
+const accept = () => SendMessageComposer(new BlackjackAcceptComposer());
+const decline = () => SendMessageComposer(new BlackjackDeclineComposer());
+const hit = () => SendMessageComposer(new BlackjackHitComposer());
+const stand = () => SendMessageComposer(new BlackjackStandComposer());
+const doubleDown = () => SendMessageComposer(new BlackjackDoubleComposer());
+const split = () => SendMessageComposer(new BlackjackSplitComposer());
+const insuranceYes = () =>
+    SendMessageComposer(new BlackjackInsuranceComposer(true));
+const insuranceNo = () =>
+    SendMessageComposer(new BlackjackInsuranceComposer(false));
 
-function ensureMount() {
-    if (mounted) return;
-    let host = document.getElementById(MOUNT_ID);
-    if (!host) {
-        host = document.createElement("div");
-        host.id = MOUNT_ID;
-        document.body.appendChild(host);
-    }
-    if (!blackjackRoot) blackjackRoot = createRoot(host!);
-    blackjackRoot!.render(<BlackjackView />);
-    mounted = true;
-}
-
-(window as any).OLRP_OPEN_BJ = (detail?: any) =>
-    window.dispatchEvent(
-        new CustomEvent("blackjack_module_result", { detail: detail || {} })
-    );
-
-function replayModuleResult(detail: any) {
-    const d = { ...(detail || {}), __viaBootstrap: true };
-    window.dispatchEvent(
-        new CustomEvent("blackjack_module_result", { detail: d })
-    );
-}
-
-function globalBootstrapListener(e: Event) {
-    const ce = e as CustomEvent;
-    const detail = ce.detail || {};
-    if (detail.__viaBootstrap) return;
-    ensureMount();
-    setTimeout(() => replayModuleResult(detail), 0);
-}
-window.addEventListener(
-    "blackjack_module_result",
-    globalBootstrapListener as EventListener
-);
-
-/* ================ helpers ================ */
-const on = <T extends Event>(type: string, cb: (e: T) => void) =>
-    window.addEventListener(type, cb as EventListener);
-const off = <T extends Event>(type: string, cb: (e: T) => void) =>
-    window.removeEventListener(type, cb as EventListener);
-
-const POS_KEY = "olrp.blackjack.pos";
-const SIZE_KEY = "olrp.blackjack.size";
+/* ---------- types (matches parser) ---------- */
+type BJPhase = "INVITE" | "PLAYING" | "ENDED";
+type BJMsg = { text: string; level: "info" | "warn" | "error" };
 
 type BJState = {
-    tableId: number;
-    state: "WAITING" | "BETTING" | "DEALING" | "PLAYING" | "PAYOUT";
-    minBet?: number;
-    maxBet?: number;
-    dealer: { cards: string[]; total?: number; reveal?: boolean };
-    players: Array<{
-        userId: number;
-        name: string;
-        seat?: number;
-        bet: number;
-        hand: string[];
-        total: number;
-        turn: boolean;
-        bust?: boolean;
-        stand?: boolean;
-        blackjack?: boolean;
-        delta?: number;
-    }>;
-    endsInMs?: number;
-    myUserId?: number;
+    phase?: BJPhase;
+    state?: BJPhase;
+
+    dealerReveal: boolean;
+    dealerCards: string[];
+    dealerTotal: number;
+
+    playerHand: string[];
+    playerTotal: number;
+    playerTurn: boolean;
+
+    canDouble: boolean;
+    canSplit: boolean;
+    insuranceOffered: boolean;
+
+    bet: number;
+    messages: BJMsg[];
+
+    isDealer?: boolean;
 };
 
-type BJMessage = { text: string; level?: "info" | "warn" | "error" };
-
-/* ================ server composers ================ */
-const joinTable = (tableId?: number) =>
-    SendMessageComposer(new BlackJackJoinComposer(tableId ?? 0));
-const leaveTable = (tableId?: number) =>
-    SendMessageComposer(new BlackJackLeaveComposer(tableId ?? 0));
-const placeBet = (amount: number, tableId?: number) =>
-    SendMessageComposer(new BlackJackBetComposer(tableId ?? 0, amount));
-
-const ACTION_MAP = { HIT: 1, STAND: 2, DOUBLE: 3 } as const;
-type ActionKind = keyof typeof ACTION_MAP;
-const doAction = (kind: ActionKind, tableId?: number) =>
-    SendMessageComposer(
-        new BlackJackActionComposer(tableId ?? 0, ACTION_MAP[kind])
-    );
-const doDeal = (tableId?: number) =>
-    SendMessageComposer(new BlackjackDealComposer(tableId ?? 0));
-
-/* ================ card parsing + totals ================ */
-const SUIT_SYM: Record<string, string> = { S: "♠", H: "♥", D: "♦", C: "♣" };
-const RANK_TXT: Record<string, string> = {
+/* ---------- card helpers ---------- */
+const SUIT: Record<string, string> = { S: "♠", H: "♥", D: "♦", C: "♣" };
+const RANK: Record<string, string> = {
     A: "A",
-    K: "K",
-    Q: "Q",
-    J: "J",
     T: "10",
-    "10": "10",
-    "9": "9",
-    "8": "8",
-    "7": "7",
-    "6": "6",
-    "5": "5",
-    "4": "4",
-    "3": "3",
+    J: "J",
+    Q: "Q",
+    K: "K",
     "2": "2",
-};
-const parseCode = (code: string | undefined) => {
-    if (!code) return { rank: "A", suit: "S" };
-    if (code === "X") return { rank: "X", suit: "" }; // facedown
-    if (code.length >= 3 && code.startsWith("10"))
-        return { rank: "10", suit: code.slice(-1) };
-    return { rank: code[0], suit: code[1] ?? "S" };
+    "3": "3",
+    "4": "4",
+    "5": "5",
+    "6": "6",
+    "7": "7",
+    "8": "8",
+    "9": "9",
 };
 
-function prettyTotalFromHand(hand: string[], fallbackTotal: number): string {
-    let minTotal = 0;
-    let aces = 0;
-    for (const code of hand) {
-        if (!code || code === "X") continue;
-        const { rank } = parseCode(code);
-        if (rank === "A") {
-            aces++;
-            minTotal += 1;
-        } else if (
-            rank === "K" ||
-            rank === "Q" ||
-            rank === "J" ||
-            rank === "T" ||
-            rank === "10"
-        ) {
-            minTotal += 10;
-        } else {
-            minTotal += Number(rank) || 0;
-        }
-    }
-    let soft = minTotal,
-        a = aces;
-    while (a > 0 && soft + 10 <= 21) {
-        soft += 10;
-        a--;
-    }
-    if (aces > 0 && soft !== minTotal) return `${minTotal}/${soft}`;
-    return String(fallbackTotal ?? minTotal);
+function parseCard(code: string) {
+    if (!code || code === "?" || code === "HID" || code === "??")
+        return { rank: "?", suit: "•", red: false, ten: false, hidden: true };
+
+    const up = code.toUpperCase().trim();
+    const rank = RANK[up[0]] || "?";
+    const suit = SUIT[up[1]] || "•";
+    const red = up[1] === "H" || up[1] === "D";
+    const ten = rank === "10";
+    return { rank, suit, red, ten, hidden: false };
 }
 
-/* ================ Circular betting timer ================ */
-const BetTimer: FC<{ remainingMs: number; totalMs: number }> = ({
-    remainingMs,
-    totalMs,
-}) => {
-    const R = 28;
-    const C = 2 * Math.PI * R;
-    const clamped = Math.max(0, Math.min(totalMs, remainingMs));
-    const pct = totalMs > 0 ? clamped / totalMs : 0;
-    const dash = Math.round(C * pct);
-    const secs = Math.ceil(clamped / 1000);
-
-    return (
-        <div className="bet-timer" aria-live="polite">
-            <svg
-                className="timer-svg"
-                width="64"
-                height="64"
-                viewBox="0 0 64 64"
-            >
-                <circle className="bg" cx="32" cy="32" r={R} />
-                <circle
-                    className="progress"
-                    cx="32"
-                    cy="32"
-                    r={R}
-                    style={{ strokeDasharray: C, strokeDashoffset: C - dash }}
-                />
-            </svg>
-            <span className="time-text">{secs}</span>
-        </div>
-    );
-};
-
-/* ================ Card component ================ */
-const Card: FC<{
+const PlayingCard: FC<{
     code: string;
     faceDown?: boolean;
-    index?: number;
-    delayMs?: number;
-}> = ({ code, faceDown, index = 0, delayMs = 0 }) => {
-    const { rank, suit } = parseCode(code);
-    const red = suit === "H" || suit === "D";
-    const isDown = faceDown || rank === "X";
+    className?: string;
+}> = ({ code, faceDown, className }) => {
+    const c = parseCard(code);
+    const down = faceDown || c.hidden;
+    const cls = [
+        "card",
+        c.red ? "red" : "black",
+        down ? "down" : "up",
+        c.ten ? "ten" : "",
+        className || "",
+    ]
+        .join(" ")
+        .trim();
 
     return (
-        <div
-            className={`card ${red ? "red" : ""}`}
-            data-facedown={isDown ? "true" : "false"}
-            data-deal-idx={index}
-            style={{
-                ["--deal-delay" as any]: `${Math.min(index, 6) * 90}ms`,
-                ["--reveal-delay" as any]: `${delayMs}ms`,
-            }}
-        >
-            <div className="card-face card-front">
-                {!isDown && (
-                    <>
-                        <div className={`rank ${rank === "10" ? "ten" : ""}`}>
-                            {RANK_TXT[rank] || rank}
+        <div className={cls}>
+            {down ? (
+                <div className="back" />
+            ) : (
+                <>
+                    <div className="corner tl">
+                        <div className={`rank ${c.ten ? "ten" : ""}`}>
+                            {c.rank}
                         </div>
-                        <div className="suit">{SUIT_SYM[suit] || ""}</div>
-                    </>
-                )}
-            </div>
-            <div className="card-face card-back" />
+                        <div className="suit">{c.suit}</div>
+                    </div>
+                    <div className="corner br">
+                        <div className={`rank ${c.ten ? "ten" : ""}`}>
+                            {c.rank}
+                        </div>
+                        <div className="suit">{c.suit}</div>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
 
-/* ================ View ================ */
+/* ---------- draggable ---------- */
+function useDrag(ref: React.RefObject<HTMLElement>) {
+    useEffect(() => {
+        const node = ref.current;
+        if (!node) return;
+        const handle =
+            (node.querySelector(".bj-header") as HTMLElement) || node;
+
+        let sx = 0,
+            sy = 0,
+            bx = 0,
+            by = 0,
+            dragging = false;
+
+        const down = (e: MouseEvent) => {
+            dragging = true;
+            sx = e.clientX;
+            sy = e.clientY;
+            const rect = node.getBoundingClientRect();
+            bx = rect.left;
+            by = rect.top;
+            document.addEventListener("mousemove", move);
+            document.addEventListener("mouseup", up);
+            e.preventDefault();
+        };
+
+        const move = (e: MouseEvent) => {
+            if (!dragging) return;
+            node.style.left = `${bx + (e.clientX - sx)}px`;
+            node.style.top = `${by + (e.clientY - sy)}px`;
+            node.style.transform = "translate(0,0)";
+        };
+
+        const up = () => {
+            dragging = false;
+            document.removeEventListener("mousemove", move);
+            document.removeEventListener("mouseup", up);
+        };
+
+        handle.addEventListener("mousedown", down);
+        return () => handle.removeEventListener("mousedown", down);
+    }, [ref]);
+}
+
+/* ---------- main view ---------- */
+type VCard = { id: number; code: string; down?: boolean };
+
 export const BlackjackView: FC = () => {
     const [open, setOpen] = useState(false);
-
-    const localUserId =
-        (window as any)?.Nitro?.instance?.sessionDataManager?.userId ??
-        (window as any)?.Nitro?.sessionDataManager?.userId ??
-        (window as any)?.HabboWebApi?.userId ??
-        (window as any)?.OLRP_USER_ID ??
-        0;
-
-    const currentUserName =
-        (window as any)?.Nitro?.instance?.sessionDataManager?.userName ??
-        (window as any)?.Nitro?.sessionDataManager?.userName ??
-        (window as any)?.HabboWebApi?.userName ??
-        (window as any)?.OLRP_USER_NAME ??
-        "";
-
-    // drag/resize
-    const rootRef = useRef<HTMLDivElement | null>(null);
-    const [pos, setPos] = useState({ x: 0, y: 0 });
-    const [size, setSize] = useState({ w: 980, h: 620 });
-    const dragging = useRef(false);
-    const dragOff = useRef({ dx: 0, dy: 0 });
-    const resizing = useRef(false);
-    const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
-
-    useLayoutEffect(() => {
-        try {
-            const p = JSON.parse(localStorage.getItem(POS_KEY) || "null");
-            const s = JSON.parse(localStorage.getItem(SIZE_KEY) || "null");
-            if (p && typeof p.x === "number" && typeof p.y === "number")
-                setPos(p);
-            if (s && typeof s.w === "number" && typeof s.h === "number")
-                setSize(s);
-        } catch {}
-        if (!localStorage.getItem(POS_KEY)) {
-            const vw = window.innerWidth,
-                vh = window.innerHeight;
-            setPos({
-                x: Math.max(0, Math.round((vw - size.w) / 2)),
-                y: Math.max(0, Math.round((vh - size.h) / 2)),
-            });
-        }
-    }, []);
-
-    useEffect(() => {
-        const onMove = (e: MouseEvent) => {
-            if (dragging.current) {
-                setPos((p) => {
-                    const x = e.clientX - dragOff.current.dx;
-                    const y = e.clientY - dragOff.current.dy;
-                    const maxX = Math.max(0, window.innerWidth - size.w);
-                    const maxY = Math.max(0, window.innerHeight - size.h);
-                    return {
-                        x: Math.min(Math.max(0, x), maxX),
-                        y: Math.min(Math.max(0, y), maxY),
-                    };
-                });
-            } else if (resizing.current) {
-                const dx = e.clientX - resizeStart.current.x;
-                const dy = e.clientY - resizeStart.current.y;
-                const W = Math.min(
-                    Math.max(820, resizeStart.current.w + dx),
-                    window.innerWidth - pos.x
-                );
-                const H = Math.min(
-                    Math.max(480, resizeStart.current.h + dy),
-                    window.innerHeight - pos.y
-                );
-                setSize({ w: W, h: H });
-            }
-        };
-        const onUp = () => {
-            if (dragging.current) {
-                dragging.current = false;
-                localStorage.setItem(POS_KEY, JSON.stringify(pos));
-            }
-            if (resizing.current) {
-                resizing.current = false;
-                localStorage.setItem(SIZE_KEY, JSON.stringify(size));
-            }
-            document.body.classList.remove("no-select");
-        };
-        window.addEventListener("mousemove", onMove);
-        window.addEventListener("mouseup", onUp);
-        return () => {
-            window.removeEventListener("mousemove", onMove);
-            window.removeEventListener("mouseup", onUp);
-        };
-    }, [pos, size]);
-
-    // ===================== state from server =====================
-    const [bj, setBJ] = useState<BJState | null>(null);
-
-    // local view helpers
-    const [dealerShown, setDealerShown] = useState<string[]>([]);
-    const [dealerDrawMode, setDealerDrawMode] = useState(false);
-    const [faceFade, setFaceFade] = useState(false);
-
-    const effectiveUserId =
-        bj?.myUserId && bj.myUserId > 0 ? bj.myUserId : localUserId;
-
-    const me = useMemo(() => {
-        if (!bj) return null;
-        let mine = bj.players.find((p) => p.userId === effectiveUserId) || null;
-        if (mine) return mine;
-        if (currentUserName) {
-            const low = currentUserName.toLowerCase();
-            mine =
-                bj.players.find((p) => (p.name || "").toLowerCase() === low) ||
-                null;
-        }
-        return mine;
-    }, [bj, effectiveUserId, currentUserName]);
-
-    /* phase flags */
-    const phase = bj?.state;
-    const isWaiting = phase === "WAITING";
-    const isBetting = phase === "BETTING";
-    const isDealing = phase === "DEALING";
-    const isPlaying = phase === "PLAYING";
-    const isPayout = phase === "PAYOUT";
-    const inRound = isDealing || isPlaying || isPayout;
-
-    const isSeated = !!me;
-    const hasBet = !!me && (me.bet ?? 0) > 0;
-    const showDeal = isBetting && isSeated && hasBet;
-
-    const canJoin = !inRound && !isSeated && (isWaiting || isBetting);
-    const canLeave = isSeated || inRound;
-    const canBet = isBetting && isSeated; // ← allow during BETTING window
-    const canDeal = showDeal; // ← deal when showing the button
-
-    const myTurn = useMemo(() => {
-        if (!bj) return false;
-        if (isPlaying) return !!me?.turn; // trust server
-        return false; // never force-turn outside PLAYING
-    }, [bj, isPlaying, me]);
-
-    const canHit = isPlaying && myTurn && !me?.bust && !me?.stand;
-    const canStand = isPlaying && myTurn && !me?.bust && !me?.stand;
-    const canDouble =
-        isPlaying &&
-        myTurn &&
-        (me?.hand?.length ?? 0) === 2 &&
-        !me?.bust &&
-        !me?.stand;
-
-    // ===================== countdown (stable) =====================
-    const [deadline, setDeadline] = useState<number | null>(null);
-    const [now, setNow] = useState<number>(Date.now());
-    const lastEndsInRef = useRef<number | null>(null);
-    const lastPhaseRef = useRef<string | null>(null);
-
-    useEffect(() => {
-        const id = setInterval(() => setNow(Date.now()), 200);
-        return () => clearInterval(id);
-    }, []);
-
-    useEffect(() => {
-        const ends = bj?.endsInMs ?? null;
-        const ph = bj?.state ?? null;
-        const phaseChanged = lastPhaseRef.current !== ph;
-        const endsChanged = lastEndsInRef.current !== ends;
-        if (ends && (phaseChanged || endsChanged || deadline === null)) {
-            setDeadline(Date.now() + ends);
-            lastEndsInRef.current = ends;
-            lastPhaseRef.current = ph;
-        }
-    }, [bj?.endsInMs, bj?.state]); // eslint-disable-line
-
-    const remainingMs = Math.max(0, (deadline ?? 0) - now);
-    const progress = useMemo(() => {
-        if (!bj?.endsInMs) return 0;
-        const used = bj.endsInMs - remainingMs;
-        return Math.min(100, Math.max(0, (used / bj.endsInMs) * 100));
-    }, [bj?.endsInMs, remainingMs]);
-
-    // toasts
+    const [st, setSt] = useState<BJState | null>(null);
     const [toasts, setToasts] = useState<
-        Array<{ id: number; text: string; level?: "info" | "warn" | "error" }>
+        Array<{ id: number; text: string; level: string }>
     >([]);
 
-    // bet controls
-    const [bet, setBet] = useState<number>(100);
-    const minBet = bj?.minBet ?? 1;
-    const maxBet = bj?.maxBet ?? 1000;
+    // Staged visible cards with stable IDs
+    const [visDealer, setVisDealer] = useState<VCard[]>([]);
+    const [visPlayer, setVisPlayer] = useState<VCard[]>([]);
+    const idSeq = useRef(1);
+    const lastPhaseRef = useRef<BJPhase | null>(null);
 
-    // open on module_result
-    useEffect(() => {
-        const onModule = (e: CustomEvent) => {
-            const { hasInfo, tableId, minBet, maxBet } = e.detail || {};
-            if (!hasInfo) return;
-            setOpen(true);
-            setBJ((prev) => ({
-                tableId: tableId ?? prev?.tableId ?? 0,
-                state: prev?.state ?? "WAITING",
-                minBet: minBet ?? prev?.minBet,
-                maxBet: maxBet ?? prev?.maxBet,
-                dealer: prev?.dealer ?? { cards: [] },
-                players: prev?.players ?? [],
-            }));
-            try {
-                joinTable(tableId ?? 0);
-            } catch {}
-        };
-        on<CustomEvent>("blackjack_module_result", onModule);
-        return () => off<CustomEvent>("blackjack_module_result", onModule);
-    }, []);
+    const rootRef = useRef<HTMLDivElement>(null);
+    useDrag(rootRef);
 
-    // state stream → main reducer
     useEffect(() => {
-        const onState = (e: CustomEvent) => {
-            const s = e.detail as BJState;
-            const myId =
-                typeof s.myUserId === "number"
-                    ? s.myUserId
-                    : Number((s as any).myUserId) || 0;
-            const players = (s.players || []).map((p: any) => ({
-                ...p,
-                userId:
-                    typeof p.userId === "number"
-                        ? p.userId
-                        : Number(p.userId) || 0,
-            }));
-            setBJ({ ...s, myUserId: myId, players });
-        };
-        const onMsg = (e: CustomEvent) =>
-            setToasts((t) =>
-                [{ id: Math.random(), ...(e.detail as BJMessage) }, ...t].slice(
-                    0,
-                    4
-                )
+        const W = window as any;
+        if (!W.__BJ_LISTENERS__) {
+            const onModule = (e: Event) => {
+                const detail = (e as CustomEvent).detail || {};
+                setOpen(true);
+                setSt(
+                    (prev) =>
+                        prev || {
+                            phase: "INVITE",
+                            dealerReveal: false,
+                            dealerCards: [],
+                            dealerTotal: 0,
+                            playerHand: [],
+                            playerTotal: 0,
+                            playerTurn: false,
+                            canDouble: false,
+                            canSplit: false,
+                            insuranceOffered: false,
+                            bet: detail.bet ?? 0,
+                            messages: [],
+                            isDealer: detail.isDealer ?? undefined,
+                        }
+                );
+                // brand new mount: clear stage
+                setVisDealer([]);
+                setVisPlayer([]);
+                idSeq.current = 1;
+                lastPhaseRef.current = "INVITE";
+            };
+
+            const onState = (e: Event) => {
+                const incoming = (e as CustomEvent).detail as BJState;
+
+                const phase: BJPhase = (incoming.phase ||
+                    incoming.state ||
+                    "INVITE") as BJPhase;
+
+                const safe: BJState = {
+                    phase,
+                    state: incoming.state,
+                    dealerReveal: !!incoming?.dealerReveal,
+                    dealerCards: Array.isArray(incoming?.dealerCards)
+                        ? incoming.dealerCards
+                        : [],
+                    dealerTotal: Number.isFinite((incoming as any)?.dealerTotal)
+                        ? (incoming as any).dealerTotal
+                        : 0,
+                    playerHand: Array.isArray(incoming?.playerHand)
+                        ? incoming.playerHand
+                        : [],
+                    playerTotal: Number.isFinite((incoming as any)?.playerTotal)
+                        ? (incoming as any).playerTotal
+                        : 0,
+                    playerTurn: !!incoming?.playerTurn,
+                    canDouble: !!incoming?.canDouble,
+                    canSplit: !!incoming?.canSplit,
+                    insuranceOffered: !!incoming?.insuranceOffered,
+                    bet: Number.isFinite((incoming as any)?.bet)
+                        ? (incoming as any).bet
+                        : 0,
+                    messages: Array.isArray(incoming?.messages)
+                        ? incoming.messages
+                        : [],
+                    isDealer: incoming.isDealer,
+                };
+
+                setSt(safe);
+
+                // toasts
+                if (safe.messages.length) {
+                    setToasts((ts) =>
+                        [
+                            {
+                                id: Math.random(),
+                                text: safe.messages[0].text,
+                                level: safe.messages[0].level,
+                            },
+                            ...ts,
+                        ].slice(0, 6)
+                    );
+                }
+
+                // --- Stage management (prevent duplicates/redeal) ---
+                const prevPhase = lastPhaseRef.current;
+                lastPhaseRef.current = phase;
+
+                // Round reset when we go to INVITE or card counts shrink
+                const resetNeeded =
+                    phase === "INVITE" ||
+                    safe.playerHand.length < visPlayer.length ||
+                    safe.dealerCards.length < visDealer.length;
+
+                if (resetNeeded || prevPhase === "ENDED") {
+                    setVisDealer([]);
+                    setVisPlayer([]);
+                    idSeq.current = 1;
+                }
+
+                // Player: append only new
+                setVisPlayer((cur) => {
+                    const next = [...cur];
+                    for (let i = cur.length; i < safe.playerHand.length; i++) {
+                        next.push({
+                            id: idSeq.current++,
+                            code: safe.playerHand[i],
+                        });
+                    }
+                    // If server resent fewer (already handled by reset); if same length, keep
+                    return next;
+                });
+
+                // Dealer: append only new; index 1 is hole card that may flip later
+                setVisDealer((cur) => {
+                    const next = [...cur];
+                    for (let i = cur.length; i < safe.dealerCards.length; i++) {
+                        const code = safe.dealerCards[i];
+                        const down = !safe.dealerReveal && i === 1; // hide hole card until reveal
+                        next.push({ id: idSeq.current++, code, down });
+                    }
+                    // Flip hole card without adding a new one
+                    if (safe.dealerReveal && next[1] && next[1].down) {
+                        next[1] = { ...next[1], down: false };
+                    }
+                    return next;
+                });
+
+                setOpen(true);
+            };
+
+            W.__BJ_LISTENERS__ = { onModule, onState };
+            window.addEventListener(
+                "blackjack_module_result",
+                onModule as EventListener
             );
-        on<CustomEvent>("blackjack_state", onState);
-        on<CustomEvent>("blackjack_message", onMsg);
-        return () => {
-            off<CustomEvent>("blackjack_state", onState);
-            off<CustomEvent>("blackjack_message", onMsg);
-        };
-    }, []);
-
-    /* ===================== Dealer reveal / draw pacing (robust) ===================== */
-    const revealWanted =
-        !!bj?.dealer.reveal ||
-        bj?.state === "DEALING" ||
-        bj?.state === "PAYOUT";
-
-    // Step through dealer cards until we've displayed everything we've received from the server.
-    useEffect(() => {
-        if (!bj) return;
-
-        const full = bj.dealer.cards || [];
-
-        if (!revealWanted) {
-            // Not revealing: mirror exactly what server sent (usually first up card + X's)
-            setDealerDrawMode(false);
-            setDealerShown(full.slice());
-            return;
-        }
-
-        setDealerDrawMode(true);
-
-        // Always ensure we at least have a slice of the full list (no shrink).
-        setDealerShown((prev) => {
-            if (prev.length > full.length) return full.slice();
-            return prev.slice(0, full.length);
-        });
-
-        let i = 0;
-        const startAt = Math.min(dealerShown.length, full.length);
-        i = startAt;
-
-        let timeout: number | undefined;
-        const tick = () => {
-            setDealerShown((prev) => {
-                if (i >= full.length) return prev;
-                const next = prev.slice(0, full.length);
-                next[i] = full[i];
-                i++;
-                return next;
-            });
-            if (i < full.length) timeout = window.setTimeout(tick, 700);
-        };
-
-        // Kick the stepping loop when we still have cards to reveal.
-        if (startAt < full.length) timeout = window.setTimeout(tick, 200);
-
-        // Failsafe: if nothing progressed for 2s, snap to full (prevents “stuck until Leave”).
-        const snap = window.setTimeout(() => {
-            setDealerShown((prev) =>
-                prev.length >= full.length ? prev : full.slice()
+            window.addEventListener(
+                "blackjack_state",
+                onState as EventListener
             );
-        }, 2000);
-
-        return () => {
-            if (timeout) window.clearTimeout(timeout);
-            window.clearTimeout(snap);
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [bj?.dealer.cards, revealWanted]);
-
-    // fade+clear after payout (~5s)
-    useEffect(() => {
-        if (!isPayout) {
-            setFaceFade(false);
-            return;
         }
-        setFaceFade(false);
-        const fadeT = window.setTimeout(() => setFaceFade(true), 4400);
-        return () => window.clearTimeout(fadeT);
-    }, [isPayout]);
-
-    // keep window open but allow manual close
-    const close = () => {
-        setOpen(false);
-        try {
-            leaveTable(bj?.tableId ?? 0);
-        } catch {}
-    };
+    }, [visDealer.length, visPlayer.length]);
 
     if (!open) return null;
 
-    // reveal flag for render
-    const dealerReveal = revealWanted;
+    const phase: BJPhase = (st?.phase || st?.state || "INVITE") as BJPhase;
+    const inviting = phase === "INVITE";
+    const playing = phase === "PLAYING";
+    const myTurn = !!st?.playerTurn;
 
-    // fixed seats (0..2) with placeholders
-    const seats: Array<BJState["players"][number] | null> = [null, null, null];
-    (bj?.players || []).forEach((p) => {
-        if (typeof p.seat === "number" && p.seat >= 0 && p.seat < 3)
-            seats[p.seat] = p;
-    });
-    const mySeatIndex = me?.seat ?? -1;
+    // Dealer sees Accept/Decline during INVITE; player sees “waiting…”
+    const isDealer = st?.isDealer ?? (inviting ? !myTurn : false);
+
+    const close = () => {
+        setOpen(false);
+        try {
+            leave();
+        } catch {}
+    };
 
     return (
-        <div
-            ref={rootRef}
-            className="blackjack-view"
-            style={{
-                position: "fixed",
-                zIndex: 1000,
-                left: pos.x,
-                top: pos.y,
-                width: size.w,
-                height: size.h,
-            }}
-            role="dialog"
-            aria-modal="true"
-        >
-            <div
-                className="bj-header"
-                onMouseDown={(e) => {
-                    if (!rootRef.current) return;
-                    const rect = rootRef.current.getBoundingClientRect();
-                    dragging.current = true;
-                    dragOff.current = {
-                        dx: e.clientX - rect.left,
-                        dy: e.clientY - rect.top,
-                    };
-                    document.body.classList.add("no-select");
-                }}
-            >
-                <span>
-                    Blackjack {bj?.tableId ? `• Table #${bj.tableId}` : ""}
-                </span>
+        <div className="bj-root" ref={rootRef}>
+            <div className="bj-header" title="Drag me">
+                <span>Blackjack</span>
                 <div className="spacer" />
-                <button className="bj-btn grey" onClick={close}>
+                <button className="btn grey" onClick={close}>
                     ✕
                 </button>
             </div>
 
-            <div
-                className={`bj-table ${dealerDrawMode ? "draw-slow" : ""}`}
-                style={{ ["--panelW" as any]: "340px" }}
-            >
-                {/* BETTING circular timer */}
-                {isBetting && bj?.endsInMs ? (
-                    <BetTimer remainingMs={remainingMs} totalMs={bj.endsInMs} />
-                ) : null}
-
-                {/* Dealer */}
-                <div className={`dealer ${faceFade ? "fade-out" : ""}`}>
-                    <div className="label">Dealer</div>
-                    <div
-                        className={`hand fan ${
-                            dealerReveal ? "reveal-all" : ""
-                        }`}
-                        style={{ overflow: "visible" }}
-                    >
-                        {(dealerReveal
-                            ? dealerShown
-                            : bj?.dealer.cards ?? []
-                        ).map((c, i) => (
-                            <Card
-                                key={`dealer-${i}`}
-                                code={c}
-                                faceDown={c === "X" && !dealerReveal}
-                                index={i}
-                                delayMs={dealerReveal ? i * 700 : 0}
-                            />
-                        ))}
-                    </div>
-                    {!!bj?.dealer.total && dealerReveal && (
-                        <div className="total">{bj.dealer.total}</div>
-                    )}
-                </div>
-
-                {/* Felt payouts (static copy) */}
-                <div className={`felt-payouts ${faceFade ? "fade-out" : ""}`}>
-                    <div className="line big">BLACKJACK PAYS 3 TO 2</div>
-                    <div className="line">
-                        Perfect Pair (same suit & color) 25:1
-                    </div>
-                    <div className="line">Perfect Pair (same color) 15:1</div>
-                    <div className="line">
-                        Perfect Pair (different color) 5:1
-                    </div>
-                </div>
-
-                {/* Seats */}
-                <div className="players ring">
-                    {seats.map((p, seatIdx) => {
-                        const isMine = seatIdx === mySeatIndex;
-
-                        if (!p) {
-                            return (
-                                <div
-                                    key={`seat-${seatIdx}`}
-                                    className={`seat placeholder seat-${seatIdx}`}
-                                >
-                                    <div className="seat-header">
-                                        <span className="name">Empty</span>
-                                        <span className="bet">$0</span>
-                                    </div>
-                                    <div className="hand horizontal" />
-                                    <div className="footer">
-                                        <span className="total">0</span>
-                                    </div>
+            <div className="bj-body">
+                {/* INVITE */}
+                {inviting && (
+                    <div className="invite-banner">
+                        <div>
+                            <b>Bet:</b> {st?.bet ?? 0}
+                        </div>
+                        <div className="act">
+                            {isDealer ? (
+                                <>
+                                    <button
+                                        className="btn green"
+                                        onClick={accept}
+                                    >
+                                        Accept
+                                    </button>
+                                    <button
+                                        className="btn grey"
+                                        onClick={decline}
+                                    >
+                                        Decline
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="waiting">
+                                    Waiting for dealer to accept...
                                 </div>
-                            );
-                        }
-
-                        const totalText = prettyTotalFromHand(p.hand, p.total);
-
-                        return (
-                            <div
-                                key={p.userId}
-                                className={`seat seat-${seatIdx} ${
-                                    p.turn ? "turn" : ""
-                                } ${p.bust ? "bust" : ""} ${
-                                    faceFade ? "fade-out" : ""
-                                }`}
-                            >
-                                <div className="seat-header">
-                                    <span className="name">{p.name}</span>
-                                    <span className="bet">${p.bet ?? 0}</span>
-                                </div>
-
-                                <div className="hand horizontal">
-                                    {p.hand.map((c, i) => (
-                                        <div
-                                            className="card-wrapper"
-                                            key={`${p.userId}-${i}`}
-                                            style={{ ["--i" as any]: i }}
-                                        >
-                                            <Card code={c} index={i} />
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="footer">
-                                    <span className="total">{totalText}</span>
-                                    {p.blackjack && (
-                                        <span className="badge">BJ</span>
-                                    )}
-                                    {p.stand && (
-                                        <span className="badge">STAND</span>
-                                    )}
-                                    {p.bust && (
-                                        <span className="badge red">BUST</span>
-                                    )}
-                                    {typeof p.delta === "number" &&
-                                        bj?.state === "PAYOUT" && (
-                                            <span
-                                                className={`delta ${
-                                                    p.delta >= 0
-                                                        ? "win"
-                                                        : "lose"
-                                                }`}
-                                            >
-                                                {p.delta >= 0 ? "+" : ""}
-                                                {p.delta}
-                                            </span>
-                                        )}
-                                </div>
-
-                                {isMine && (
-                                    <div className="seat-actions">
-                                        <button
-                                            className="bj-btn green"
-                                            disabled={!canHit}
-                                            onClick={() =>
-                                                doAction(
-                                                    "HIT",
-                                                    bj?.tableId ?? 0
-                                                )
-                                            }
-                                        >
-                                            Hit
-                                        </button>
-                                        <button
-                                            className="bj-btn white"
-                                            disabled={!canStand}
-                                            onClick={() =>
-                                                doAction(
-                                                    "STAND",
-                                                    bj?.tableId ?? 0
-                                                )
-                                            }
-                                        >
-                                            Stand
-                                        </button>
-                                        <button
-                                            className="bj-btn yellow"
-                                            disabled={!canDouble}
-                                            onClick={() =>
-                                                doAction(
-                                                    "DOUBLE",
-                                                    bj?.tableId ?? 0
-                                                )
-                                            }
-                                        >
-                                            Double
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* linear timer (stable) */}
-                {bj?.endsInMs ? (
-                    <div className="timer">
-                        <div
-                            className="bar"
-                            style={{ width: `${100 - progress}%` }}
-                        />
-                    </div>
-                ) : null}
-
-                {/* Floating betting controls */}
-                <div className="corner-controls">
-                    <div className="betting">
-                        <div className="row">
-                            <input
-                                type="number"
-                                min={minBet}
-                                max={maxBet}
-                                value={bet}
-                                onChange={(e) =>
-                                    setBet(
-                                        Math.min(
-                                            maxBet,
-                                            Math.max(
-                                                minBet,
-                                                Number(e.target.value) || minBet
-                                            )
-                                        )
-                                    )
-                                }
-                            />
-                            <button
-                                className="bj-btn green"
-                                disabled={!canBet}
-                                onClick={() => placeBet(bet, bj?.tableId ?? 0)}
-                            >
-                                Bet
-                            </button>
-                            {showDeal && (
-                                <button
-                                    className="bj-btn white"
-                                    disabled={!canDeal}
-                                    onClick={() => doDeal(bj?.tableId ?? 0)}
-                                >
-                                    Deal
-                                </button>
                             )}
-                            <button
-                                className="bj-btn"
-                                disabled={!canJoin}
-                                onClick={() => joinTable(bj?.tableId ?? 0)}
-                            >
-                                Join
-                            </button>
-                            <button
-                                className="bj-btn"
-                                disabled={!canLeave}
-                                onClick={() => leaveTable(bj?.tableId ?? 0)}
-                            >
-                                Leave
-                            </button>
                         </div>
-                        <div className="chips">
-                            {[5, 10, 25, 50, 100].map((v) => (
-                                <button
-                                    key={v}
-                                    className="chip"
-                                    onClick={() =>
-                                        setBet((b) =>
-                                            Math.min(
-                                                maxBet,
-                                                Math.max(minBet, (b || 0) + v)
-                                            )
-                                        )
-                                    }
-                                >
-                                    +{v}
-                                </button>
+                    </div>
+                )}
+
+                {/* TABLE */}
+                <div className="table">
+                    <div className="row dealer">
+                        <div className="label">Dealer</div>
+                        <div className="hand">
+                            {visDealer.map((d) => (
+                                <PlayingCard
+                                    key={d.id}
+                                    code={d.code}
+                                    faceDown={!!d.down}
+                                    className="deal-in"
+                                />
                             ))}
-                            <button
-                                className="chip"
-                                onClick={() => setBet(minBet)}
-                            >
-                                Min
-                            </button>
-                            <button
-                                className="chip"
-                                onClick={() => setBet(maxBet)}
-                            >
-                                Max
-                            </button>
-                            <span className="limits">
-                                Limits: ${minBet}–${maxBet}
-                            </span>
+                        </div>
+                        <div className="total">
+                            {st?.dealerReveal
+                                ? `Total: ${st?.dealerTotal ?? 0}`
+                                : "Total: ?"}
+                        </div>
+                    </div>
+
+                    <div className="row player">
+                        <div className="label">You</div>
+                        <div className="hand">
+                            {visPlayer.map((p) => (
+                                <PlayingCard
+                                    key={p.id}
+                                    code={p.code}
+                                    className="deal-in"
+                                />
+                            ))}
+                        </div>
+                        <div className="total">
+                            Total: {st?.playerTotal ?? 0}
                         </div>
                     </div>
                 </div>
 
-                {/* Toasts */}
+                {/* INSURANCE — player only */}
+                {playing && st?.insuranceOffered && myTurn && !isDealer && (
+                    <div className="insurance">
+                        Dealer shows an Ace. Take insurance?
+                        <div className="act">
+                            <button
+                                className="btn yellow"
+                                onClick={insuranceYes}
+                            >
+                                Yes
+                            </button>
+                            <button className="btn grey" onClick={insuranceNo}>
+                                No
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* CONTROLS — player only */}
+                {playing && !isDealer && (
+                    <div className="controls">
+                        <div className="act">
+                            <button
+                                className="btn yellow"
+                                disabled={!myTurn}
+                                onClick={hit}
+                            >
+                                Hit
+                            </button>
+                            <button
+                                className="btn yellow"
+                                disabled={!myTurn}
+                                onClick={stand}
+                            >
+                                Stand
+                            </button>
+                            <button
+                                className="btn yellow"
+                                disabled={!myTurn || !st?.canDouble}
+                                onClick={doubleDown}
+                            >
+                                Double
+                            </button>
+                            <button
+                                className="btn yellow"
+                                disabled={!myTurn || !st?.canSplit}
+                                onClick={split}
+                            >
+                                Split
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* META */}
+                <div className="meta">
+                    <div>
+                        Bet: <b>{st?.bet ?? 0}</b>
+                    </div>
+                    <div>
+                        Status: <b>{phase}</b>
+                    </div>
+                    <div>
+                        Turn:{" "}
+                        <b>
+                            {st?.playerTurn
+                                ? "PLAYER"
+                                : playing
+                                ? "DEALER"
+                                : "-"}
+                        </b>
+                    </div>
+                </div>
+
+                {/* TOASTS */}
                 <div className="toasts">
                     {toasts.map((t) => (
-                        <div
-                            key={t.id}
-                            className={`toast ${t.level || "info"}`}
-                        >
+                        <div key={t.id} className={`toast ${t.level}`}>
                             {t.text}
                         </div>
                     ))}
                 </div>
             </div>
-
-            {/* resize */}
-            <div
-                className="resize-handle"
-                onMouseDown={(e) => {
-                    e.stopPropagation();
-                    if (!rootRef.current) return;
-                    const rect = rootRef.current.getBoundingClientRect();
-                    resizing.current = true;
-                    resizeStart.current = {
-                        x: e.clientX,
-                        y: e.clientY,
-                        w: rect.width,
-                        h: rect.height,
-                    };
-                    document.body.classList.add("no-select");
-                }}
-                title="Resize"
-            />
         </div>
     );
 };
 
 export default BlackjackView;
+
+/* ---------- HARD SINGLETON MOUNT ---------- */
+(() => {
+    const W = window as any;
+    if (W.__BJ_APP_MOUNTED__) return;
+    W.__BJ_APP_MOUNTED__ = true;
+
+    const MOUNT_ID = "olrp-blackjack-root";
+
+    const dupes = Array.from(
+        document.querySelectorAll<HTMLElement>("#" + MOUNT_ID)
+    );
+    dupes.slice(1).forEach((n) => n.remove());
+
+    let host = document.getElementById(MOUNT_ID) as HTMLElement | null;
+    if (!host) {
+        host = document.createElement("div");
+        host.id = MOUNT_ID;
+        document.body.appendChild(host);
+    }
+
+    try {
+        if (
+            W.__BJ_ROOT__ &&
+            typeof (W.__BJ_ROOT__ as Root).unmount === "function"
+        )
+            (W.__BJ_ROOT__ as Root).unmount();
+    } catch {}
+
+    const root = createRoot(host);
+    root.render(<BlackjackView />);
+    W.__BJ_ROOT__ = root;
+
+    W.OLRP_OPEN_BJ = (detail?: any) => {
+        window.dispatchEvent(
+            new CustomEvent("blackjack_module_result", { detail: detail || {} })
+        );
+    };
+})();

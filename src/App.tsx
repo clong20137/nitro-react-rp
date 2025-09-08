@@ -48,6 +48,7 @@ import BlackjackView from "./components/roleplay/BlackJackView";
 import MarketplaceView from "./components/roleplay/MarketplaceView";
 import OpponentStatsOverlay from "./components/roleplay/OpponentStatsOverlay";
 import HighLowView from "./components/roleplay/HighLowView";
+import SlotMachineView from "./components/roleplay/SlotMachineView";
 
 NitroVersion.UI_VERSION = GetUIVersion();
 
@@ -246,6 +247,7 @@ export const App: FC<{}> = (props) => {
                 <OpponentStatsOverlay></OpponentStatsOverlay>
                 <LiveFeed></LiveFeed> /<BlackjackView></BlackjackView>
                 <HighLowView></HighLowView>
+                <SlotMachineView></SlotMachineView>
                 <MarketplaceView></MarketplaceView>
                 <PoliceCallView
                     onTaxi={() => console.log("Taxi to caller room")}

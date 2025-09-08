@@ -1,6 +1,14 @@
-.blackjack-view {
+/* =========================
+BlackjackView.scss (full)
+========================= */
+
+/* --- Root container --- */
+.bj-root {
     position: fixed;
     z-index: 1100;
+    left: 50%;
+    top: 55%;
+    transform: translate(-50%, -50%);
     background: #e6e6e6;
     border: 1px solid #000;
     border-radius: 8px;
@@ -9,421 +17,206 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-
-    .bj-header {
-        background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
-        color: #fff;
-        font-weight: 700;
-        padding: 8px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        border-radius: 8px 8px 0 0;
-        cursor: grab;
-
-        .spacer {
-            flex: 1;
-        }
-    }
+    width: 680px;
+    /* a bit wider to fit larger cards */
 }
 
-/* Drag helper */
-.no-select {
-    user-select: none !important;
-}
-
-/* =========================
-Felt (table) – fills module
-========================= */
-.blackjack-view .bj-table {
-    position: relative;
-    flex: 1 1 auto;
-    margin: 12px;
-    border-radius: 14px;
-    background: radial-gradient(ellipse at center, #146b2a 0%, #0f5a22 60%, #0b441a 100%);
-    border: 2px solid #0a3013;
-    overflow: hidden;
-    /* we’ll open specific areas */
-}
-
-/* Small “pulse” when dealing */
-.blackjack-view .bj-table.dealing {
-    animation: bj-table-pulse 320ms ease-in-out both;
-}
-
-@keyframes bj-table-pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
-    }
-
-    50% {
-        box-shadow: 0 0 0 2px rgba(255, 255, 255, .08) inset;
-    }
-
-    100% {
-        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
-    }
-}
-
-/* =========================
-Dealer – top center
-========================= */
-.blackjack-view .bj-table .dealer {
-    position: absolute;
-    top: 28px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(255, 255, 255, .08);
-    border: 1px solid rgba(0, 0, 0, .25);
-    border-radius: 12px;
-    padding: 10px 12px;
-    text-align: center;
-    z-index: 2;
-
-    .label {
-        color: #fff;
-        font-weight: 700;
-        margin-bottom: 4px;
-    }
-
-    .hand {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0;
-        /* we overlap with negative margin */
-        overflow: visible;
-        /* so flips aren’t clipped */
-    }
-
-    .total {
-        margin-top: 6px;
-        color: #fff;
-        font-weight: 800;
-        background: rgba(0, 0, 0, .35);
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 999px;
-    }
-}
-
-/* Dealer card overlap (~50%) */
-.blackjack-view .bj-table .dealer .hand .card {
-    margin-left: -44px;
-    /* half of 88px card width */
-}
-
-.blackjack-view .bj-table .dealer .hand .card:first-child {
-    margin-left: 0;
-}
-
-/* Slow reveal when showing all */
-.blackjack-view .bj-table .dealer .hand.reveal-all .card {
-    transition-delay: var(--deal-delay, 0ms);
-}
-
-/* =========================
-Felt payouts (centered text)
-========================= */
-.blackjack-view .bj-table .felt-payouts {
-    position: absolute;
-    top: 110px;
-    /* sits under dealer box */
-    left: 50%;
-    transform: translateX(-50%);
-    color: rgba(255, 255, 255, .85);
-    text-align: center;
-    pointer-events: none;
-    line-height: 1.25;
-
-    .line {
-        font-weight: 700;
-        text-shadow: 0 1px 0 rgba(0, 0, 0, .25);
-    }
-
-    .big {
-        font-size: 18px;
-        letter-spacing: .5px;
-        margin-bottom: 4px;
-    }
-}
-
-/* =========================
-Three-seat player rail
-========================= */
-.blackjack-view .bj-table .players.ring {
-    position: absolute;
-    left: 5%;
-    right: 5%;
-    bottom: 56px;
-    /* room for timer */
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
-    /* Leave space on the right so corner-controls never overlap seats */
-    padding-right: 360px;
-    /* ~= width of the corner-controls */
-    box-sizing: border-box;
-}
-
-.blackjack-view .bj-table .seat {
+/* --- Header --- */
+.bj-header {
+    background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
     color: #fff;
-    background: rgba(255, 255, 255, .08);
-    border: 1px solid rgba(0, 0, 0, .3);
-    border-radius: 12px;
-    padding: 10px;
-    min-height: 168px;
-
-    &.turn {
-        box-shadow: 0 0 0 2px rgba(255, 255, 255, .5) inset;
-    }
-
-    &.bust {
-        opacity: .75;
-    }
-
-    &.placeholder {
-        opacity: .5;
-    }
-}
-
-.blackjack-view .seat .seat-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 6px;
-
-    .name {
-        font-weight: 800;
-    }
-
-    .bet {
-        background: #fff;
-        color: #000;
-        border-radius: 999px;
-        padding: 2px 8px;
-        font-weight: 800;
-    }
-}
-
-/* Player cards – horizontal, overlapping by ~50% */
-.blackjack-view .seat .hand.horizontal {
-    position: relative;
-    height: 130px;
-    /* room for up to ~6 cards */
-}
-
-.blackjack-view .seat .hand.horizontal .card-wrapper {
-    position: absolute;
-    top: 0;
-    left: calc(var(--i, 0) * 44px);
-    /* 50% overlap */
-}
-
-.blackjack-view .seat .hand.horizontal .card-wrapper:first-child {
-    left: 0;
-}
-
-/* Seat footer & badges */
-.blackjack-view .seat .footer {
+    font-weight: 700;
+    padding: 8px;
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 6px;
-
-    .badge {
-        background: #fff;
-        color: #000;
-        border-radius: 999px;
-        padding: 1px 8px;
-        font-weight: 800;
-        font-size: 12px;
-
-        &.red {
-            background: #e85050;
-            color: #fff;
-        }
-    }
-
-    .delta {
-        margin-left: auto;
-        font-weight: 800;
-
-        &.win {
-            color: #9ff0a4;
-        }
-
-        &.lose {
-            color: #ffb2b2;
-        }
-    }
-}
-
-/* Your action buttons directly under your seat */
-.blackjack-view .seat .seat-actions {
-    display: flex;
     gap: 8px;
-    margin-top: 8px;
-    flex-wrap: wrap;
+    border-radius: 8px 8px 0 0;
+    cursor: grab;
+
+    .spacer {
+        flex: 1;
+    }
+
+    .btn.grey {
+        color: #fff;
+        background: linear-gradient(180deg, #888 0, #888 50%, #606060 50%, #606060);
+        border: 1px solid #000;
+        border-bottom-width: 2px;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-weight: 700;
+    }
 }
 
-.blackjack-view .bj-table .bet-timer {
-    position: absolute;
-    top: 18px;
-    /* under the window header */
-    left: 50%;
-    transform: translateX(-50%);
-    width: 64px;
-    height: 64px;
-    display: grid;
-    place-items: center;
-    z-index: 4;
-    /* above felt, below header close button */
-}
+/* --- Body --- */
+.bj-body {
+    position: relative;
+    padding: 14px 14px 18px;
+    background: radial-gradient(ellipse at center, #146b2a 0%, #0f5a22 60%, #0b441a 100%);
+    border-top: 2px solid #0a3013;
+    min-height: 380px;
 
-.blackjack-view .bj-table .bet-timer .time-text {
-    position: absolute;
-    font-weight: 900;
-    color: #fff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
-    font-size: 18px;
-}
-
-.blackjack-view .bj-table .timer-svg {
-    transform: rotate(-90deg);
-    /* start at 12 o’clock */
-}
-
-.blackjack-view .bj-table .timer-svg circle {
-    fill: none;
-    stroke-width: 5;
-}
-
-.blackjack-view .bj-table .timer-svg .bg {
-    stroke: rgba(255, 255, 255, .25);
-}
-
-.blackjack-view .bj-table .timer-svg .progress {
-    stroke: #9ff0a4;
-    /* green ring */
-    transition: stroke-dashoffset .2s linear;
-}
-
-/* =========================
-Pinned betting panel (bottom-right, never overlapping seats)
-========================= */
-.blackjack-view .bj-table .corner-controls {
-    position: absolute;
-    right: 16px;
-    bottom: 16px;
-    width: 340px;
-    /* used by players.ring padding-right */
-    max-width: 42%;
-    z-index: 3;
-    padding: 16px;
-
-    .betting {
-        background: #f6f6f6;
-        border: 1px solid #cfcfcf;
+    /* Invite banner */
+    .invite-banner {
+        color: #fff;
+        font-weight: 800;
+        background: rgba(0, 0, 0, .28);
+        border: 1px solid rgba(0, 0, 0, .35);
         border-radius: 10px;
-        padding: 8px;
+        padding: 8px 10px;
+        text-align: center;
+        margin-bottom: 10px;
+
+        .waiting {
+            opacity: .85;
+        }
+    }
+
+    /* Table (dealer row + player row) */
+    .table {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 18px;
 
         .row {
+            display: grid;
+            grid-template-columns: 90px 1fr 120px;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .label {
+            color: #fff;
+            font-weight: 800;
+            text-align: right;
+            padding-right: 6px;
+        }
+
+        .hand {
+            /* center the line and let cards overlap horizontally */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0;
+            /* overlap handled by negative margin on .card */
+
+            /* Staggered dealing feel for the first few cards.
+This produces: P1 (0ms), D1 (100ms), P2 (200ms), D2 (300ms)
+because both rows have nth-child delays; combined they alternate visually. */
+            .card {
+                animation: bjDealIn 420ms ease-out both;
+            }
+
+            .card:nth-child(1) {
+                animation-delay: 0ms;
+            }
+
+            .card:nth-child(2) {
+                animation-delay: 100ms;
+            }
+
+            .card:nth-child(3) {
+                animation-delay: 200ms;
+            }
+
+            .card:nth-child(4) {
+                animation-delay: 300ms;
+            }
+
+            .card:nth-child(5) {
+                animation-delay: 400ms;
+            }
+
+            .card:nth-child(6) {
+                animation-delay: 500ms;
+            }
+
+            /* extra nth-child rules are harmless if not used */
+        }
+
+        .total {
+            color: #ffd166;
+            font-weight: 900;
+            text-align: left;
+        }
+    }
+
+    /* Controls */
+    .controls {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+
+        .act {
             display: flex;
             gap: 8px;
-            align-items: center;
-            flex-wrap: wrap;
+            justify-content: center;
+            align-items: stretch;
         }
+    }
 
-        input[type="number"] {
-            width: 92px;
-            height: 32px;
-            padding: 0 8px;
-            border: 1px solid #bbb;
-            border-radius: 6px;
-        }
+    /* Insurance */
+    .insurance {
+        margin-top: 8px;
+        color: #fff;
+        font-weight: 700;
+        text-align: center;
 
-        .chips {
+        .act {
+            margin-top: 6px;
             display: flex;
-            gap: 6px;
-            align-items: center;
-            margin-top: 8px;
-            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
         }
+    }
 
-        .chip {
-            padding: 4px 8px;
-            border: 1px solid #000;
-            border-bottom-width: 2px;
-            border-radius: 999px;
-            background: #fff;
-            cursor: pointer;
-        }
+    /* Meta line */
+    .meta {
+        margin-top: 12px;
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+        color: #fff;
+        font-weight: 700;
+    }
 
-        .limits {
-            margin-left: auto;
-            color: #555;
-            font-size: 12px;
+    /* Toasts */
+    .toasts {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        max-width: 360px;
+        max-height: 30vh;
+        overflow: auto;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 6px;
+
+        .toast {
+            padding: 6px 8px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            background: #eef3ff;
+            border: 1px solid #cfe1ff;
+            font-weight: 700;
+
+            &.warn {
+                background: #fff7e6;
+                border-color: #ffe1a6;
+            }
+
+            &.error {
+                background: #fdeaea;
+                border-color: #f5bcbc;
+            }
         }
     }
 }
 
-/* =========================
-Timer along felt bottom
-========================= */
-.blackjack-view .bj-table .timer {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 4px;
-    background: rgba(0, 0, 0, .25);
-
-    .bar {
-        height: 100%;
-        background: #ffd166;
-        transition: width 180ms linear;
-    }
-}
-
-/* =========================
-Toasts – bottom-left on felt
-========================= */
-.blackjack-view .bj-table .toasts {
-    position: absolute;
-    left: 16px;
-    bottom: 12px;
-    max-width: 360px;
-    max-height: 30vh;
-    overflow: auto;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 6px;
-
-    .toast {
-        padding: 6px 8px;
-        border-radius: 6px;
-        margin-bottom: 6px;
-        background: #eef3ff;
-        border: 1px solid #cfe1ff;
-
-        &.warn {
-            background: #fff7e6;
-            border-color: #ffe1a6;
-        }
-
-        &.error {
-            background: #fdeaea;
-            border-color: #f5bcbc;
-        }
-    }
-}
-
-/* =========================
-Buttons (kept)
-========================= */
-.blackjack-view .bj-btn {
+/* --- Buttons --- */
+.bj-root .btn {
     display: inline-block;
     padding: 6px 12px;
     border: 1px solid #000;
@@ -438,17 +231,13 @@ Buttons (kept)
         background: linear-gradient(180deg, #3aa900 0, #3aa900 50%, #2d7d00 50%, #2d7d00);
     }
 
-    &.white {
-        background: linear-gradient(180deg, #fff 0, #fff 50%, #ccc 50%, #ccc);
+    &.grey {
+        color: #fff;
+        background: linear-gradient(180deg, #888 0, #888 50%, #606060 50%, #606060);
     }
 
     &.yellow {
         background: linear-gradient(180deg, #ffd166 0, #ffd166 50%, #e0aa24 50%, #e0aa24);
-    }
-
-    &.grey {
-        color: #fff;
-        background: linear-gradient(180deg, #888 0, #888 50%, #606060 50%, #606060);
     }
 
     &:disabled {
@@ -457,159 +246,159 @@ Buttons (kept)
     }
 }
 
-/* =========================
-Card visuals + flip
-========================= */
-.blackjack-view .card {
-    width: 88px;
-    height: 120px;
-    border-radius: 6px;
+/* --- Playing cards (white, larger, horizontal overlap) --- */
+.card {
+    width: 78px;
+    /* larger */
+    height: 110px;
+    /* larger */
+    border-radius: 10px;
+    background: #ffffff;
+    /* white face */
+    border: 1px solid #222;
     position: relative;
-    transform-style: preserve-3d;
-    perspective: 800px;
-    animation: bj-deal-in .25s cubic-bezier(.2, .9, .3, 1) both;
-    animation-delay: var(--deal-delay, 0ms);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, .35);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial;
 
-    .card-face {
-        position: absolute;
-        inset: 0;
-        border-radius: 6px;
-        backface-visibility: hidden;
-        display: grid;
-        place-items: center;
-    }
+    /* Horizontal overlap */
+    margin-left: -22px;
 
-    .card-front {
-        background: #fff;
-        border: 1px solid #222;
-        color: #000;
-
-        .rank {
-            position: absolute;
-            top: 4px;
-            left: 5px;
-            font-weight: 800;
-            font-size: 26px;
-            letter-spacing: 0;
-
-            &.ten {
-                font-size: 22px;
-                letter-spacing: -0.5px;
-            }
-
-            /* “10” fits cleanly */
-        }
-
-        .suit {
-            font-size: 40px;
-        }
+    &:first-child {
+        margin-left: 0;
     }
 
     &.red {
         color: #ce2f2f;
     }
 
-    .card-back {
-        transform: rotateY(180deg);
-        background: repeating-linear-gradient(45deg, #1e2433, #1e2433 6px, #2e3546 6px, #2e3546 12px);
-        border: 1px solid #222;
+    &:not(.red) {
+        color: #111;
+    }
+
+    /* Face-down version (used when dealer hole card is hidden) */
+    &.down {
+        background: #0b3a7e;
+        border-color: #021c3b;
+        overflow: hidden;
+
+        .back {
+            position: absolute;
+            inset: 3px;
+            border-radius: 8px;
+            background-image:
+                radial-gradient(#b5c8ff 18%, transparent 19%),
+                radial-gradient(#b5c8ff 18%, transparent 19%);
+            background-size: 12px 12px;
+            background-position: 0 0, 6px 6px;
+            opacity: .8;
+        }
+
+        /* hide face elements when down */
+        .corner {
+            display: none;
+        }
+    }
+
+    /* Card corners (rank + suit only; no big center pip) */
+    .corner {
+        position: absolute;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 1;
+
+        &.tl {
+            top: 8px;
+            left: 8px;
+        }
+
+        &.br {
+            bottom: 8px;
+            right: 8px;
+            transform: rotate(180deg);
+        }
+
+        .rank {
+            font-weight: 900;
+            font-size: 20px;
+
+            /* larger rank */
+            &.ten {
+                font-size: 18px;
+                letter-spacing: -0.5px;
+            }
+        }
+
+        .suit {
+            font-size: 18px;
+        }
+
+        /* larger suit */
+    }
+
+    /* default "deal in" animation applied in .hand with nth-child delays */
+
+    /* If you ever add a "fresh" class in React for newly appended cards,
+you can give them a different animation like this: */
+    &.fresh {
+        animation: bjDrawIn 320ms ease-out both;
     }
 }
 
-/* Flip logic: facedown shows back (no rank/suit on face) */
-.blackjack-view .card[data-facedown="true"] {
-    transform: rotateY(180deg);
-    transition: transform .45s ease;
-}
-
-.blackjack-view .card[data-facedown="false"] {
-    transform: rotateY(0deg);
-    transition: transform .45s ease;
-}
-
-/* Deal-in animation */
-@keyframes bj-deal-in {
-    from {
-        transform: translateY(-8px) scale(.95) rotate(-1.5deg);
+/* --- Dealing / drawing animations --- */
+/* initial deal: slides from top-center-ish, with slight rotation */
+@keyframes bjDealIn {
+    0% {
+        transform: translateY(-28px) translateX(-10px) scale(0.96) rotate(-5deg);
         opacity: 0;
     }
 
-    to {
-        transform: translateY(0) scale(1) rotate(0);
+    60% {
+        transform: translateY(3px) translateX(1px) scale(1.01) rotate(-1deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(0) translateX(0) scale(1) rotate(0deg);
         opacity: 1;
     }
 }
 
-/* =========================
-Resize handle
-========================= */
-.blackjack-view .resize-handle {
-    position: absolute;
-    width: 16px;
-    height: 16px;
-    right: 4px;
-    bottom: 4px;
-    cursor: nwse-resize;
-    background: linear-gradient(135deg, transparent 0 50%, rgba(0, 0, 0, .25) 50% 100%);
-    border-radius: 3px;
-}
-
-/* =========================
-Responsive
-========================= */
-@media (max-width: 980px) {
-    .blackjack-view .bj-table .players.ring {
-        padding-right: 0;
-        /* panel stacks over felt at small sizes */
-        left: 12px;
-        right: 12px;
+/* draw (hit) animation: quicker, gentle slide-up */
+@keyframes bjDrawIn {
+    0% {
+        transform: translateY(14px) scale(0.98);
+        opacity: 0;
     }
 
-    .blackjack-view .bj-table .corner-controls {
-        right: 12px;
-        bottom: 12px;
-        width: min(320px, 90%);
+    100% {
+        transform: translateY(0) scale(1.00);
+        opacity: 1;
     }
 }
 
-.blackjack-view .bj-table .bet-timer {
-    position: absolute;
-    top: 18px;
-    /* under the window header */
-    left: 50%;
-    transform: translateX(-50%);
-    width: 64px;
-    height: 64px;
-    display: grid;
-    place-items: center;
-    z-index: 4;
-    /* above felt, below header close button */
-}
+/* --- Responsive --- */
+@media (max-width: 700px) {
+    .bj-root {
+        width: min(680px, 94vw);
+    }
 
-.blackjack-view .bj-table .bet-timer .time-text {
-    position: absolute;
-    font-weight: 900;
-    color: #fff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
-    font-size: 18px;
-}
+    .table .row {
+        grid-template-columns: 70px 1fr 90px;
+    }
 
-.blackjack-view .bj-table .timer-svg {
-    transform: rotate(-90deg);
-    /* start at 12 o’clock */
-}
+    .card {
+        width: 72px;
+        height: 102px;
+        border-radius: 9px;
+        margin-left: -20px;
 
-.blackjack-view .bj-table .timer-svg circle {
-    fill: none;
-    stroke-width: 5;
-}
+        .corner .rank {
+            font-size: 19px;
+        }
 
-.blackjack-view .bj-table .timer-svg .bg {
-    stroke: rgba(255, 255, 255, .25);
-}
-
-.blackjack-view .bj-table .timer-svg .progress {
-    stroke: #9ff0a4;
-    /* green ring */
-    transition: stroke-dashoffset .2s linear;
+        .corner .suit {
+            font-size: 17px;
+        }
+    }
 }
