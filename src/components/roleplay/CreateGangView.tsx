@@ -1,4 +1,4 @@
-import { FC, useEffect, useRef, useState } from "react";
+import { FC, useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./CreateGangView.scss";
 import { SendMessageComposer } from "../../api";
 import { CreateGangComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CreateGangComposer";
@@ -77,20 +77,65 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
     const deltaRef = useRef({ dx: 0, dy: 0 });
     const rootRef = useRef<HTMLDivElement | null>(null);
 
-    useEffect(() => {
+    /* -------------------- positioning: center by default, keep in bounds -------------------- */
+
+    const clampToClient = (x: number, y: number) => {
+        const margin = 8;
+        const w = rootRef.current?.offsetWidth ?? 400;
+        const h = rootRef.current?.offsetHeight ?? 300;
+        const maxX = Math.max(margin, window.innerWidth - w - margin);
+        const maxY = Math.max(margin, window.innerHeight - h - margin);
+        return {
+            x: Math.min(Math.max(margin, x), maxX),
+            y: Math.min(Math.max(margin, y), maxY),
+        };
+    };
+
+    const centerInClient = () => {
+        const w = rootRef.current?.offsetWidth ?? 400;
+        const h = rootRef.current?.offsetHeight ?? 300;
+        const x = Math.round((window.innerWidth - w) / 2);
+        const y = Math.round((window.innerHeight - h) / 2);
+        return clampToClient(x, y);
+    };
+
+    // On mount: use saved pos if present, else center. Always clamp.
+    useLayoutEffect(() => {
+        let next = centerInClient();
+
         const saved = localStorage.getItem("createGangPosition");
         if (saved) {
             try {
                 const p = JSON.parse(saved);
-                setPosition(p);
-                posRef.current = p;
-            } catch {}
+                if (typeof p?.x === "number" && typeof p?.y === "number") {
+                    next = clampToClient(p.x, p.y);
+                }
+            } catch {
+                // ignore corrupt saved position
+            }
         }
+
+        setPosition(next);
+        posRef.current = next;
     }, []);
 
+    // Keep ref in sync
     useEffect(() => {
         posRef.current = position;
     }, [position]);
+
+    // Re-clamp on resize (stays in viewport if user resizes window)
+    useEffect(() => {
+        const onResize = () => {
+            const clamped = clampToClient(posRef.current.x, posRef.current.y);
+            setPosition(clamped);
+            posRef.current = clamped;
+        };
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, []);
+
+    /* ----------------------------------- drag ----------------------------------- */
 
     const startDrag = (clientX: number, clientY: number) => {
         draggingRef.current = true;
@@ -105,16 +150,7 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
         if (!draggingRef.current) return;
         const x = clientX - deltaRef.current.dx;
         const y = clientY - deltaRef.current.dy;
-
-        const winW = window.innerWidth,
-            winH = window.innerHeight;
-        const node = rootRef.current;
-        const w = node?.offsetWidth ?? 400;
-        const h = node?.offsetHeight ?? 300;
-
-        const nx = Math.min(Math.max(8, x), winW - w - 8);
-        const ny = Math.min(Math.max(8, y), winH - h - 8);
-        setPosition({ x: nx, y: ny });
+        setPosition(clampToClient(x, y));
     };
 
     const stopDrag = () => {
@@ -156,9 +192,17 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
         window.addEventListener("touchcancel", onEnd);
     };
 
-    // ---- FETCH ALLOWED COLORS (palette for part "cc") ----
+    // Clean up if unmounted during drag
     useEffect(() => {
-        // ask server which hexes are valid for clothing part "cc"
+        return () => {
+            document.body.classList.remove("is-dragging");
+            draggingRef.current = false;
+        };
+    }, []);
+
+    /* ----------------------- fetch allowed palette hexes once ----------------------- */
+
+    useEffect(() => {
         SendMessageComposer(new GetPartPaletteHexesComposer("cc"));
 
         const onHexes = (ev: Event) => {
@@ -185,7 +229,8 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
             window.removeEventListener("palette_hexes_result", onHexes);
     }, []); // once
 
-    // ---- HELPERS ----
+    /* -------------------------------- helpers -------------------------------- */
+
     const iconKeyFromSrc = (src: string): string => {
         const m = src.match(/\/([^\/]+)\.(gif|png)$/i);
         return m ? m[1] : "";
@@ -195,7 +240,6 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
         ICON_OPTIONS.find((i) => i.name === selectedIcon)?.src ?? "";
     const selectedIconKey = iconKeyFromSrc(selectedIconSrc);
 
-    // ---- ACTIONS ----
     const handleCreate = () => {
         if (name.length < 3)
             return setError("Gang name must be at least 3 characters.");
@@ -203,8 +247,6 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
             return setError("Gang name cannot exceed 20 characters.");
         if (!selectedIconKey) return setError("Please select a gang icon.");
 
-        // NOTE: CreateGangComposer on the client should accept (name, primaryHex, secondaryHex, iconKey)
-        // If your server expects hexes without '#', that stripping should be handled inside the composer.
         SendMessageComposer(
             new CreateGangComposer(
                 name,
@@ -236,6 +278,8 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
             )}
         </div>
     );
+
+    /* -------------------------------- render -------------------------------- */
 
     return (
         <div
@@ -314,7 +358,7 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
 
                 <div className="gang-divider" />
 
-                {/* MIDDLE: Colors (compact) */}
+                {/* MIDDLE: Colors */}
                 <div className="gang-column gang-color-chooser">
                     <div className="color-rows">
                         <div className="color-block">

@@ -14,7 +14,7 @@ import { ChangeGangRankComposer } from "@nitrots/nitro-renderer/src/nitro/commun
 import { EditGangComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/EditGangComposer";
 import { GetPartPaletteHexesComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetPartPaletteHExesComposer";
 
-// OPTIONAL getters (if your client has them). We guard with try/catch, so safe if missing.
+// Optional getters (guarded)
 let GetGangStatusComposer: any;
 let GetGangMembersComposer: any;
 let GetGangRanksComposer: any;
@@ -35,11 +35,20 @@ interface GangsDetailViewProps {
     onClose: () => void;
 }
 
-interface GangMember {
+interface GangMemberRaw {
+    userId: number;
+    username: string;
+    rankName?: string;
+    rankId?: number; // role id from the DB
+    rankOrder?: number; // sometimes sent directly
+    figure?: string;
+}
+
+interface GangMemberNorm {
     userId: number;
     username: string;
     rankName: string;
-    rankOrder: number; // “position” for grouping
+    rankOrder: number; // computed from ranks.position
     figure: string;
 }
 
@@ -108,7 +117,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
     const [gangName, setGangName] = useState("");
     const [gangRank, setGangRank] = useState(0);
 
-    // Colors & icon key (key like "ALW09")
+    // Colors & icon key
     const [primaryColor, setPrimaryColor] = useState("#000000");
     const [secondaryColor, setSecondaryColor] = useState("#000000");
     const [gangIcon, setGangIcon] = useState<string>("");
@@ -120,7 +129,8 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
 
     // Members / ranks
     const [inviteUsername, setInviteUsername] = useState("");
-    const [gangMembers, setGangMembers] = useState<GangMember[]>([]);
+    const [membersRaw, setMembersRaw] = useState<GangMemberRaw[]>([]);
+    const [membersNorm, setMembersNorm] = useState<GangMemberNorm[]>([]);
     const [gangRanks, setGangRanks] = useState<GangRank[]>([]);
     const [collapsedRanks, setCollapsedRanks] = useState<number[]>([]);
 
@@ -148,8 +158,8 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
     // Viewer / permissions
     const currentUsername = Nitro.instance.sessionDataManager.userName;
     const viewer = useMemo(
-        () => gangMembers.find((m) => m.username === currentUsername),
-        [gangMembers, currentUsername]
+        () => membersNorm.find((m) => m.username === currentUsername),
+        [membersNorm, currentUsername]
     );
     const [isGangAdmin, setIsGangAdmin] = useState(false);
     const [isGangOwner, setIsGangOwner] = useState(false);
@@ -174,7 +184,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         (iconsPage + 1) * ICONS_PER_PAGE
     );
 
-    // Drag
+    // Dragging/position
     const rootRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const dragStart = useRef({ x: 0, y: 0 });
@@ -198,7 +208,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                 (gangIcon || "").toUpperCase()
         )?.src ?? (gangIcon ? keyToIconPath(gangIcon) : "");
 
-    // ===== Helpers =====
+    // Helpers
     const getClampedPos = (x: number, y: number, node?: HTMLElement | null) => {
         const w = node?.offsetWidth ?? 650;
         const h = node?.offsetHeight ?? 420;
@@ -206,15 +216,11 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         const maxX = window.innerWidth - w - pad;
         const maxY = window.innerHeight - h - pad;
         const clamp = (v: number, min: number, max: number) =>
-            Math.min(Math.max(v, min), max);
-        return {
-            x: clamp(x, pad, Math.max(pad, maxX)),
-            y: clamp(y, pad, Math.max(pad, maxY)),
-        };
+            Math.min(Math.max(v, min), Math.max(min, max));
+        return { x: clamp(x, pad, maxX), y: clamp(y, pad, maxY) };
     };
 
     const refreshAll = () => {
-        // Prefer real composers if available
         try {
             if (GetGangStatusComposer)
                 SendMessageComposer(new GetGangStatusComposer());
@@ -227,14 +233,67 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             if (GetGangRanksComposer)
                 SendMessageComposer(new GetGangRanksComposer());
         } catch {}
-
-        // DOM bridge fallback
+        // DOM bridge fallbacks
         window.dispatchEvent(new CustomEvent("request_gang_status"));
         window.dispatchEvent(new CustomEvent("request_gang_members"));
         window.dispatchEvent(new CustomEvent("request_gang_ranks"));
     };
 
-    // ===== Listeners / bootstrap =====
+    // Normalize members whenever raw members or ranks change
+    useEffect(() => {
+        if (!membersRaw.length) {
+            setMembersNorm([]);
+            return;
+        }
+        const idToPos = new Map<number, number>();
+        for (const r of gangRanks) idToPos.set(r.id, r.position);
+
+        const normalized: GangMemberNorm[] = membersRaw.map((m) => ({
+            userId: m.userId,
+            username: m.username,
+            rankName: m.rankName ?? "",
+            rankOrder:
+                (Number.isFinite(m.rankOrder)
+                    ? (m.rankOrder as number)
+                    : undefined) ??
+                (m.rankId !== undefined ? idToPos.get(m.rankId) : undefined) ??
+                -1,
+            figure: m.figure ?? "",
+        }));
+
+        setMembersNorm(normalized);
+    }, [membersRaw, gangRanks]);
+
+    // Compute admin/owner if server didn't set isGangOwner
+    useEffect(() => {
+        if (!viewer) return;
+        // Keep existing flags if server sent them
+        if (!isGangOwner) {
+            // Fallback owner guess: highest position + administrator
+            const topPos = gangRanks.reduce(
+                (max, r) => Math.max(max, r.position),
+                -Infinity
+            );
+            const viewersRank =
+                membersNorm.find((m) => m.userId === viewer.userId)
+                    ?.rankOrder ?? -1;
+            const topIsAdmin =
+                gangRanks.find((r) => r.position === topPos)?.administrator ??
+                false;
+            if (viewersRank === topPos && topIsAdmin) setIsGangOwner(true);
+        }
+        if (!isGangAdmin) {
+            const viewersRank =
+                membersNorm.find((m) => m.userId === viewer.userId)
+                    ?.rankOrder ?? -1;
+            const admin =
+                gangRanks.find((r) => r.position === viewersRank)
+                    ?.administrator ?? false;
+            if (admin) setIsGangAdmin(true);
+        }
+    }, [viewer, membersNorm, gangRanks]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Listeners/bootstrap
     useEffect(() => {
         const handleStatus = (ev: Event) => {
             const data: any = (ev as CustomEvent).detail;
@@ -256,7 +315,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             setPrimaryColor(primary);
             setSecondaryColor(secondary);
 
-            // Icon key (ALW09). Accept url fallback.
             let key: string = (data.iconKey ?? data.icon ?? "")
                 .toString()
                 .trim();
@@ -278,7 +336,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                 Number(data.turfsControlled ?? data.turfCount ?? 0)
             );
 
-            // Permissions
+            // Permissions (prefer server truth)
             setIsGangAdmin(!!(data.isAdmin || data.isGangAdmin));
             setIsGangOwner(!!data.isGangOwner);
         };
@@ -288,17 +346,20 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             const list: any[] = Array.isArray(detail?.members)
                 ? detail.members
                 : [];
-            // normalize rankOrder and figure
-            const mapped: GangMember[] = list.map((m) => ({
-                userId: Number(m.userId),
-                username: String(m.username ?? ""),
+            const mapped: GangMemberRaw[] = list.map((m) => ({
+                userId: Number(m.userId ?? m.id),
+                username: String(m.username ?? m.name ?? ""),
                 rankName: String(m.rankName ?? m.roleName ?? ""),
-                rankOrder: Number(
-                    m.rankOrder ?? m.rankPosition ?? m.position ?? -1
-                ),
+                rankId: m.rankId !== undefined ? Number(m.rankId) : undefined,
+                rankOrder:
+                    m.rankOrder !== undefined
+                        ? Number(m.rankOrder)
+                        : m.position !== undefined
+                        ? Number(m.position)
+                        : undefined,
                 figure: String(m.figure ?? m.look ?? ""),
             }));
-            setGangMembers(mapped);
+            setMembersRaw(mapped);
         };
 
         const handleRanks = (ev: Event) => {
@@ -320,6 +381,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             setGangRanks(mapped);
         };
 
+        // Status / members / ranks events (support a few aliases)
         window.addEventListener(
             "gang_status_result",
             handleStatus as EventListener
@@ -329,11 +391,15 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             handleMembers as EventListener
         );
         window.addEventListener(
+            "gang_members_received",
+            handleMembers as EventListener
+        );
+        window.addEventListener(
             "gang_ranks_received",
             handleRanks as EventListener
         );
 
-        // Allowed color palette (once)
+        // Palette
         SendMessageComposer(new GetPartPaletteHexesComposer("cc"));
         const onHexes = (ev: Event) => {
             const { part, hexes } = (ev as CustomEvent).detail || {};
@@ -342,7 +408,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                 (h: string) => `#${String(h).toUpperCase()}`
             );
             setCcSwatches(withHash);
-            // sanitize picked colors into palette
             if (withHash.length) {
                 if (!withHash.includes(primaryColor))
                     setPrimaryColor(withHash[0]);
@@ -355,7 +420,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             onHexes as EventListener
         );
 
-        // Position sanitize (center on first mount if needed)
+        // Position: use saved (clamped) or center once
         const saved = localStorage.getItem("gangs-detail-position");
         if (saved) {
             try {
@@ -370,9 +435,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                     "gangs-detail-position",
                     JSON.stringify(clamped)
                 );
-            } catch {
-                /* ignore */
-            }
+            } catch {}
         } else {
             const w = rootRef.current?.offsetWidth ?? 650;
             const h = rootRef.current?.offsetHeight ?? 420;
@@ -385,7 +448,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         }
         setPositionReady(true);
 
-        // IMPORTANT: request AFTER listeners are attached
+        // Request AFTER listeners attach
         const t = setTimeout(refreshAll, 0);
 
         return () => {
@@ -396,6 +459,10 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             );
             window.removeEventListener(
                 "gang_members_result",
+                handleMembers as EventListener
+            );
+            window.removeEventListener(
+                "gang_members_received",
                 handleMembers as EventListener
             );
             window.removeEventListener(
@@ -469,16 +536,16 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         }
     }, [showEditRoleModal, editRoleId, gangRanks]);
 
-    // Group members by rank position, robust fallback
+    // Group members by rank position
     const groupedMembers = useMemo(() => {
-        const map: Record<number, GangMember[]> = {};
-        for (const m of gangMembers) {
+        const map: Record<number, GangMemberNorm[]> = {};
+        for (const m of membersNorm) {
             const k = Number.isFinite(m.rankOrder) ? m.rankOrder : -1;
             if (!map[k]) map[k] = [];
             map[k].push(m);
         }
         return map;
-    }, [gangMembers]);
+    }, [membersNorm]);
 
     const toggleCollapse = (rankOrder: number) => {
         setCollapsedRanks((prev) =>
@@ -488,7 +555,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         );
     };
 
-    // Actions (each one refreshes data to update immediately)
+    // Actions
     const sendGangInvite = () => {
         const u = inviteUsername.trim();
         if (!u) return;
@@ -499,6 +566,11 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
 
     const handleLeaveGangClick = () => {
         SendMessageComposer(new LeaveGangComposer());
+        // Clear local UI quickly to avoid ghost state
+        setMembersRaw([]);
+        setMembersNorm([]);
+        setIsGangOwner(false);
+        setIsGangAdmin(false);
         setTimeout(() => {
             refreshAll();
             onClose();
@@ -627,7 +699,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             </div>
 
             <div className="gangs-content">
-                {/* INFO TAB */}
+                {/* INFO */}
                 {activeTab === "info" && (
                     <div className="info-tab">
                         <div className="info-section gang-header">
@@ -703,7 +775,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                         <div className="info-section">
                             <h3>Gang Stats</h3>
                             <div className="gang-stat">
-                                Total Members: <span>{gangMembers.length}</span>
+                                Total Members: <span>{membersNorm.length}</span>
                             </div>
                             <div className="gang-stat">
                                 Total Kills: <span>{gangKills}</span>
@@ -715,7 +787,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                     </div>
                 )}
 
-                {/* MANAGE TAB */}
+                {/* MANAGE */}
                 {activeTab === "manage" && (
                     <div className="manage-tab">
                         <div className="gangs-subheader">
@@ -753,7 +825,9 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                 {isGangOwner && (
                                     <button
                                         className="habbo-action-button red"
-                                        onClick={handleDeleteGang}
+                                        onClick={() =>
+                                            setShowConfirmDeleteModal(true)
+                                        }
                                     >
                                         Disband Gang
                                     </button>
@@ -790,6 +864,11 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                                     setShowConfirmDeleteModal(
                                                         false
                                                     );
+                                                    // Clean local state to avoid UI ghosts
+                                                    setMembersRaw([]);
+                                                    setMembersNorm([]);
+                                                    setIsGangOwner(false);
+                                                    setIsGangAdmin(false);
                                                     setTimeout(() => {
                                                         refreshAll();
                                                         handleClose();
@@ -1163,7 +1242,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                     </div>
                 )}
 
-                {/* NEW ROLE POPUP */}
+                {/* NEW ROLE */}
                 {showNewRoleModal && (
                     <div className="new-role-popup fade-in">
                         <div className="popup-header">
@@ -1276,7 +1355,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                     </div>
                 )}
 
-                {/* EDIT ROLE POPUP */}
+                {/* EDIT ROLE */}
                 {showEditRoleModal && (
                     <div className="gangs-modal-overlay">
                         <div className="gangs-modal-popup scale-in">
@@ -1427,7 +1506,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                     </div>
                 )}
 
-                {/* SETTINGS TAB */}
+                {/* SETTINGS */}
                 {activeTab === "settings" && (
                     <div className="settings-tab">
                         <div className="settings-row">
