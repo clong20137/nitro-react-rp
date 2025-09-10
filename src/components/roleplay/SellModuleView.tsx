@@ -120,7 +120,7 @@ export const SellModuleView: FC = () => {
                 <div className="sell-list">
                     {inventory
                         .filter(
-                            (item) => item.item_id === 11 || item.item_id === 14
+                            (item) => item.item_id === 11 || item.item_id == 15 || item.item_id === 14
                         ) // Only show crops
                         .map((item) => (
                             <div key={item.item_id} className="sell-item-row">

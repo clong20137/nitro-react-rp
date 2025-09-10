@@ -49,6 +49,8 @@ import MarketplaceView from "./components/roleplay/MarketplaceView";
 import OpponentStatsOverlay from "./components/roleplay/OpponentStatsOverlay";
 import HighLowView from "./components/roleplay/HighLowView";
 import SlotMachineView from "./components/roleplay/SlotMachineView";
+import { WheelModuleEvent } from "@nitrots/nitro-renderer/src/nitro/communication/messages/incoming/roleplay/WheelModuleEvent";
+import BigWheelView from "./components/roleplay/BigWheelView";
 
 NitroVersion.UI_VERSION = GetUIVersion();
 
@@ -249,6 +251,7 @@ export const App: FC<{}> = (props) => {
                 <HighLowView></HighLowView>
                 <SlotMachineView></SlotMachineView>
                 <MarketplaceView></MarketplaceView>
+                { /*<BigWheelView></BigWheelView> */ }
                 <PoliceCallView
                     onTaxi={() => console.log("Taxi to caller room")}
                 />
