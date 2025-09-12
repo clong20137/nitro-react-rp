@@ -35,6 +35,8 @@ interface ContextMenuViewProps extends BaseProps<HTMLDivElement> {
     collapsable?: boolean;
 }
 
+/* ---------------- constants ---------------- */
+
 const LOCATION_STACK_SIZE = 25;
 const BUBBLE_DROP_SPEED = 3;
 const FADE_DELAY = 5000;
@@ -42,9 +44,22 @@ const FADE_LENGTH = 75;
 const SPACE_AROUND_EDGES = 10;
 
 let COLLAPSED = false;
-let FIXED_STACK: FixedSizeStack = null;
+let FIXED_STACK: FixedSizeStack = null as unknown as FixedSizeStack;
 let MAX_STACK = -1000000;
 let FADE_TIME = 1;
+
+/* ---------------- utils ---------------- */
+
+const readBool = (k: string, fallback = false) => {
+    try {
+        const raw = localStorage.getItem(k);
+        if (raw === null) return fallback;
+        const v = JSON.parse(raw);
+        return typeof v === "boolean" ? v : !!v;
+    } catch {
+        return fallback;
+    }
+};
 
 export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
     const {
@@ -61,38 +76,50 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         ...rest
     } = props;
 
-    // ✅ NEW: respect the user’s “Disable Context Menu” setting
+    /* ------------- respect “Disable Context Menu” setting ------------- */
+
     const [contextMenuDisabled, setContextMenuDisabled] = useState<boolean>(
-        () => {
-            const stored = localStorage.getItem("contextMenuDisabled");
-            return stored ? JSON.parse(stored) : false;
-        }
+        () => readBool("contextMenuDisabled", false)
     );
 
-    // Keep in sync if settings change while open
     useEffect(() => {
-        const handler = (e: Event) => {
+        const onToggle = (e: Event) => {
             const det = (e as CustomEvent)?.detail;
             if (!det) return;
             const disabled = !!det.disabled;
             setContextMenuDisabled(disabled);
-            if (disabled && onClose) onClose(); // close immediately if toggled on
+            if (disabled && onClose) onClose();
         };
-        window.addEventListener("toggleContextMenu", handler as EventListener);
-        return () =>
+
+        const onStorage = (ev: StorageEvent) => {
+            if (ev.key === "contextMenuDisabled") {
+                const disabled = readBool("contextMenuDisabled", false);
+                setContextMenuDisabled(disabled);
+                if (disabled && onClose) onClose();
+            }
+        };
+
+        window.addEventListener("toggleContextMenu", onToggle as EventListener);
+        window.addEventListener("storage", onStorage);
+        return () => {
             window.removeEventListener(
                 "toggleContextMenu",
-                handler as EventListener
+                onToggle as EventListener
             );
+            window.removeEventListener("storage", onStorage);
+        };
     }, [onClose]);
 
-    // If disabled → do not render the context menu at all
+    // If disabled, do not render at all
     if (contextMenuDisabled) return null;
 
-    const [pos, setPos] = useState<{ x: number; y: number }>({
+    /* ---------------- state ---------------- */
+
+    const [pos, setPos] = useState<{ x: number | null; y: number | null }>({
         x: null,
         y: null,
     });
+
     const userData =
         GetRoomSession().userDataManager.getUserDataByIndex(objectId);
 
@@ -105,6 +132,8 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
     const [isFading, setIsFading] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(COLLAPSED);
     const elementRef = useRef<HTMLDivElement>(null);
+
+    /* ---------------- position / fade calcs ---------------- */
 
     const updateFade = useCallback(
         (time: number) => {
@@ -181,26 +210,37 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         return { ...newStyle, ...style };
     }, [pos, opacity, style]);
 
+    /* ---------------- effects ---------------- */
+
     useEffect(() => {
+        const ticker = GetTicker();
+
         const update = (time: number) => {
-            if (!elementRef.current) return;
-            updateFade(time);
+            try {
+                if (!elementRef.current) return;
 
-            const bounds = GetRoomObjectBounds(
-                GetRoomSession().roomId,
-                objectId,
-                category
-            );
-            const location = GetRoomObjectScreenLocation(
-                GetRoomSession().roomId,
-                objectId,
-                category
-            );
+                updateFade(time);
 
-            if (bounds && location) updatePosition(bounds, location);
+                const session = GetRoomSession();
+                if (!session) return;
+
+                const bounds = GetRoomObjectBounds(
+                    session.roomId,
+                    objectId,
+                    category
+                );
+                const location = GetRoomObjectScreenLocation(
+                    session.roomId,
+                    objectId,
+                    category
+                );
+
+                if (bounds && location) updatePosition(bounds, location);
+            } catch {
+                // Swallow any frame errors (e.g., unmounted mid-tick) to avoid black screen
+            }
         };
 
-        const ticker = GetTicker();
         ticker.add(update);
         return () => {
             ticker.remove(update);
@@ -231,6 +271,8 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         toggleStats();
     }, [objectId, userType, userData]);
 
+    /* ---------------- render ---------------- */
+
     return (
         <Base
             innerRef={elementRef}
@@ -250,7 +292,6 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
                                 new CustomEvent("user_inspect_stats", {
                                     detail: {
                                         userId: objectId,
-                                        // ... your payload
                                     },
                                 })
                             );

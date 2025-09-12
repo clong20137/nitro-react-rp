@@ -1,21 +1,21 @@
 {
   "files": {
-    "main.css": "./static/css/main.5aa50740.chunk.css",
-    "main.js": "./static/js/main.b26a35f5.chunk.js",
-    "renderer.js": "./static/js/renderer.6d47357d.chunk.js",
+    "main.css": "./static/css/main.4d1baf24.chunk.css",
+    "main.js": "./static/js/main.4c0f5f37.chunk.js",
+    "renderer.js": "./static/js/renderer.5a2a35b6.chunk.js",
     "runtime-main.js": "./static/js/runtime-main.1f55c366.js",
     "vendors.css": "./static/css/vendors.34eda13e.chunk.css",
-    "vendors.js": "./static/js/vendors.6dc6b05b.chunk.js",
+    "vendors.js": "./static/js/vendors.b54539bf.chunk.js",
     "index.html": "./index.html",
-    "static/js/vendors.6dc6b05b.chunk.js.LICENSE.txt": "./static/js/vendors.6dc6b05b.chunk.js.LICENSE.txt",
+    "static/js/vendors.b54539bf.chunk.js.LICENSE.txt": "./static/js/vendors.b54539bf.chunk.js.LICENSE.txt",
     "static/media/index.scss": "./static/media/nitro-n-light.2f039e79.svg"
   },
   "entrypoints": [
     "static/js/runtime-main.1f55c366.js",
-    "static/js/renderer.6d47357d.chunk.js",
+    "static/js/renderer.5a2a35b6.chunk.js",
     "static/css/vendors.34eda13e.chunk.css",
-    "static/js/vendors.6dc6b05b.chunk.js",
-    "static/css/main.5aa50740.chunk.css",
-    "static/js/main.b26a35f5.chunk.js"
+    "static/js/vendors.b54539bf.chunk.js",
+    "static/css/main.4d1baf24.chunk.css",
+    "static/js/main.4c0f5f37.chunk.js"
   ]
 }
