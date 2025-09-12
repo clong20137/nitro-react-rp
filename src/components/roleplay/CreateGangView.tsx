@@ -409,7 +409,7 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
                     className="habbo-action-button green"
                     onClick={handleCreate}
                 >
-                    Create Gang for 100 💵
+                    Create Gang for 250 💵
                 </button>
             </div>
         </div>

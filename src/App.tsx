@@ -51,6 +51,7 @@ import HighLowView from "./components/roleplay/HighLowView";
 import SlotMachineView from "./components/roleplay/SlotMachineView";
 import { WheelModuleEvent } from "@nitrots/nitro-renderer/src/nitro/communication/messages/incoming/roleplay/WheelModuleEvent";
 import BigWheelView from "./components/roleplay/BigWheelView";
+import { HotelAlertView } from "./components/roleplay/HotelAlertView";
 
 NitroVersion.UI_VERSION = GetUIVersion();
 
@@ -251,6 +252,7 @@ export const App: FC<{}> = (props) => {
                 <HighLowView></HighLowView>
                 <SlotMachineView></SlotMachineView>
                 <MarketplaceView></MarketplaceView>
+                <HotelAlertView></HotelAlertView>
                 { /*<BigWheelView></BigWheelView> */ }
                 <PoliceCallView
                     onTaxi={() => console.log("Taxi to caller room")}

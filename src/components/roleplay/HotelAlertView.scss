@@ -1,0 +1,124 @@
+.hotel-alert-container {
+    position: fixed;
+    top: 12px;
+    left: 0;
+    right: 0;
+    z-index: 9999; // above most UI
+    display: flex;
+    justify-content: center;
+    pointer-events: none; // let clicks pass through except the alert itself
+}
+
+.hotel-alert {
+    pointer-events: auto;
+    max-width: 720px;
+    width: calc(100% - 24px);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px 12px;
+    align-items: start;
+
+    background: rgba(20, 22, 26, 0.96);
+    color: #fff;
+    border-radius: 10px;
+    padding: 14px 16px 14px 16px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(3px);
+
+    transform: translateY(-12px);
+    opacity: 0;
+    animation: hotelAlertIn 180ms ease-out forwards;
+}
+
+.hotel-alert.out {
+    animation: hotelAlertOut 220ms ease-in forwards;
+}
+
+.hotel-alert__title {
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    font-size: 28px;
+    opacity: 0.95;
+    grid-column: 1 / 2;
+}
+
+.hotel-alert__message {
+    grid-column: 1 / 2;
+    font-size: 18px;
+    line-height: 1.35;
+    opacity: 0.95;
+    white-space: pre-wrap; // keeps your \r\n formatting from the server
+}
+
+.hotel-alert__close {
+    grid-column: 2 / 3;
+    grid-row: 1 / 3;
+    width:24px;
+    height:24px;
+    align-self: start;
+    border: none;
+    border-radius: 4px;
+    background: repeating-linear-gradient(#f55041, #f55041, 50%, #c23027 0, #c23027);
+    box-shadow: 0 0 0 1.6px #fff;
+    color: #fff;
+    font-size: 18px;
+    border: solid 2px #921911;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 2px;
+    transition: opacity 120ms ease;
+
+    &:hover {
+        background: repeating-linear-gradient(#f55749, #f55749, 50%, #d33a32 0, #d33a32);
+        transition: opacity 120ms ease;
+    }
+}
+
+img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    user-select: none;
+}
+
+
+
+
+@keyframes hotelAlertIn {
+    from {
+        transform: translateY(-12px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0px);
+        opacity: 1;
+    }
+}
+
+@keyframes hotelAlertOut {
+    from {
+        transform: translateY(0px);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+}
+
+/* small screens */
+@media (max-width: 420px) {
+    .hotel-alert {
+        font-size: 13px;
+        padding: 12px 12px 12px 12px;
+    }
+
+    .hotel-alert__message {
+        font-size: 14px;
+        margin-top:10px;
+        margin-bottom:10px;
+    }
+}
