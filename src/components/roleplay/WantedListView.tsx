@@ -13,13 +13,19 @@ interface WantedListViewProps {
     onClose: () => void;
 }
 
-const STORAGE_KEY = "wanted-list-pos";
+const POS_KEY = "wanted-list-pos";
+const SIZE_KEY = "wanted-list-size";
+
+/** star art (replace paths if yours differ) */
+const STAR_FULL = "../../icons/star-full.gif";
+const STAR_EMPTY = "../../icons/star-empty.gif";
 
 export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
     const [wantedUsers, setWantedUsers] = useState<WantedUser[]>([]);
 
-    // --- draggable state ---
     const containerRef = useRef<HTMLDivElement | null>(null);
+
+    // draggable
     const [position, setPosition] = useState<{ x: number; y: number }>({
         x: 120,
         y: 120,
@@ -27,48 +33,47 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
     const dragging = useRef(false);
     const dragOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-    // Load saved position before paint (prevents jump)
+    // resizable
+    const [size, setSize] = useState<{ width: number; height: number }>({
+        width: 340,
+        height: 420,
+    });
+    const resizing = useRef(false);
+    const resizeStart = useRef<{ x: number; y: number; w: number; h: number }>({
+        x: 0,
+        y: 0,
+        w: 340,
+        h: 420,
+    });
+
+    // closing state for exit animation
+    const [closing, setClosing] = useState(false);
+    const handleClose = () => setClosing(true);
+
     useLayoutEffect(() => {
         try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                const pos = JSON.parse(saved);
-                setPosition({
-                    x: Number(pos.x) || 120,
-                    y: Number(pos.y) || 120,
+            const p = localStorage.getItem(POS_KEY);
+            if (p) {
+                const { x, y } = JSON.parse(p);
+                setPosition({ x: Number(x) || 120, y: Number(y) || 120 });
+            }
+            const s = localStorage.getItem(SIZE_KEY);
+            if (s) {
+                const { width, height } = JSON.parse(s);
+                setSize({
+                    width: Math.max(280, Number(width) || 340),
+                    height: Math.max(300, Number(height) || 420),
                 });
             }
-        } catch {
-            /* ignore */
-        }
+        } catch {}
     }, []);
 
     useEffect(() => {
-        const handleWantedListUpdate = (e: any) => {
-            const users = e.detail || [];
-            console.log("Wanted Users State Updated:", users);
-            setWantedUsers(users);
-        };
-
-        window.addEventListener("wanted_list_update", handleWantedListUpdate);
-        return () =>
-            window.removeEventListener(
-                "wanted_list_update",
-                handleWantedListUpdate
-            );
+        const handle = (e: any) => setWantedUsers(e.detail || []);
+        window.addEventListener("wanted_list_update", handle);
+        return () => window.removeEventListener("wanted_list_update", handle);
     }, []);
 
-    const renderStars = (level: number) => (
-        <div className="wanted-stars">
-            {[...Array(5)].map((_, i) => (
-                <span key={i} className={i < level ? "filled" : "empty"}>
-                    ★
-                </span>
-            ))}
-        </div>
-    );
-
-    // --- drag helpers ---
     const clampToViewport = (x: number, y: number) => {
         const el = containerRef.current;
         if (!el) return { x, y };
@@ -83,6 +88,7 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
         };
     };
 
+    // drag mouse/touch
     const startDragMouse = (e: React.MouseEvent) => {
         dragging.current = true;
         dragOffset.current = {
@@ -93,18 +99,20 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
     };
     const onMouseMove = (e: MouseEvent) => {
         if (!dragging.current) return;
-        const nx = e.clientX - dragOffset.current.x;
-        const ny = e.clientY - dragOffset.current.y;
-        setPosition(clampToViewport(nx, ny));
+        setPosition(
+            clampToViewport(
+                e.clientX - dragOffset.current.x,
+                e.clientY - dragOffset.current.y
+            )
+        );
     };
     const endDragMouse = () => {
         if (!dragging.current) return;
         dragging.current = false;
         document.body.style.userSelect = "";
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(position));
+        localStorage.setItem(POS_KEY, JSON.stringify(position));
     };
 
-    // touch
     const startDragTouch = (e: React.TouchEvent) => {
         const t = e.touches[0];
         dragging.current = true;
@@ -117,23 +125,79 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
     const onTouchMove = (e: TouchEvent) => {
         if (!dragging.current) return;
         const t = e.touches[0];
-        const nx = t.clientX - dragOffset.current.x;
-        const ny = t.clientY - dragOffset.current.y;
-        setPosition(clampToViewport(nx, ny));
+        setPosition(
+            clampToViewport(
+                t.clientX - dragOffset.current.x,
+                t.clientY - dragOffset.current.y
+            )
+        );
     };
     const endDragTouch = () => {
         if (!dragging.current) return;
         dragging.current = false;
         document.body.style.userSelect = "";
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(position));
+        localStorage.setItem(POS_KEY, JSON.stringify(position));
+    };
+
+    // resize mouse/touch
+    const startResizeMouse = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        resizing.current = true;
+        resizeStart.current = {
+            x: e.clientX,
+            y: e.clientY,
+            w: size.width,
+            h: size.height,
+        };
+        document.body.style.userSelect = "none";
+    };
+    const startResizeTouch = (e: React.TouchEvent) => {
+        e.stopPropagation();
+        const t = e.touches[0];
+        resizing.current = true;
+        resizeStart.current = {
+            x: t.clientX,
+            y: t.clientY,
+            w: size.width,
+            h: size.height,
+        };
+        document.body.style.userSelect = "none";
+    };
+    const onResizeMove = (clientX: number, clientY: number) => {
+        if (!resizing.current) return;
+        const dx = clientX - resizeStart.current.x;
+        const dy = clientY - resizeStart.current.y;
+        setSize({
+            width: Math.max(280, resizeStart.current.w + dx),
+            height: Math.max(300, resizeStart.current.h + dy),
+        });
+    };
+    const endResize = () => {
+        if (!resizing.current) return;
+        resizing.current = false;
+        document.body.style.userSelect = "";
+        localStorage.setItem(SIZE_KEY, JSON.stringify(size));
     };
 
     // global listeners
     useEffect(() => {
-        const mm = (e: MouseEvent) => onMouseMove(e);
-        const mu = () => endDragMouse();
-        const tm = (e: TouchEvent) => onTouchMove(e);
-        const tu = () => endDragTouch();
+        const mm = (e: MouseEvent) => {
+            onMouseMove(e);
+            if (resizing.current) onResizeMove(e.clientX, e.clientY);
+        };
+        const mu = () => {
+            endDragMouse();
+            endResize();
+        };
+        const tm = (e: TouchEvent) => {
+            onTouchMove(e);
+            if (resizing.current)
+                onResizeMove(e.touches[0].clientX, e.touches[0].clientY);
+        };
+        const tu = () => {
+            endDragTouch();
+            endResize();
+        };
 
         document.addEventListener("mousemove", mm);
         document.addEventListener("mouseup", mu);
@@ -146,54 +210,97 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
             document.removeEventListener("touchmove", tm as any);
             document.removeEventListener("touchend", tu);
         };
-    }, [position]);
+    }, [position, size]);
+
+    const renderStars = (level: number) => (
+        <div
+            className="wanted-stars"
+            role="img"
+            aria-label={`${level} out of 5`}
+        >
+            {[...Array(5)].map((_, i) => (
+                <img
+                    key={i}
+                    className={`star ${i < level ? "filled" : "empty"}`}
+                    src={i < level ? STAR_FULL : STAR_EMPTY}
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                />
+            ))}
+        </div>
+    );
 
     return (
         <div
             ref={containerRef}
-            className="wanted-list-view"
+            className={`wanted-list-view ${closing ? "exit-br" : "enter-br"}`}
+            onAnimationEnd={() => {
+                if (closing) onClose();
+            }}
             style={{
                 position: "absolute",
                 left: position.x,
                 top: position.y,
-                zIndex: 1100,
+                width: size.width,
+                height: size.height,
             }}
         >
             <div
                 className="wanted-header"
                 onMouseDown={startDragMouse}
                 onTouchStart={startDragTouch}
-                style={{ cursor: "grab", userSelect: "none" }}
             >
                 <span>Wanted List</span>
-                <button onClick={onClose} className="close-button">
+                <button onClick={handleClose} className="close-button">
                     ✖
                 </button>
             </div>
 
             <div className="wanted-content">
                 {wantedUsers.length === 0 ? (
-                    <div className="no-wanted-users">
-                        No wanted users found.
+                    <div className="empty-state">
+                        <div className="empty-icon">
+                            <img alt="empty" src="../../icons/duck.gif" />
+                        </div>
+                        <div className="empty-title">NO WANTED USERS</div>
+                        <div className="empty-sub">
+                            All citizens are being good little ducks.
+                        </div>
                     </div>
                 ) : (
-                    wantedUsers.map((user) => (
-                        <div className="wanted-entry" key={user.userId}>
-                            <div className="avatar">
-                                <img
-                                    src={`https://www.habbo.com/habbo-imaging/avatarimage?figure=${user.figure}&headonly=1&direction=2`}
-                                    alt={user.username}
-                                />
+                    wantedUsers.map((u, idx) => {
+                        // rotating accent color (stable per index)
+                        const hue = (idx * 47) % 360;
+                        const accent = `hsl(${hue} 70% 46%)`;
+                        return (
+                            <div
+                                className="wanted-entry colorized"
+                                key={u.userId}
+                                style={{ ["--accent" as any]: accent }}
+                            >
+                                <div className="avatar">
+                                    <img
+                                        src={`https://www.habbo.com/habbo-imaging/avatarimage?figure=${u.figure}&headonly=1&direction=2`}
+                                        alt={u.username}
+                                    />
+                                </div>
+                                <div className="wanted-info">
+                                    <div className="username">{u.username}</div>
+                                    <div className="charges">{u.charges}</div>
+                                    {renderStars(u.wantedLevel)}
+                                </div>
                             </div>
-                            <div className="wanted-info">
-                                <div className="username">{user.username}</div>
-                                <div className="charges">{user.charges}</div>
-                                {renderStars(user.wantedLevel)}
-                            </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
+
+            <div
+                className="resize-handle"
+                onMouseDown={startResizeMouse}
+                onTouchStart={startResizeTouch}
+            />
         </div>
     );
 };

@@ -60,6 +60,9 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
 }) => {
     // entrance animation
     const [opening, setOpening] = useState(true);
+    // exit animation
+    const [closing, setClosing] = useState(false);
+    const handleClose = () => setClosing(true);
 
     // data
     const [loading, setLoading] = useState(true);
@@ -181,7 +184,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         return () => window.removeEventListener("resize", onResize);
     }, []);
 
-    // corporations list (DOM bridge) — attach listeners, hydrate from cache, then request
+    // corporations list (DOM bridge)
     useEffect(() => {
         const onCorps = (ev: Event) => {
             const detail: any = (ev as CustomEvent).detail;
@@ -198,7 +201,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
             onCorps as EventListener
         );
 
-        // hydrate from sticky cache if bridge saved it earlier
         const cached = (window as any).__olrpCache?.corporations as
             | Corporation[]
             | undefined;
@@ -207,9 +209,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
             setLoading(false);
         }
 
-        // then request on next tick so we never race the listener
         const t = setTimeout(() => {
-            // If you also use a Composer for this list, call it here instead.
             window.dispatchEvent(new CustomEvent("request_corporations_list"));
         }, 0);
 
@@ -226,9 +226,8 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         };
     }, []);
 
-    // 🔴 LIVE STOCK UPDATES (single + bulk) — IMMEDIATE UI SYNC
+    // 🔴 LIVE STOCK UPDATES
     useEffect(() => {
-        // update helper (keeps identity stable for untouched items)
         const applyStockPatch = (
             id: number,
             patch: { stock?: number; delta?: number }
@@ -241,7 +240,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                         typeof patch.stock === "number"
                             ? patch.stock
                             : Math.max(0, curr + (patch.delta ?? 0));
-                    if (next === c.stock) return c; // no-op
+                    if (next === c.stock) return c;
                     return { ...c, stock: next };
                 })
             );
@@ -263,7 +262,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                 : [];
             if (!arr.length) return;
             setCorporations((prev) => {
-                // build quick map for O(1) access
                 const patchMap = new Map<number, number>();
                 for (const row of arr) {
                     const id = Number(row.id ?? row.corporationId);
@@ -321,7 +319,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         };
     }, []);
 
-    // auto-select first corporation once list arrives (prevents “click twice”)
+    // auto-select first corporation
     useEffect(() => {
         if (!loading && selectedCorpId == null && corporations.length > 0) {
             handleSelectCorp(corporations[0].id);
@@ -340,11 +338,9 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
             setMembers(m);
             setMembersLoading(false);
 
-            // trigger list entrance on next paint
             setMembersReady(false);
             requestAnimationFrame(() => setMembersReady(true));
 
-            // quick flash
             setRefreshFlash(true);
             setTimeout(() => setRefreshFlash(false), 180);
         };
@@ -449,7 +445,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         try {
             SendMessageComposer(new GetCorporationRanksComposer(corpId));
         } catch {}
-        // also refresh corporations list so stock badges stay in sync if server prefers snapshots
         try {
             window.dispatchEvent(new CustomEvent("request_corporations_list"));
         } catch {}
@@ -555,8 +550,11 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
             <div
                 ref={rootRef}
                 className={`corporations-view ${dragging ? "dragging" : ""} ${
-                    opening ? "enter" : "entered"
+                    closing ? "exit-br" : opening ? "enter" : "entered"
                 } ${refreshFlash ? "flash" : ""}`}
+                onAnimationEnd={() => {
+                    if (closing) onClose();
+                }}
                 style={{
                     position: "fixed",
                     left: `${pos.x}px`,
@@ -573,7 +571,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                     <span>Corporations</span>
                     <button
                         className="close-button"
-                        onClick={onClose}
+                        onClick={handleClose}
                         aria-label="Close"
                     >
                         ×

@@ -7,6 +7,8 @@
     z-index: 1000;
     border-radius: 8px;
     color: #000;
+    transform-origin: bottom right;
+    /* for exit slide direction */
 
     &.enter {
         opacity: 0;
@@ -19,12 +21,29 @@
         transform: translateY(0) scale(1);
     }
 
+    /* 🔽 exit: slide/fade toward bottom-right (matches Wanted behavior) */
+    &.exit-br {
+        animation: corpSlideOutBR 220ms cubic-bezier(.2, .9, .2, 1) both;
+    }
+
     &.flash {
         animation: corpFlash 180ms ease-out;
     }
 
     &.dragging .corporations-header {
         cursor: grabbing;
+    }
+}
+
+@keyframes corpSlideOutBR {
+    from {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+
+    to {
+        transform: translate(24px, 24px) scale(.98);
+        opacity: 0;
     }
 }
 
@@ -68,19 +87,28 @@
     border-radius: 6px 6px 0 0;
     cursor: grab;
 
+    /* ⬛ close button: square + eased hover (matches Wanted) */
     .close-button {
+        width: 22px;
+        height: 22px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+
         cursor: pointer;
         color: #fff;
-        padding: 1px 5px;
         line-height: 1;
-        border-radius: .25rem;
+        border-radius: 4px;
+        /* more squared */
         box-shadow: 0 0 0 1.6px #fff;
         border: 2px solid #921911;
         background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
-        transition: 150ms ease;
+        transition: filter .2s ease, transform .2s ease;
 
         &:hover {
-            background: repeating-linear-gradient(#f55749, #f55749 50%, #d33a32 0, #d33a32);
+            filter: brightness(1.05);
+            transform: scale(1.05);
         }
 
         &:active {
@@ -97,6 +125,7 @@
     display: grid;
     grid-template-columns: 1fr 1px 1.5fr;
     gap: 0;
+    box-shadow: 0 0 rgba(0, 0, 0, .4), 0 0 rgba(0, 0, 0, .3019607843), inset 0 -4px rgba(0, 0, 0, .2);
 
     .loading,
     .empty,
@@ -113,7 +142,6 @@
         overflow-y: auto;
         max-height: 500px;
         margin-bottom: 40px;
-
 
         .corporation-item {
             display: flex;
@@ -260,7 +288,6 @@
             flex-direction: column;
             gap: 12px;
 
-            /* member cards become visible once data has landed */
             &.ready .member-card {
                 opacity: 1;
                 transform: translateY(0);
@@ -272,14 +299,11 @@
             border: 1px solid #cfcfcf;
             border-radius: 6px;
             overflow: hidden;
-
-            /* appear with stagger */
             transform: translateY(2px);
             opacity: 0;
             transition: opacity 160ms ease-out, transform 220ms ease-out, box-shadow 180ms ease;
         }
 
-        /* once in DOM they instantly flip visible (no extra class required) */
         .rank-section {
             opacity: 1;
             transform: translateY(0);
@@ -324,7 +348,6 @@
             border-radius: 6px;
             padding: 8px 10px;
 
-            /* entrance */
             opacity: 0;
             transform: translateY(4px);
             transition: opacity 140ms ease-out, transform 180ms ease-out, box-shadow 160ms ease;
@@ -390,7 +413,6 @@
         }
     }
 
-    /* narrow screens: stack cards */
     @media (max-width: 980px) {
         .corporation-details .rank-members {
             grid-template-columns: 1fr;
@@ -517,21 +539,13 @@
 
 /* =========================
 Mobile / Small screens
-- Primary catch-all (≤ 460px)
-- iOS safe areas
-- Portrait / Landscape tweaks
 ========================= */
-
-/* Catch-all small phones (covers iPhone Pro/Pro Max CSS widths) */
 @media screen and (max-width: 460px) {
     .corporations-view {
         width: min(92vw, 430px);
         left: 50% !important;
-        /* center horizontally */
         top: max(8svh, 16px) !important;
-        /* keep off the notch */
         transform: translateX(-50%);
-        /* center */
         border-radius: 10px;
         margin: 0 12px;
     }
@@ -542,11 +556,9 @@ Mobile / Small screens
     }
 
     .corporations-body {
-        /* Stack into a single column */
         grid-template-columns: 1fr !important;
         gap: 8px;
         max-height: calc(100svh - 170px);
-        /* header + padding */
         overflow: auto;
         padding: 10px;
     }
@@ -577,7 +589,6 @@ Mobile / Small screens
         width: 100%;
     }
 
-    /* Cards: tighten a bit on phones */
     .corporations-body .corporations-list .corporation-item {
         padding: 8px;
         gap: 8px;
@@ -602,7 +613,6 @@ Mobile / Small screens
         font-size: 12px;
     }
 
-    /* Right column details */
     .corporations-body .corporation-details .rank-members {
         grid-template-columns: 1fr !important;
     }
@@ -635,25 +645,21 @@ Mobile / Small screens
         gap: 6px;
     }
 
-    /* Skeleton grid condensed */
     .members-skeleton {
         grid-template-columns: 1fr !important;
         gap: 8px;
     }
 }
 
-/* iOS safe area padding (dynamic island / home indicator) */
 @supports (padding: max(0px)) {
     @media screen and (max-width: 460px) {
         .corporations-view {
-            /* protect from top/bottom safe areas */
             margin-top: max(12px, env(safe-area-inset-top));
             margin-bottom: max(12px, env(safe-area-inset-bottom));
         }
     }
 }
 
-/* Portrait-specific refinements */
 @media screen and (max-width: 460px) and (orientation: portrait) {
     .corporations-view {
         width: 94vw;
@@ -664,7 +670,6 @@ Mobile / Small screens
     }
 }
 
-/* Landscape-specific refinements (short height: keep content scrollable) */
 @media screen and (max-width: 812px) and (orientation: landscape) {
     .corporations-view {
         width: 96vw;
@@ -676,7 +681,6 @@ Mobile / Small screens
     .corporations-body {
         max-height: calc(100svh - 120px);
         grid-template-columns: 1fr !important;
-        /* stack in tight landscape too */
     }
 
     .corporations-body .corp-divider {
@@ -684,10 +688,8 @@ Mobile / Small screens
     }
 }
 
-/* High-DPI iPhones (Pro/Pro Max) — explicit WebKit hint */
 @media screen and (-webkit-min-device-pixel-ratio: 3) and (max-width: 460px) {
     .corporations-view {
-        /* slight width tweak for the Pro Max CSS width buckets */
         width: min(92vw, 430px);
     }
 }

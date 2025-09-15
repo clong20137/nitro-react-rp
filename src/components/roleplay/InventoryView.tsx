@@ -4,7 +4,7 @@ import { RequestInventoryItemsComposer } from "@nitrots/nitro-renderer/src/nitro
 import { InventoryStore } from "@nitrots/nitro-renderer/src/nitro/communication/messages/parser/roleplay/InventoryStore";
 import { InventoryContext } from "../../api/contexts/inventory/InventoryContext";
 import { UseInventoryItemComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/UseInventoryItemComposer";
-import { GetNitroInstance } from "../../api/nitro/GetNitroInstance"; // <- renderer size
+import { GetNitroInstance } from "../../api/nitro/GetNitroInstance";
 import "./InventoryView.scss";
 
 interface InventoryViewProps {
@@ -13,16 +13,33 @@ interface InventoryViewProps {
 
 type DragPayload = { id: number; fromSlot: number };
 
+// helper: item type checks (adjust strings here if your item_type differs)
+const isType = (it: InventoryContext | undefined, t: string) =>
+    (it?.item_type || "").toLowerCase() === t;
+
+// which slots accept which types
+const slotAccepts = (slot: number, it: InventoryContext | undefined) => {
+    if (slot === 0) return isType(it, "weapon");
+    if (slot === 1) return isType(it, "shield");
+    if (slot === 2) return isType(it, "potion");
+    return true; // 3..11 accept anything
+};
+
 export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
     const [items, setItems] = useState<InventoryContext[]>([]);
     const winRef = useRef<HTMLDivElement>(null);
 
-    // rAF throttle for dragging
+    // window open/close animation flags
+    const [animClass, setAnimClass] = useState<"enter" | "idle" | "exit">(
+        "enter"
+    );
+
+    // rAF throttle for dragging the window
     const rafRef = useRef<number | null>(null);
     const dragRef = useRef<{ dx: number; dy: number } | null>(null);
     const isDraggingRef = useRef(false);
 
-    // load persisted position (with sane default)
+    // load persisted position
     const [position, setPosition] = useState<{ x: number; y: number }>(() => {
         try {
             const s = localStorage.getItem("inventoryPos");
@@ -31,12 +48,9 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         return { x: Math.round(window.innerWidth * 0.1), y: 100 };
     });
 
-    // --- helpers -----------------------------------------------------
-
-    // stage-aware clamp (Nitro renderer size > window fallback)
+    // stage-aware clamp
     const clamp = useCallback((x: number, y: number) => {
         const nitro = GetNitroInstance?.();
-        // Some builds expose .renderer (PIXI) with width/height, others use .stageSize
         const stageWidth =
             // @ts-ignore
             nitro?.renderer?.width ??
@@ -54,7 +68,7 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         const w = winRef.current?.offsetWidth ?? 420;
         const h = winRef.current?.offsetHeight ?? 360;
 
-        const pad = 8; // breathing room from edges
+        const pad = 8;
         const maxX = Math.max(pad, stageWidth - w - pad);
         const maxY = Math.max(pad, stageHeight - h - pad);
 
@@ -78,10 +92,7 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         const nx = cx - dragRef.current.dx;
         const ny = cy - dragRef.current.dy;
         const { x, y, maxX, maxY } = clamp(nx, ny);
-
-        // if your stage is smaller than the window, make sure we never “stick”
         const clamped = { x: Math.min(x, maxX), y: Math.min(y, maxY) };
-
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => setPosition(clamped));
     };
@@ -94,19 +105,15 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         }
     };
 
-    // persist position when it changes
     useEffect(() => {
         try {
             localStorage.setItem("inventoryPos", JSON.stringify(position));
         } catch {}
     }, [position]);
 
-    // --- global listeners (created once) -----------------------------
-
     const onMouseMove = useCallback((e: MouseEvent) => {
         moveDrag(e.clientX, e.clientY);
     }, []);
-
     const onMouseUp = useCallback(() => {
         stopDrag();
         window.removeEventListener("mousemove", onMouseMove);
@@ -114,26 +121,22 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
     }, [onMouseMove]);
 
     const onTouchMove = useCallback((e: TouchEvent) => {
-        // we actively drag; prevent the page from scrolling
         e.preventDefault();
         const t = e.touches[0];
         if (t) moveDrag(t.clientX, t.clientY);
     }, []);
-
     const onTouchEnd = useCallback(() => {
         stopDrag();
         window.removeEventListener("touchmove", onTouchMove as any);
         window.removeEventListener("touchend", onTouchEnd as any);
     }, [onTouchMove]);
 
-    // header press starts the drag
     const onHeaderMouseDown = (e: React.MouseEvent) => {
         e.preventDefault();
         startDrag(e.clientX, e.clientY);
         window.addEventListener("mousemove", onMouseMove);
         window.addEventListener("mouseup", onMouseUp);
     };
-
     const onHeaderTouchStart = (e: React.TouchEvent) => {
         const t = e.touches[0];
         if (!t) return;
@@ -142,17 +145,28 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         window.addEventListener("touchend", onTouchEnd);
     };
 
-    // --- data subscription -------------------------------------------
+    // close with animation
+    const beginClose = () => {
+        setAnimClass("exit");
+        // match CSS animation duration (200ms) + small buffer
+        setTimeout(() => onClose(), 220);
+    };
 
+    // enter animation to idle after mount
+    useEffect(() => {
+        const t = setTimeout(() => setAnimClass("idle"), 220);
+        return () => clearTimeout(t);
+    }, []);
+
+    // data subscription
     useEffect(() => {
         const comm = GetCommunication();
         comm.connection.send(new RequestInventoryItemsComposer());
         setItems(InventoryStore.getItems());
-
         const unsub = InventoryStore.onUpdate((next) => setItems(next));
 
         return () => {
-            unsub?.(); // if your store returns an unsubscribe
+            unsub?.();
             InventoryStore.clearListeners?.();
             window.removeEventListener("mousemove", onMouseMove);
             window.removeEventListener("mouseup", onMouseUp);
@@ -162,8 +176,7 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         };
     }, [onMouseMove, onMouseUp, onTouchMove, onTouchEnd]);
 
-    // --- durability helpers ------------------------------------------
-
+    // durability helpers
     const getDurabilityMax = (item: InventoryContext) => {
         const md = (item as any)?.max_durability;
         if (typeof md === "number") return md;
@@ -171,14 +184,12 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         if (t === "potion") return 30;
         return 100;
     };
-
     const getDurabilityPercent = (item: InventoryContext) => {
         if (typeof item.durability !== "number") return 0;
         const max = getDurabilityMax(item);
         const pct = (item.durability / Math.max(1, max)) * 100;
         return Math.max(0, Math.min(100, pct));
     };
-
     const getDurabilityColor = (item: InventoryContext) => {
         const pct = getDurabilityPercent(item);
         if (pct > 66) return "#5bc236";
@@ -186,8 +197,7 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         return "#e74c3c";
     };
 
-    // --- interactions -------------------------------------------------
-
+    // interactions
     const handleItemClick = (item: InventoryContext) => {
         if (isDraggingRef.current) return;
         GetCommunication().connection.send(
@@ -197,36 +207,85 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
 
     const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
     const [dragInvalid, setDragInvalid] = useState(false);
+    const [dragFromSlot, setDragFromSlot] = useState<number | null>(null);
 
     const onItemDragStart = (e: React.DragEvent, item: InventoryContext) => {
         isDraggingRef.current = true;
+        setDragFromSlot(item.slot);
         const payload: DragPayload = { id: item.id, fromSlot: item.slot };
         e.dataTransfer.setData("application/x-inv", JSON.stringify(payload));
         e.dataTransfer.effectAllowed = "move";
         setDragOverSlot(null);
         setDragInvalid(false);
     };
-
     const onItemDragEnd = () =>
         setTimeout(() => (isDraggingRef.current = false), 0);
 
-    const onSlotDrop = (e: React.DragEvent, _slotIndex: number) => {
-        e.preventDefault();
+    // local move helper (instant UI), emits event for your server layer to persist
+    const applyLocalMove = (id: number, fromSlot: number, toSlot: number) => {
+        setItems((prev) =>
+            prev.map((it) => (it.id === id ? { ...it, slot: toSlot } : it))
+        );
         setDragOverSlot(null);
         setDragInvalid(false);
-        const raw = e.dataTransfer.getData("application/x-inv");
-        if (!raw) return;
-        const { id } = JSON.parse(raw) as DragPayload;
-        const moving = items.find((i) => i.id === id);
-        if (!moving) return;
-
-        // TODO: Replace with MoveInventoryItemComposer(fromSlot, toSlot) if supported.
-        GetCommunication().connection.send(
-            new UseInventoryItemComposer(moving.id)
+        window.dispatchEvent(
+            new CustomEvent("move-inventory-item", {
+                detail: { id, fromSlot, toSlot },
+            })
         );
     };
 
-    const labelFor = (slot: number) =>
+    const onSlotDrop = (e: React.DragEvent, toSlot: number) => {
+        e.preventDefault();
+        const raw = e.dataTransfer.getData("application/x-inv");
+        setDragOverSlot(null);
+        setDragInvalid(false);
+        if (!raw) return;
+
+        const { id, fromSlot } = JSON.parse(raw) as DragPayload;
+        if (toSlot === fromSlot) return;
+
+        const moving = items.find((i) => i.id === id);
+        if (!moving) return;
+
+        // validate by slot type
+        if (!slotAccepts(toSlot, moving)) {
+            setDragInvalid(true);
+            return;
+        }
+
+        const occupying = items.find((i) => i.slot === toSlot);
+
+        // 1) Local swap/move for instant UI
+        if (occupying) {
+            setItems((prev) =>
+                prev.map((it) =>
+                    it.id === moving.id
+                        ? { ...it, slot: toSlot }
+                        : it.id === occupying.id
+                        ? { ...it, slot: fromSlot }
+                        : it
+                )
+            );
+            window.dispatchEvent(
+                new CustomEvent("move-inventory-item", {
+                    detail: { id, fromSlot, toSlot, swapWith: occupying.id },
+                })
+            );
+        } else {
+            applyLocalMove(id, fromSlot, toSlot);
+        }
+
+        // 2) Server packets
+        // If dropping INTO 0–2, mimic click to equip on server
+        if (toSlot <= 2) {
+            GetCommunication().connection.send(
+                new UseInventoryItemComposer(id)
+            );
+        }
+    };
+
+    const labelForTop = (slot: number) =>
         slot === 0
             ? "Weapon"
             : slot === 1
@@ -235,12 +294,16 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
             ? "Potion"
             : null;
 
-    // --- render ------------------------------------------------------
+    // number label for slots 3..11 -> 1..9
+    const bottomNumberFor = (slot: number) =>
+        slot >= 3 ? String(slot - 2) : null;
 
     return (
         <div
             ref={winRef}
-            className="inventory-module"
+            className={`inventory-module ${
+                animClass === "enter" ? "animate-in" : ""
+            } ${animClass === "exit" ? "animate-out" : ""}`}
             style={{ position: "absolute", left: position.x, top: position.y }}
         >
             <div
@@ -249,29 +312,32 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                 onTouchStart={onHeaderTouchStart}
             >
                 Inventory
-                <div className="inventory-close" onClick={onClose}>
-                    ✖
-                </div>
+                <button
+                    className="inventory-close"
+                    onClick={beginClose}
+                    aria-label="Close"
+                />
             </div>
 
             <div className="inventory-grid">
                 {Array.from({ length: 12 }, (_, slotIndex) => {
                     const item = items.find((i) => i.slot === slotIndex);
-                    const slotClass =
-                        `inventory-slot ${
-                            slotIndex === 0
-                                ? "active-weapon"
-                                : slotIndex === 1
-                                ? "active-shield"
-                                : slotIndex === 2
-                                ? "active-potion"
-                                : ""
-                        } ${item?.rarity ? `rarity-${item.rarity}` : ""} ` +
-                        (dragOverSlot === slotIndex
-                            ? dragInvalid
-                                ? "slot-invalid"
-                                : "slot-over"
-                            : "");
+                    const topLabel = labelForTop(slotIndex);
+                    const numberLabel = bottomNumberFor(slotIndex);
+
+                    const moving = items.find((i) => i.slot === dragFromSlot!);
+                    const over = dragOverSlot === slotIndex;
+                    const validOver = slotAccepts(slotIndex, moving);
+
+                    const cls =
+                        `inventory-slot` +
+                        (over
+                            ? validOver
+                                ? " slot-over"
+                                : " slot-invalid"
+                            : "") +
+                        (item?.rarity ? ` rarity-${item.rarity}` : "") +
+                        (topLabel ? ` active-${topLabel.toLowerCase()}` : "");
 
                     return (
                         <div
@@ -280,12 +346,14 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                             onDragEnter={(e) => {
                                 e.preventDefault();
                                 setDragOverSlot(slotIndex);
-                                setDragInvalid(false);
+                                setDragInvalid(!slotAccepts(slotIndex, moving));
                             }}
                             onDragOver={(e) => {
                                 e.preventDefault();
-                                e.dataTransfer.dropEffect = "move";
+                                const v = slotAccepts(slotIndex, moving);
+                                e.dataTransfer.dropEffect = v ? "move" : "none";
                                 setDragOverSlot(slotIndex);
+                                setDragInvalid(!v);
                             }}
                             onDragLeave={() => {
                                 if (dragOverSlot === slotIndex) {
@@ -295,13 +363,19 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                             }}
                             onDrop={(e) => onSlotDrop(e, slotIndex)}
                         >
-                            {slotIndex < 3 && (
-                                <div className="slot-label">
-                                    {labelFor(slotIndex)}
-                                </div>
+                            {/* top labels for 0..2 */}
+                            {topLabel && (
+                                <div className="slot-label">{topLabel}</div>
                             )}
 
-                            <div className={slotClass}>
+                            <div className={cls}>
+                                {/* Centered number for empty slots 3..11 */}
+                                {!item && numberLabel && (
+                                    <div className="slot-number centered">
+                                        {numberLabel}
+                                    </div>
+                                )}
+
                                 {item && (
                                     <div
                                         className="inventory-item-wrapper"
@@ -319,6 +393,14 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                                             draggable={false}
                                         />
 
+                                        {/* quantity */}
+                                        {item.quantity > 1 && (
+                                            <div className="quantity-label">
+                                                x{item.quantity}
+                                            </div>
+                                        )}
+
+                                        {/* durability */}
                                         {typeof item.durability ===
                                             "number" && (
                                             <div className="durability-bar">
@@ -337,12 +419,14 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                                             </div>
                                         )}
 
-                                        {item.quantity > 1 && (
-                                            <div className="quantity-label">
-                                                x{item.quantity}
+                                        {/* faint corner number even when filled */}
+                                        {numberLabel && (
+                                            <div className="slot-number filled-corner">
+                                                {numberLabel}
                                             </div>
                                         )}
 
+                                        {/* tooltip */}
                                         <div className="item-tooltip">
                                             <strong>{item.name}</strong>
                                             <br />

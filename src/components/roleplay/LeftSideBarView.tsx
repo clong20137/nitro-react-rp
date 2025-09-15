@@ -5,6 +5,8 @@ import { GangsDetailView } from "../roleplay/GangsDetailView";
 import { CorporationsView } from "./CorporationView";
 import { InventoryView } from "./InventoryView";
 import { WantedListView } from "./WantedListView";
+import { MacroView } from "./MacroView";
+
 import { CorporationData } from "@nitrots/nitro-renderer/src/nitro/communication/messages/parser/CorporationsListParser";
 import { CheckGangStatusComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CheckGangStatusComposer";
 import { ToggleGangChatComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ToggleGangChatComposer";
@@ -22,6 +24,7 @@ export const LeftSidebarView: FC = () => {
     const [gangMode, setGangMode] = useState<"none" | "create" | "details">(
         "none"
     );
+    const [showMacros, setShowMacros] = useState(false); // ✅ NEW
 
     const gangModeRef = useRef<"none" | "create" | "details">("none");
     useEffect(() => {
@@ -35,7 +38,6 @@ export const LeftSidebarView: FC = () => {
         const handleCorporationsList = (event: any) => {
             const corps = event.detail.corporations as CorporationData[];
             setCorporations(corps);
-
             // only auto-open if we're not already showing (prevents re-opening after manual close)
             setShowCorporations((prev) => prev || true);
         };
@@ -120,6 +122,8 @@ export const LeftSidebarView: FC = () => {
         });
     };
 
+    const onClickMacros = () => setShowMacros((prev) => !prev); // ✅ NEW
+
     return (
         <>
             <div className="left-sidebar-wrapper">
@@ -177,6 +181,16 @@ export const LeftSidebarView: FC = () => {
                                 Gang Chat Toggle
                             </span>
                         </div>
+
+                        {/* ✅ NEW: Macros launcher */}
+                        <div className="sidebar-icon tooltip-container">
+                            <div
+                                className="sidebar-icon macros"
+                                title="Macros"
+                                onClick={onClickMacros}
+                            />
+                            <span className="tooltip-text">Macros</span>
+                        </div>
                     </div>
                 </div>
 
@@ -208,6 +222,9 @@ export const LeftSidebarView: FC = () => {
             {gangMode === "details" && (
                 <GangsDetailView onClose={() => setGangMode("none")} />
             )}
+
+            {/* ✅ NEW: render Macros view */}
+            {showMacros && <MacroView onClose={() => setShowMacros(false)} />}
         </>
     );
 };

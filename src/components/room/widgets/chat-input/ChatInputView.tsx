@@ -20,9 +20,57 @@ import {
     useUiEvent,
 } from "../../../../hooks";
 
+/* ===== Macros (read-only) ===== */
+type Macro = { id: string; key: string; command: string };
+type Preset = { id: string; name: string; macros: Macro[] };
+const LS_PRESETS = "olrp.macros.presets.v1";
+const LS_ACTIVE = "olrp.macros.activePreset.v1";
+const LS_ENABLED = "olrp.macros.enabled.v1";
+
+/* Optional cooldown overrides */
+const LS_COOLDOWN_PER_KEY = "olrp.macros.cooldownMs.v1";
+const LS_COOLDOWN_GLOBAL = "olrp.macros.globalCooldownMs.v1";
+
+/* Defaults */
+const DEFAULT_PER_KEY_MS = 2000;
+const DEFAULT_GLOBAL_MS = 1200;
+
+const eventToKeyString = (e: KeyboardEvent): string | null => {
+    if (
+        e.key === "Shift" ||
+        e.key === "Control" ||
+        e.key === "Alt" ||
+        e.key === "Meta"
+    )
+        return null;
+    const code = (e.code || e.key) as string;
+    return code === " " ? "Space" : code;
+};
+
+const readNumberLS = (key: string, fallback: number) => {
+    const raw = localStorage.getItem(key);
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) && n >= 0 ? n : fallback;
+};
+
+const readActiveMacros = (): { enabled: boolean; macros: Macro[] } => {
+    try {
+        const enabled = JSON.parse(localStorage.getItem(LS_ENABLED) || "true");
+        const presets: Preset[] = JSON.parse(
+            localStorage.getItem(LS_PRESETS) || "[]"
+        );
+        const activeId =
+            localStorage.getItem(LS_ACTIVE) || presets[0]?.id || "";
+        const preset = presets.find((p) => p.id === activeId) || presets[0];
+        return { enabled: !!enabled, macros: preset?.macros || [] };
+    } catch {
+        return { enabled: true, macros: [] };
+    }
+};
+
 export const ChatInputView: FC<{}> = (props) => {
     const [chatValue, setChatValue] = useState<string>("");
-    const { chatStyleId = 0 } = useSessionInfo(); // style selector removed visually; value still sent
+    const { chatStyleId = 0 } = useSessionInfo();
     const {
         selectedUsername = "",
         floodBlocked = false,
@@ -33,12 +81,59 @@ export const ChatInputView: FC<{}> = (props) => {
     } = useChatInputWidget();
     const inputRef = useRef<HTMLInputElement>();
 
-    // Emoji popover state
+    // Emoji popover
     const [emojiOpen, setEmojiOpen] = useState(false);
     const buttonRef = useRef<HTMLButtonElement | null>(null);
     const popoverRef = useRef<HTMLDivElement | null>(null);
 
-    // keep a small curated emoji list
+    /* ===== Macros state & cooldowns ===== */
+    const macrosEnabledRef = useRef<boolean>(true);
+    const macrosMapRef = useRef<Map<string, string>>(new Map()); // key -> command
+
+    const perKeyCooldownRef = useRef<number>(DEFAULT_PER_KEY_MS);
+    const globalCooldownRef = useRef<number>(DEFAULT_GLOBAL_MS);
+
+    const lastGlobalFireRef = useRef<number>(0);
+    const lastKeyFireRef = useRef<Map<string, number>>(new Map());
+
+    const hydrateMacros = useCallback(() => {
+        const { enabled, macros } = readActiveMacros();
+        macrosEnabledRef.current = enabled;
+        const m = new Map<string, string>();
+        for (const row of macros)
+            if (row?.key && row?.command) m.set(row.key, row.command);
+        macrosMapRef.current = m;
+
+        perKeyCooldownRef.current = readNumberLS(
+            LS_COOLDOWN_PER_KEY,
+            DEFAULT_PER_KEY_MS
+        );
+        globalCooldownRef.current = readNumberLS(
+            LS_COOLDOWN_GLOBAL,
+            DEFAULT_GLOBAL_MS
+        );
+    }, []);
+
+    useEffect(() => {
+        hydrateMacros();
+        const onStorage = (e: StorageEvent) => {
+            if (
+                [
+                    LS_PRESETS,
+                    LS_ACTIVE,
+                    LS_ENABLED,
+                    LS_COOLDOWN_PER_KEY,
+                    LS_COOLDOWN_GLOBAL,
+                ].includes(e.key || "")
+            ) {
+                hydrateMacros();
+            }
+        };
+        window.addEventListener("storage", onStorage);
+        return () => window.removeEventListener("storage", onStorage);
+    }, [hydrateMacros]);
+
+    // curated emojis
     const EMOJIS = useMemo(
         () => [
             "😀",
@@ -82,8 +177,6 @@ export const ChatInputView: FC<{}> = (props) => {
         ],
         []
     );
-
-    // random single emoji for the button glyph
     const buttonEmoji = useMemo(
         () => EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
         [EMOJIS]
@@ -176,9 +269,9 @@ export const ChatInputView: FC<{}> = (props) => {
                 if (/%CC%/g.test(encodeURIComponent(text))) {
                     setChatValue("");
                 } else {
-                    setChatValue("");
-                    // keep sending styleId for compatibility even though chooser is hidden
+                    setChatValue(text);
                     sendChat(text, chatType, recipientName, chatStyleId);
+                    setTimeout(() => setChatValue(""), 0);
                 }
             }
 
@@ -208,8 +301,55 @@ export const ChatInputView: FC<{}> = (props) => {
         [setIsTyping, setIsIdle]
     );
 
+    /* ===== Global keydown: includes macro hotkeys with cooldowns ===== */
     const onKeyDownEvent = useCallback(
         (event: KeyboardEvent) => {
+            // 1) Try macro first — also block auto-repeat to avoid spam when key is held
+            if (event.repeat) {
+                // ignore key-hold repeats
+                return;
+            }
+            const k = eventToKeyString(event);
+            if (k && macrosEnabledRef.current) {
+                const macroCmd = macrosMapRef.current.get(k);
+                if (macroCmd && !floodBlocked) {
+                    const now = performance.now();
+
+                    // global cooldown check
+                    const sinceGlobal = now - lastGlobalFireRef.current;
+                    if (sinceGlobal < globalCooldownRef.current) {
+                        // still on global cooldown → ignore
+                        event.preventDefault();
+                        return;
+                    }
+
+                    // per-key cooldown check
+                    const lastForKey = lastKeyFireRef.current.get(k) || 0;
+                    const sinceKey = now - lastForKey;
+                    if (sinceKey < perKeyCooldownRef.current) {
+                        event.preventDefault();
+                        return;
+                    }
+
+                    // pass both checks → fire macro
+                    event.preventDefault();
+                    lastGlobalFireRef.current = now;
+                    lastKeyFireRef.current.set(k, now);
+
+                    if (
+                        inputRef.current &&
+                        document.activeElement !== inputRef.current
+                    )
+                        inputRef.current.focus();
+
+                    setChatValue(macroCmd);
+                    sendChatValue(macroCmd, false);
+                    setEmojiOpen(false);
+                    return; // stop further handling
+                }
+            }
+
+            // 2) Regular input handling
             if (floodBlocked || !inputRef.current || anotherInputHasFocus())
                 return;
 
@@ -225,7 +365,6 @@ export const ChatInputView: FC<{}> = (props) => {
                 case "NumpadEnter":
                 case "Enter":
                     sendChatValue(value, event.shiftKey);
-                    // close emoji popover on send
                     setEmojiOpen(false);
                     return;
                 case "Backspace":
@@ -245,7 +384,6 @@ export const ChatInputView: FC<{}> = (props) => {
         [
             floodBlocked,
             inputRef,
-            chatModeIdWhisper,
             anotherInputHasFocus,
             setInputFocus,
             checkSpecialKeywordForInput,
@@ -270,16 +408,15 @@ export const ChatInputView: FC<{}> = (props) => {
     // Styles list still computed (no UI)
     const chatStyleIds = useMemo(() => {
         let styleIds: number[] = [];
-        const styles =
-            GetConfiguration<
-                {
-                    styleId: number;
-                    minRank: number;
-                    isSystemStyle: boolean;
-                    isHcOnly: boolean;
-                    isAmbassadorOnly: boolean;
-                }[]
-            >("chat.styles");
+        const styles = GetConfiguration<
+            {
+                styleId: number;
+                minRank: number;
+                isSystemStyle: boolean;
+                isHcOnly: boolean;
+                isAmbassadorOnly: boolean;
+            }[]
+        >("chat.styles");
 
         for (const style of styles) {
             if (!style) continue;
@@ -363,11 +500,11 @@ export const ChatInputView: FC<{}> = (props) => {
         const r = buttonRef.current.getBoundingClientRect();
         return {
             position: "fixed",
-            top: Math.max(0, r.top - 220), // pop above the bar
-            left: Math.min(window.innerWidth - 260, r.right - 240), // keep on screen
+            top: Math.max(0, r.top - 220),
+            left: Math.min(window.innerWidth - 260, r.right - 240),
             zIndex: 2000,
         };
-    }, [emojiOpen]); // recompute when opened
+    }, [emojiOpen]);
 
     if (GetRoomSession().isSpectator) return null;
 
@@ -403,7 +540,6 @@ export const ChatInputView: FC<{}> = (props) => {
                     )}
                 </div>
 
-                {/* single emoji button at far right */}
                 <button
                     ref={buttonRef}
                     className="emoji-button"
@@ -415,7 +551,6 @@ export const ChatInputView: FC<{}> = (props) => {
                 </button>
             </div>
 
-            {/* popover rendered OUTSIDE the chat box */}
             {emojiOpen &&
                 createPortal(
                     <div
@@ -432,8 +567,6 @@ export const ChatInputView: FC<{}> = (props) => {
                                     onClick={() => {
                                         const el = inputRef.current;
                                         if (!el) return;
-
-                                        // insert at caret
                                         const start =
                                             el.selectionStart ??
                                             el.value.length;
@@ -444,16 +577,11 @@ export const ChatInputView: FC<{}> = (props) => {
                                             e +
                                             el.value.slice(end);
                                         setChatValue(next);
-
-                                        // restore caret after emoji
                                         requestAnimationFrame(() => {
                                             el.focus();
                                             const pos = start + e.length;
                                             el.setSelectionRange(pos, pos);
                                         });
-
-                                        // keep popover open for multi-pick; close if you prefer:
-                                        // setEmojiOpen(false);
                                     }}
                                 >
                                     {e}
