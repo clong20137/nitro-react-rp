@@ -1,63 +1,186 @@
+/* ===== Shared theme ===== */
+$bg: #dedede;
+$border: #222;
+$header-grad: linear-gradient(180deg, #b57f2a, #b57f2a 50%, #c38c35 0, #c38c35);
+$shadow: 0 0 10px rgba(0, 0, 0, .4);
+
+/* ===== Container ===== */
 .settings-view {
     position: fixed;
     z-index: 1200;
-    width: 360px;
-    background: #e6e6e6;
-    border: 1px solid #000;
-    border-radius: 8px;
-    box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
-    user-select: none;
+    width: 420px;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 10px;
+    box-shadow: $shadow, inset 0 -4px rgba(0, 0, 0, .2);
+    overflow: hidden;
+    transform-origin: top right;
+    will-change: transform, opacity;
 }
 
+/* slide IN from top-right (under the right mini bar) */
+.settings-view.enter-tr {
+    animation: slideInTR 300ms cubic-bezier(.2, .9, .2, 1) both;
+}
+
+.settings-view.exit-tr {
+    animation: slideOutTR 220ms cubic-bezier(.2, .9, .2, 1) both;
+}
+
+@keyframes slideInTR {
+    from {
+        transform: translate(18px, -8px) scale(.98);
+        opacity: 0;
+    }
+
+    to {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutTR {
+    from {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+
+    to {
+        transform: translate(18px, -8px) scale(.98);
+        opacity: 0;
+    }
+}
+
+/* ===== Header / Close ===== */
 .settings-header {
-    background: linear-gradient(180deg,#bd9426,#bd9426 50%,#cdb267 0,#cdb267);
-    color: #fff;
-    font-weight: 700;
-    padding: 8px 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-radius: 8px 8px 0 0;
-    cursor: grab;
-
-    span {
-        pointer-events: none;
-    }
-
-    .close-button {
-        margin-left: auto;
-        border: 1px solid #000;
-        border-bottom-width: 2px;
-        border-radius: 4px;
-        background: repeating-linear-gradient(#f55041, #f55041, 50%, #c23027 0, #c23027);
-        color: #fff;
-        font-weight: 800;
-        padding: 4px 8px;
-        cursor: pointer;
-    }
-}
-.checkbox {
-    width:16px;
-    height:16px;
-}
-
-.settings-body {
-    padding: 12px;
-}
-
-.setting-option {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #f6f6f6;
-    border: 1px solid #cfcfcf;
-    color:#000;
-    font-size:16px;
-    padding: 16px
+    background: $header-grad;
+    color: #fff;
+    padding: 8px 10px;
+    font-size: 18px;
+    font-weight: 800;
+    cursor: grab;
+    user-select: none;
+
+    .close-button {
+        width: 22px;
+        height: 22px;
+        display: inline-grid;
+        place-items: center;
+        font-size: 14px;
+        line-height: 1;
+        cursor: pointer;
+        color: #fff;
+        border-radius: 4px;
+        box-shadow: 0 0 0 1.6px #fff;
+        border: 2px solid #921911;
+        background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
+        transition: filter .2s ease, transform .2s ease;
+
+        &:hover {
+            filter: brightness(1.05);
+            transform: scale(1.05);
+        }
+    }
 }
 
+/* ===== Body / Rows ===== */
+.settings-body {
+    padding: 10px;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px;
+    border: 1px solid #cfcfcf;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .65);
+    color: #000;
+
+    +.setting-row {
+        margin-top: 10px;
+    }
+}
+
+.setting-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    .setting-title {
+        font-weight: 900;
+        color: #111;
+    }
+
+    .setting-sub {
+        color: #6b6b6b;
+        font-size: 14px;
+    }
+}
+
+/* ===== Pixel-style Toggle (consistent across app) ===== */
+.olrp-toggle {
+    --w: 48px;
+    --h: 26px;
+    --pad: 1px;
+
+    position: relative;
+    width: var(--w);
+    height: var(--h);
+    border: 2px solid #1a1a1a;
+    border-radius: 999px;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    outline: none;
+
+    .track {
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #d1d1d1, #c6c6c6);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .55),
+            inset 0 -3px 0 rgba(0, 0, 0, .18);
+        transition: background .18s;
+    }
+
+    .thumb {
+        position: absolute;
+        width: calc(var(--h) - var(--pad)*2);
+        height: calc(var(--h) - var(--pad)*2);
+        top: var(--pad);
+        left: var(--pad);
+        border-radius: 8px;
+        background: #f7efe0;
+        border: 2px solid #2a220f;
+        box-shadow:
+            0 2px 0 rgba(0, 0, 0, .22),
+            inset 0 -3px rgba(0, 0, 0, .15);
+        transition: transform .18s cubic-bezier(.2, .9, .2, 1);
+    }
+
+    &.on .track {
+        background: linear-gradient(180deg,#b57f2a,#b57f2a 50%,#c38c35 0,#c38c35);
+    }
+
+    &.on .thumb {
+        transform: translateX(calc(var(--w) - var(--h)));
+    }
+
+    &.off .track {
+        background: linear-gradient(180deg, #d1d1d1, #bdbdbd);
+    }
+}
+
+/* ===== Actions ===== */
 .actions {
-    margin-top: 16px;
+    margin-top: 12px;
     text-align: right;
 }
 
@@ -69,51 +192,27 @@
     font-weight: 700;
     padding: 8px 10px;
     margin: 2px;
-    border-radius: 5px;
+    border-radius: 6px;
     text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
     cursor: pointer;
-    transition: background-color .2s
+    transition: filter .2s;
+
+    &:hover {
+        filter: brightness(1.06);
+    }
+
+    &.green {
+        background-color: #007c17;
+        border-color: #003d0b;
+    }
 }
 
-.habbo-action-button:hover {
-    background-color: #2c2c2c
-}
-
-.habbo-action-button:active {
-    background-color: #000;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6)
-}
-
-.habbo-action-button.green {
-    background-color: #007c17;
-    border-color: #003d0b
-}
-
-.habbo-action-button.green:hover {
-    background-color: #0aa127
-}
-
-.habbo-action-button.green:active {
-    background-color: #003d0b;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6)
-}
-
-.habbo-action-button.red {
-    background-color: #aa1c1c;
-    border-color: #5a0000
-}
-
-.habbo-action-button.red:hover {
-    background-color: #c52b2b
-}
-
-.habbo-action-button.red:active {
-    background-color: #5a0000;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6)
-}
-/* Body helper while dragging */
-body.dragging {
-    cursor: grabbing !important;
-    user-select: none !important;
+/* Mobile */
+@media (max-width: 540px) {
+    .settings-view {
+        width: calc(100vw - 24px);
+        left: 12px !important;
+        right: 12px;
+    }
 }

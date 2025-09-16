@@ -1,4 +1,11 @@
-import { FC, useState, useEffect, useRef } from "react";
+import {
+    FC,
+    useState,
+    useEffect,
+    useRef,
+    MutableRefObject,
+    useLayoutEffect,
+} from "react";
 import { GetSessionDataManager, SendMessageComposer } from "../../api";
 import { CreateGangView } from "../roleplay/CreateGangView";
 import { GangsDetailView } from "../roleplay/GangsDetailView";
@@ -14,6 +21,33 @@ import { GetWantedListComposer } from "@nitrots/nitro-renderer/src/nitro/communi
 import { GetCorporationsComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetCorporationsComposer";
 import "./LeftSideBarView.scss";
 
+/** ---- optional onboarding anchor hook (same as above) ---- */
+type AnchorEventDetail = { id: string; el: HTMLElement | null };
+const OB_REGISTER_EVT = "ob-register-anchor";
+function useOnboardingAnchor(
+    id: string,
+    ref: MutableRefObject<HTMLElement | null>
+) {
+    useLayoutEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        window.dispatchEvent(
+            new CustomEvent<AnchorEventDetail>(OB_REGISTER_EVT, {
+                detail: { id, el },
+            })
+        );
+        const re = () =>
+            window.dispatchEvent(
+                new CustomEvent<AnchorEventDetail>(OB_REGISTER_EVT, {
+                    detail: { id, el: ref.current },
+                })
+            );
+        window.addEventListener("resize", re);
+        return () => window.removeEventListener("resize", re);
+    }, [id, ref]);
+}
+/** ------------------------------------------------------- */
+
 export const LeftSidebarView: FC = () => {
     const [showInventory, setShowInventory] = useState(false);
     const [showWantedList, setShowWantedList] = useState(false);
@@ -24,7 +58,7 @@ export const LeftSidebarView: FC = () => {
     const [gangMode, setGangMode] = useState<"none" | "create" | "details">(
         "none"
     );
-    const [showMacros, setShowMacros] = useState(false); // ✅ NEW
+    const [showMacros, setShowMacros] = useState(false);
 
     const gangModeRef = useRef<"none" | "create" | "details">("none");
     useEffect(() => {
@@ -33,15 +67,12 @@ export const LeftSidebarView: FC = () => {
 
     const userId = GetSessionDataManager().userId;
 
-    // ————— Corporations: open on event, but allow icon to close immediately —————
     useEffect(() => {
         const handleCorporationsList = (event: any) => {
             const corps = event.detail.corporations as CorporationData[];
             setCorporations(corps);
-            // only auto-open if we're not already showing (prevents re-opening after manual close)
             setShowCorporations((prev) => prev || true);
         };
-
         window.addEventListener(
             "corporations_list_result",
             handleCorporationsList
@@ -53,15 +84,11 @@ export const LeftSidebarView: FC = () => {
             );
     }, []);
 
-    // ————— Gang: respond to server telling us which module to open —————
     useEffect(() => {
-        const handleCreate = () =>
-            setGangMode((prev) => (prev === "create" ? prev : "create"));
-        const handleDetail = () =>
-            setGangMode((prev) => (prev === "details" ? prev : "details"));
-
+        const handleCreate = () => setGangMode("create");
+        const handleDetail = () => setGangMode("details");
         const handleGangStatus = (event: CustomEvent) => {
-            const isInGang = event.detail?.inGang;
+            const isInGang = (event.detail as any)?.inGang;
             setGangMode(isInGang ? "details" : "create");
         };
 
@@ -82,18 +109,14 @@ export const LeftSidebarView: FC = () => {
         };
     }, []);
 
-    // ————— Icon handlers (toggle-to-close) —————
     const onClickInventory = () => setShowInventory((prev) => !prev);
-
     const onClickWanted = () => {
-        // request fresh list each time you open
         setShowWantedList((prev) => {
             const next = !prev;
             if (next) SendMessageComposer(new GetWantedListComposer());
             return next;
         });
     };
-
     const onClickCorporations = () => {
         setShowCorporations((prev) => {
             const next = !prev;
@@ -101,16 +124,13 @@ export const LeftSidebarView: FC = () => {
             return next;
         });
     };
-
     const onClickGangs = () => {
-        // If any gang module is open → close it. Otherwise ask server which to open.
         if (gangModeRef.current !== "none") {
             setGangMode("none");
             return;
         }
         SendMessageComposer(new CheckGangStatusComposer());
     };
-
     const onClickGangChatToggle = () => {
         setIsGangChatEnabled((prev) => {
             const next = !prev;
@@ -121,8 +141,14 @@ export const LeftSidebarView: FC = () => {
             return next;
         });
     };
+    const onClickMacros = () => setShowMacros((prev) => !prev);
 
-    const onClickMacros = () => setShowMacros((prev) => !prev); // ✅ NEW
+    // Example: if you ever want to force anchors for specific icons
+    const skullRef = useRef<HTMLDivElement | null>(null);
+    const messageRef = useRef<HTMLDivElement | null>(null);
+    // (optional) register them — the overlay already finds them via CSS
+    // useOnboardingAnchor('gangs', skullRef);
+    // useOnboardingAnchor('gangchat', messageRef);
 
     return (
         <>
@@ -162,6 +188,7 @@ export const LeftSidebarView: FC = () => {
 
                         <div className="sidebar-icon tooltip-container">
                             <div
+                                ref={skullRef}
                                 className="sidebar-icon skull"
                                 title="Gangs"
                                 onClick={onClickGangs}
@@ -171,6 +198,7 @@ export const LeftSidebarView: FC = () => {
 
                         <div className="sidebar-icon tooltip-container">
                             <div
+                                ref={messageRef}
                                 className={`sidebar-icon message ${
                                     isGangChatEnabled ? "active" : ""
                                 }`}
@@ -182,7 +210,6 @@ export const LeftSidebarView: FC = () => {
                             </span>
                         </div>
 
-                        {/* ✅ NEW: Macros launcher */}
                         <div className="sidebar-icon tooltip-container">
                             <div
                                 className="sidebar-icon macros"
@@ -194,12 +221,13 @@ export const LeftSidebarView: FC = () => {
                     </div>
                 </div>
 
+                {/* NEW ARROW BUTTON */}
                 <div
-                    className="sidebar-toggle"
+                    className={`sidebar-toggle ${
+                        sidebarOpen ? "open" : "closed"
+                    }`}
                     onClick={() => setSidebarOpen(!sidebarOpen)}
-                >
-                    {sidebarOpen ? "❮" : "❯"}
-                </div>
+                />
             </div>
 
             {showInventory && (
@@ -208,22 +236,18 @@ export const LeftSidebarView: FC = () => {
             {showWantedList && (
                 <WantedListView onClose={() => setShowWantedList(false)} />
             )}
-
             {showCorporations && (
                 <CorporationsView
                     onClose={() => setShowCorporations(false)}
                     currentUserId={userId}
                 />
             )}
-
             {gangMode === "create" && (
                 <CreateGangView onClose={() => setGangMode("none")} />
             )}
             {gangMode === "details" && (
                 <GangsDetailView onClose={() => setGangMode("none")} />
             )}
-
-            {/* ✅ NEW: render Macros view */}
             {showMacros && <MacroView onClose={() => setShowMacros(false)} />}
         </>
     );

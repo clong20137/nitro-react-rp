@@ -3,10 +3,8 @@
     top: 0px;
     right: 10px;
     min-width: 200px;
-    max-width: 200px;
+    max-width: 280px;
     height: calc(100% - #{$toolbar-height});
-
-
 }
 
 .right-status-buttons {
@@ -31,11 +29,11 @@
         }
 
         &.police {
-            background: #b0413e; // red tone
+            background: #b0413e;
         }
 
         &.work {
-            background: #4a7c59; // green tone
+            background: #4a7c59;
         }
     }
 }
@@ -68,10 +66,9 @@
     position: absolute;
     top: 10px;
     right: 10px;
-    background: #cdb167;
-
+    background: #b57f2a;
     border-radius: 8px;
-    padding: 10px;
+    padding: 6px;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -81,9 +78,8 @@
     width: 250px;
     box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
 
-
     .right-status-item {
-        background: #cdb167;
+        background: #b57f2a;
         padding: 4px 8px;
         border-radius: 4px;
         text-align: center;
@@ -96,7 +92,6 @@
             .currency-icon {
                 width: 14px;
                 height: 14px;
-                //background: url('/icons/coin.svg') no-repeat center center;
                 background-size: contain;
             }
         }
@@ -184,15 +179,34 @@
     top: 10px;
     right: 10px;
     width: 230px;
-    /* close to the mock */
     pointer-events: none;
-    /* so it doesn’t block room clicks */
     z-index: 10;
 
-    /* allow buttons inside to be clickable */
     * {
         pointer-events: auto;
     }
+}
+
+/* ---------- Chips (padded backgrounds) ---------- */
+.chip {
+    background: #8A662F;
+    padding: 6px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #fff;
+}
+
+.chip-title {
+    padding: 6px 12px;
+}
+
+.rs-title .chip-title {
+    /* make the location box a little wider */
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* Top mini bar: time • credits • gear */
@@ -200,7 +214,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #cdb167;
+        background:#b57f2a;
+    border:1px solid #a37637;
     box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
         0 2px 0 rgba(0, 0, 0, .25),
         inset 0 -4px rgba(0, 0, 0, .12);
@@ -219,24 +234,10 @@
     gap: 6px;
 }
 
-.rs-gear {
-    width: 24px;
-    height: 24px;
-    border: 0;
-    border-radius: 6px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
-    cursor: pointer;
-}
-
-.rs-gear:hover {
-    filter: brightness(1.1);
-}
-
 /* Zone/virtual card */
 .rs-card {
-    background: #cdb167;
-
-    /* muted slate like screenshot */
+        background:#b57f2a;
+    border:1px solid #a37637;
     border-radius: 8px;
     padding: 10px;
     box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
@@ -250,7 +251,7 @@
     color: #fff;
 }
 
-/* Title row: icon + "#ID - Name" */
+/* Title row */
 .rs-title {
     grid-column: 1 / 2;
     display: flex;
@@ -266,20 +267,15 @@
     text-overflow: ellipsis;
 }
 
-/* People-in-zone counter on the right */
+/* Online counter row (right side of card) */
 .rs-counter {
-    grid-column: 2 / 3;
-    justify-self: end;
-    background: rgba(0, 0, 0, 0.25);
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-weight: 700;
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    padding: 8px 10px;
 }
 
-/* Simple emoji-ish icons without images; swap to sprites if you want */
+/* Icon sprites */
 .ico {
     display: inline-block;
     width: 20px;
@@ -292,20 +288,49 @@
     background-image: url('../../icons/clock.png');
 }
 
+.ico-gear,
+.ico-chatlog {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    outline: none;
+    background-color: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+
 .ico-gear {
     background-image: url('../../icons/settings.png');
-    height: 24px;
     width: 24px;
-    background-color: transparent;
+    height: 24px;
     background-repeat: no-repeat;
+    background-size: contain;
 }
 
 .ico-gear:hover {
-    transform: scale(1.1);
-    filter: brightness(1.2);
+    filter: brightness(1.1);
     cursor: pointer;
     transition: transform 0.8s ease, background-image 0.8s ease;
+}
 
+.ico-gear:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.ico-chatlog {
+    width: 22px;
+    height: 22px;
+    background-image: url('../../icons/chatlog.png');
+    background-repeat: no-repeat;
+    background-size: contain;
+    cursor: pointer;
+    transition: transform .12s ease, filter .12s ease;
+}
+
+.ico-chatlog:hover {
+    transform: scale(1.06);
+    filter: brightness(1.15);
 }
 
 .ico-coin {
@@ -314,7 +339,6 @@
     background-repeat: no-repeat;
 }
 
-/* or "💰" */
 .ico-zone {
     background-image: url('../../icons/room.gif');
 }
@@ -323,22 +347,29 @@
     background-image: url('../../icons/online.gif');
 }
 
-/* Keep your existing button styles */
-
-/* container for the 2nd row */
+/* Quick action row */
 .rs-quick {
     display: flex;
     align-items: center;
     justify-content: space-evenly;
     gap: 10px;
-     background: #cdb167;
-     box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
         0 2px 0 rgba(0, 0, 0, .25),
         inset 0 -4px rgba(0, 0, 0, .12);
+
+    background:#b57f2a;
+    border:1px solid #a37637;
     border-radius: 8px;
     padding: 6px 8px;
     margin-top: 6px;
     margin-bottom: 6px;
+
+    /* make chips align nicely around the 3 buttons */
+    .chip {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 }
 
 /* compact square buttons */
@@ -396,12 +427,10 @@
     stroke: #000;
 }
 
-/* state accents */
 .qbtn.clock.on {
     box-shadow: 0 0 0 2px rgba(0, 128, 0, .25) inset;
 }
 
-/* mode icon switch */
 .qbtn.mode .icon-aggressive {
     display: block;
 }
@@ -499,7 +528,6 @@
 
 /* ===== right-side HUD: responsive tweaks ===== */
 
-/* Wide tablets / small laptops */
 @media (max-width: 1024px) {
     .nitro-right-side {
         right: max(10px, env(safe-area-inset-right));
@@ -530,7 +558,6 @@
     }
 }
 
-/* Tablets & large phones (portrait) */
 @media (max-width: 768px) {
     .nitro-right-side {
         right: max(8px, env(safe-area-inset-right));
@@ -546,7 +573,6 @@
         border-radius: 8px;
     }
 
-    /* Compact header row */
     .rs-mini {
         padding: 6px 8px;
         font-size: 11px;
@@ -562,7 +588,6 @@
         }
     }
 
-    /* Stack card content when space is tight */
     .rs-card {
         grid-template-columns: 1fr;
         grid-row-gap: 8px;
@@ -572,14 +597,12 @@
         justify-self: start;
     }
 
-    /* Quick actions row: space-evenly → wrap gracefully */
     .rs-quick {
         gap: 8px;
         padding: 6px;
         flex-wrap: wrap;
     }
 
-    /* Touch targets a bit larger */
     .qbtn {
         width: 34px;
         height: 34px;
@@ -595,15 +618,13 @@
     }
 }
 
-/* Phones (≤480px) */
 @media (max-width: 480px) {
 
-    /* Pin tighter to edge, respect notches */
     .nitro-right-side,
     .nitro-right-compact {
         right: max(6px, env(safe-area-inset-right));
         top: max(6px, env(safe-area-inset-top));
-        width: min(86vw, 240px);
+        width: min(86vw, 280px);
     }
 
     .right-status-panel {
@@ -621,7 +642,6 @@
         }
     }
 
-    /* Mini bar text shrinks & truncates */
     .rs-mini {
         font-size: 10px;
 
@@ -631,7 +651,6 @@
         }
     }
 
-    /* Title ellipsis to avoid overflow */
     .rs-title {
         min-width: 0;
 
@@ -643,7 +662,6 @@
         }
     }
 
-    /* Quick buttons: bigger tap area but keep row compact */
     .qbtn {
         width: 36px;
         height: 36px;
@@ -653,9 +671,6 @@
         transform: translateY(0);
     }
 
-    /* avoid jumpy press on mobile */
-
-    /* Popover keeps on-screen */
     .q-pop {
         right: 0;
         left: auto;
@@ -664,7 +679,6 @@
     }
 }
 
-/* Very short screens (e.g., landscape phones) */
 @media (max-height: 480px) and (orientation: landscape) {
 
     .nitro-right-side,
@@ -689,7 +703,6 @@
     }
 }
 
-/* Accessibility: reduce motion if requested */
 @media (prefers-reduced-motion: reduce) {
 
     .qbtn,

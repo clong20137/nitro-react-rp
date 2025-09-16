@@ -52,7 +52,7 @@ import SlotMachineView from "./components/roleplay/SlotMachineView";
 import { WheelModuleEvent } from "@nitrots/nitro-renderer/src/nitro/communication/messages/incoming/roleplay/WheelModuleEvent";
 import BigWheelView from "./components/roleplay/BigWheelView";
 import { HotelAlertView } from "./components/roleplay/HotelAlertView";
-
+import { OnboardingOverlay } from "./components/roleplay/OnboardingOverlay";
 NitroVersion.UI_VERSION = GetUIVersion();
 
 export const App: FC<{}> = (props) => {
@@ -248,6 +248,7 @@ export const App: FC<{}> = (props) => {
                 <Base id="draggable-windows-container" />
                 {isReady && <StatsBar></StatsBar>}
                 <OpponentStatsOverlay></OpponentStatsOverlay>
+                <OnboardingOverlay></OnboardingOverlay>
                 <LiveFeed></LiveFeed> /<BlackjackView></BlackjackView>
                 <HighLowView></HighLowView>
                 <SlotMachineView></SlotMachineView>

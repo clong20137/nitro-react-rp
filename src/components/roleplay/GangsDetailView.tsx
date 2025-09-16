@@ -39,8 +39,8 @@ interface GangMemberRaw {
     userId: number;
     username: string;
     rankName?: string;
-    rankId?: number; // role id from the DB
-    rankOrder?: number; // sometimes sent directly
+    rankId?: number;
+    rankOrder?: number;
     figure?: string;
 }
 
@@ -48,7 +48,7 @@ interface GangMemberNorm {
     userId: number;
     username: string;
     rankName: string;
-    rankOrder: number; // computed from ranks.position
+    rankOrder: number;
     figure: string;
 }
 
@@ -186,8 +186,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
 
     // Dragging/position
     const rootRef = useRef<HTMLDivElement>(null);
-    const [isDragging, setIsDragging] = useState(false);
-    const dragStart = useRef({ x: 0, y: 0 });
     const [positionReady, setPositionReady] = useState(false);
     const [position, setPosition] = useState<{ x: number; y: number }>(() => {
         try {
@@ -264,34 +262,30 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         setMembersNorm(normalized);
     }, [membersRaw, gangRanks]);
 
-    // Compute admin/owner if server didn't set isGangOwner
+    // Compute admin/owner if server didn't set flags
     useEffect(() => {
         if (!viewer) return;
-        // Keep existing flags if server sent them
-        if (!isGangOwner) {
-            // Fallback owner guess: highest position + administrator
-            const topPos = gangRanks.reduce(
-                (max, r) => Math.max(max, r.position),
-                -Infinity
-            );
-            const viewersRank =
-                membersNorm.find((m) => m.userId === viewer.userId)
-                    ?.rankOrder ?? -1;
-            const topIsAdmin =
-                gangRanks.find((r) => r.position === topPos)?.administrator ??
-                false;
-            if (viewersRank === topPos && topIsAdmin) setIsGangOwner(true);
-        }
-        if (!isGangAdmin) {
-            const viewersRank =
-                membersNorm.find((m) => m.userId === viewer.userId)
-                    ?.rankOrder ?? -1;
-            const admin =
-                gangRanks.find((r) => r.position === viewersRank)
-                    ?.administrator ?? false;
-            if (admin) setIsGangAdmin(true);
-        }
-    }, [viewer, membersNorm, gangRanks]); // eslint-disable-line react-hooks/exhaustive-deps
+
+        // If owner not explicitly set, guess by top position + administrator flag
+        const topPos = gangRanks.reduce(
+            (max, r) => Math.max(max, r.position),
+            -Infinity
+        );
+        const viewersRank =
+            membersNorm.find((m) => m.userId === viewer.userId)?.rankOrder ??
+            -1;
+        const topIsAdmin =
+            gangRanks.find((r) => r.position === topPos)?.administrator ??
+            false;
+        if (!isGangOwner && viewersRank === topPos && topIsAdmin)
+            setIsGangOwner(true);
+
+        // Admin if rank has administrator OR if already owner
+        const viewersAdmin =
+            gangRanks.find((r) => r.position === viewersRank)?.administrator ??
+            false;
+        if (!isGangAdmin && (viewersAdmin || isGangOwner)) setIsGangAdmin(true);
+    }, [viewer, membersNorm, gangRanks, isGangOwner, isGangAdmin]);
 
     // Listeners/bootstrap
     useEffect(() => {
@@ -336,28 +330,51 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                 Number(data.turfsControlled ?? data.turfCount ?? 0)
             );
 
-            // Permissions (prefer server truth)
-            setIsGangAdmin(!!(data.isAdmin || data.isGangAdmin));
-            setIsGangOwner(!!data.isGangOwner);
+            // Permissions (prefer server truth); owner implies admin
+            const owner = !!(data.isGangOwner || data.owner);
+            const admin = !!(
+                data.isAdmin ||
+                data.isGangAdmin ||
+                data.admin ||
+                owner
+            );
+            setIsGangOwner(owner);
+            setIsGangAdmin(admin);
+            // Debug
+            console.debug("[Gangs] status:", { owner, admin, data });
+        };
+
+        const coerceMemberArray = (detail: any): any[] => {
+            if (Array.isArray(detail)) return detail;
+            if (Array.isArray(detail?.members)) return detail.members;
+            if (Array.isArray(detail?.list)) return detail.list;
+            if (Array.isArray(detail?.data)) return detail.data;
+            return [];
         };
 
         const handleMembers = (ev: Event) => {
             const detail: any = (ev as CustomEvent).detail;
-            const list: any[] = Array.isArray(detail?.members)
-                ? detail.members
-                : [];
-            const mapped: GangMemberRaw[] = list.map((m) => ({
-                userId: Number(m.userId ?? m.id),
-                username: String(m.username ?? m.name ?? ""),
-                rankName: String(m.rankName ?? m.roleName ?? ""),
-                rankId: m.rankId !== undefined ? Number(m.rankId) : undefined,
+            const src = coerceMemberArray(detail);
+            console.debug("[Gangs] members payload →", detail);
+            const mapped: GangMemberRaw[] = src.map((m: any) => ({
+                userId: Number(m.userId ?? m.id ?? m.user_id),
+                username: String(m.username ?? m.name ?? m.userName ?? ""),
+                rankName: m.rankName ?? m.roleName ?? m.rank ?? "",
+                rankId:
+                    m.rankId !== undefined
+                        ? Number(m.rankId)
+                        : m.roleId !== undefined
+                        ? Number(m.roleId)
+                        : undefined,
                 rankOrder:
                     m.rankOrder !== undefined
                         ? Number(m.rankOrder)
                         : m.position !== undefined
                         ? Number(m.position)
+                        : m.rank_pos !== undefined
+                        ? Number(m.rank_pos)
                         : undefined,
-                figure: String(m.figure ?? m.look ?? ""),
+                figure: String(m.figure ?? m.look ?? m.avatar ?? ""),
             }));
             setMembersRaw(mapped);
         };
@@ -366,26 +383,33 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             const detail: any = (ev as CustomEvent).detail;
             const ranks: any[] = Array.isArray(detail?.ranks)
                 ? detail.ranks
+                : Array.isArray(detail)
+                ? detail
                 : [];
             const mapped: GangRank[] = ranks.map((r) => ({
                 id: Number(r.id),
                 name: String(r.name ?? ""),
                 position: Number(r.position ?? r.rankOrder ?? r.order ?? 0),
-                canInvite: !!r.canInvite,
-                canKick: !!r.canKick,
-                canPromote: !!r.canPromote,
-                canAlert: !!r.canAlert,
-                administrator: !!r.administrator,
-                canAccessBank: !!r.canAccessBank,
+                canInvite: !!(r.canInvite ?? r.invite),
+                canKick: !!(r.canKick ?? r.kick),
+                canPromote: !!(r.canPromote ?? r.promote),
+                canAlert: !!(r.canAlert ?? r.alert),
+                administrator: !!(r.administrator ?? r.admin),
+                canAccessBank: !!(r.canAccessBank ?? r.bank),
             }));
             setGangRanks(mapped);
         };
 
-        // Status / members / ranks events (support a few aliases)
+        // Status / members / ranks events (include common aliases)
         window.addEventListener(
             "gang_status_result",
             handleStatus as EventListener
         );
+        window.addEventListener(
+            "gang_status_received",
+            handleStatus as EventListener
+        );
+
         window.addEventListener(
             "gang_members_result",
             handleMembers as EventListener
@@ -394,8 +418,18 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             "gang_members_received",
             handleMembers as EventListener
         );
+        window.addEventListener("gang_members", handleMembers as EventListener);
+        window.addEventListener(
+            "gang_member_list",
+            handleMembers as EventListener
+        );
+
         window.addEventListener(
             "gang_ranks_received",
+            handleRanks as EventListener
+        );
+        window.addEventListener(
+            "gang_ranks_result",
             handleRanks as EventListener
         );
 
@@ -458,6 +492,11 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                 handleStatus as EventListener
             );
             window.removeEventListener(
+                "gang_status_received",
+                handleStatus as EventListener
+            );
+
+            window.removeEventListener(
                 "gang_members_result",
                 handleMembers as EventListener
             );
@@ -466,9 +505,23 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                 handleMembers as EventListener
             );
             window.removeEventListener(
+                "gang_members",
+                handleMembers as EventListener
+            );
+            window.removeEventListener(
+                "gang_member_list",
+                handleMembers as EventListener
+            );
+
+            window.removeEventListener(
                 "gang_ranks_received",
                 handleRanks as EventListener
             );
+            window.removeEventListener(
+                "gang_ranks_result",
+                handleRanks as EventListener
+            );
+
             window.removeEventListener(
                 "palette_hexes_result",
                 onHexes as EventListener
@@ -477,64 +530,12 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Dragging
-    const handleMouseDown = (e: React.MouseEvent) => {
-        if (e.button !== 0) return;
-        e.preventDefault();
-        setIsDragging(true);
-        dragStart.current = {
-            x: e.clientX - position.x,
-            y: e.clientY - position.y,
-        };
-        document.body.classList.add("is-dragging");
-    };
-    useEffect(() => {
-        if (!isDragging) return;
-        const onMove = (e: MouseEvent) => {
-            const next = getClampedPos(
-                e.clientX - dragStart.current.x,
-                e.clientY - dragStart.current.y,
-                rootRef.current
-            );
-            setPosition(next);
-        };
-        const onUp = () => {
-            setIsDragging(false);
-            document.body.classList.remove("is-dragging");
-            localStorage.setItem(
-                "gangs-detail-position",
-                JSON.stringify(position)
-            );
-        };
-        window.addEventListener("mousemove", onMove);
-        window.addEventListener("mouseup", onUp);
-        return () => {
-            window.removeEventListener("mousemove", onMove);
-            window.removeEventListener("mouseup", onUp);
-        };
-    }, [isDragging, position]);
-
     useEffect(() => {
         const onResize = () =>
             setPosition((p) => getClampedPos(p.x, p.y, rootRef.current));
         window.addEventListener("resize", onResize);
         return () => window.removeEventListener("resize", onResize);
     }, []);
-
-    // Role editing hydrate
-    useEffect(() => {
-        if (showEditRoleModal && editRoleId !== null) {
-            const rank = gangRanks.find((r) => r.id === editRoleId);
-            if (rank) {
-                setRolePermissions({
-                    bankAccess: !!rank.canAccessBank,
-                    kickMembers: !!rank.canKick,
-                    inviteMembers: !!rank.canInvite,
-                    administrator: !!rank.administrator,
-                });
-            }
-        }
-    }, [showEditRoleModal, editRoleId, gangRanks]);
 
     // Group members by rank position
     const groupedMembers = useMemo(() => {
@@ -576,8 +577,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             onClose();
         }, 120);
     };
-
-    const handleDeleteGang = () => setShowConfirmDeleteModal(true);
 
     const handleEditRoleSubmit = () => {
         if (!editRoleId) return;
@@ -644,13 +643,42 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         </div>
     );
 
+    const ownerOrAdmin = isGangOwner || isGangAdmin; // convenience
+
     return (
         <div
             ref={rootRef}
             className={`gangs-detail-view ${visible ? "fade-in" : "fade-out"}`}
             style={{ position: "absolute", left: position.x, top: position.y }}
         >
-            <div className="gangs-header" onMouseDown={handleMouseDown}>
+            <div
+                className="gangs-header"
+                onMouseDown={(e) => {
+                    if (e.button !== 0) return;
+                    const start = {
+                        x: e.clientX - position.x,
+                        y: e.clientY - position.y,
+                    };
+                    const move = (me: MouseEvent) =>
+                        setPosition(
+                            getClampedPos(
+                                me.clientX - start.x,
+                                me.clientY - start.y,
+                                rootRef.current
+                            )
+                        );
+                    const up = () => {
+                        window.removeEventListener("mousemove", move);
+                        window.removeEventListener("mouseup", up);
+                        localStorage.setItem(
+                            "gangs-detail-position",
+                            JSON.stringify(position)
+                        );
+                    };
+                    window.addEventListener("mousemove", move);
+                    window.addEventListener("mouseup", up);
+                }}
+            >
                 <div className="gang-name-header">
                     <div className="gang-color-split-box">
                         <div
@@ -998,50 +1026,44 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                                 </div>
                                             </div>
 
-                                            <div>
-                                                {isGangAdmin && (
-                                                    <div className="role-actions">
-                                                        <button
-                                                            className="habbo-action-button"
-                                                            onClick={() => {
-                                                                setEditRoleId(
-                                                                    rank.id
-                                                                );
-                                                                setRoleName(
-                                                                    rank.name
-                                                                );
-                                                                setRolePermissions(
-                                                                    {
-                                                                        bankAccess:
-                                                                            !!rank.canAccessBank,
-                                                                        kickMembers:
-                                                                            !!rank.canKick,
-                                                                        inviteMembers:
-                                                                            !!rank.canInvite,
-                                                                        administrator:
-                                                                            !!rank.administrator,
-                                                                    }
-                                                                );
-                                                                setShowEditRoleModal(
-                                                                    true
-                                                                );
-                                                            }}
-                                                        >
-                                                            Edit Role
-                                                        </button>
-                                                        <button
-                                                            className="habbo-action-button red"
-                                                            onClick={() =>
-                                                                deleteRole(
-                                                                    rank.id
-                                                                )
-                                                            }
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            {ownerOrAdmin && (
+                                                <div className="role-actions">
+                                                    <button
+                                                        className="habbo-action-button"
+                                                        onClick={() => {
+                                                            setEditRoleId(
+                                                                rank.id
+                                                            );
+                                                            setRoleName(
+                                                                rank.name
+                                                            );
+                                                            setRolePermissions({
+                                                                bankAccess:
+                                                                    !!rank.canAccessBank,
+                                                                kickMembers:
+                                                                    !!rank.canKick,
+                                                                inviteMembers:
+                                                                    !!rank.canInvite,
+                                                                administrator:
+                                                                    !!rank.administrator,
+                                                            });
+                                                            setShowEditRoleModal(
+                                                                true
+                                                            );
+                                                        }}
+                                                    >
+                                                        Edit Role
+                                                    </button>
+                                                    <button
+                                                        className="habbo-action-button red"
+                                                        onClick={() =>
+                                                            deleteRole(rank.id)
+                                                        }
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {!collapsedRanks.includes(
@@ -1095,7 +1117,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                                                 }
                                                             </span>
 
-                                                            {isGangAdmin &&
+                                                            {ownerOrAdmin &&
                                                                 viewer?.userId !==
                                                                     member.userId && (
                                                                     <select
@@ -1229,7 +1251,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                             </div>
                         )}
 
-                        {isGangAdmin && (
+                        {ownerOrAdmin && (
                             <div style={{ marginTop: 20 }}>
                                 <button
                                     className="habbo-action-button green"
@@ -1537,7 +1559,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                             (gangIcon || "").toUpperCase();
                                         const isLocked =
                                             !!icon.vip && gangRank < 2;
-
                                         const clickIcon = () => {
                                             if (isLocked) {
                                                 window.dispatchEvent(
@@ -1552,7 +1573,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                             }
                                             setGangIcon(key);
                                         };
-
                                         return (
                                             <div
                                                 key={icon.name}

@@ -1,4 +1,133 @@
+/* sizes hook your existing variables; provide safe fallbacks */
+$chat-history-width: 320px !default;
+$chat-history-height: 260px !default;
+
 .nitro-chat-history {
     width: $chat-history-width;
     height: $chat-history-height;
+
+    .ch-content {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        height: 100%;
+    }
+
+    /* toolbar */
+    .ch-toolbar {
+        display: grid;
+        grid-template-columns: 1fr 160px;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .ch-field {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .ch-input {
+        width: 100%;
+        padding: 6px 28px 6px 8px;
+        border: 1px solid rgba(0, 0, 0, .25);
+        border-radius: 6px;
+        outline: none;
+        background: #fff;
+        color: #000;
+        transition: box-shadow .15s ease, border-color .15s ease;
+
+        &:focus {
+            border-color: #5c8df6;
+            box-shadow: 0 0 0 2px rgba(92, 141, 246, .2);
+        }
+    }
+
+    .ch-clear {
+        position: absolute;
+        right: 4px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 22px;
+        height: 22px;
+        border: 1px solid rgba(0, 0, 0, .3);
+        border-radius: 50%;
+        background: #fff;
+        cursor: pointer;
+        line-height: 1;
+        font-size: 12px;
+        transition: transform .08s ease, filter .12s ease;
+
+        &:hover {
+            filter: brightness(1.05);
+        }
+
+        &:active {
+            transform: translateY(-50%) scale(.98);
+        }
+    }
+
+    .ch-select {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid rgba(0, 0, 0, .25);
+        border-radius: 6px;
+        background: #fff;
+        color: #000;
+    }
+
+    /* list area fills remaining space */
+    .ch-list-wrap {
+        flex: 1;
+        min-height: 0;
+    }
+
+    /* rows */
+    .ch-row {
+        padding: 3px 6px;
+        border-radius: 4px;
+
+        &.even {
+            background: rgba(0, 0, 0, .03);
+        }
+
+        &.odd {
+            background: transparent;
+        }
+    }
+
+    .ch-time {
+        min-width: 44px;
+        opacity: .75;
+    }
+
+    .ch-name {
+        font-weight: 700;
+        margin-right: 4px;
+    }
+
+    .ch-room-icon {
+        opacity: .8;
+        margin-right: 4px;
+    }
+
+    .ch-msg,
+    .ch-info {
+        color: #111;
+    }
+
+    /* search highlight */
+    .ch-mark {
+        background: #ffe08a;
+        color: inherit;
+        padding: 0 1px;
+        border-radius: 2px;
+    }
+}
+
+/* small layouts */
+@media (max-width: 420px) {
+    .nitro-chat-history {
+        width: 96vw;
+    }
 }

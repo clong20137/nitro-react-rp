@@ -1,10 +1,19 @@
 /* =========================
-🎛 Variables & breakpoints
+Marble & Bronze theme (Greek vibes)
+Drop-in for LeftSideBarView.scss
 ========================= */
-$gold: #cdb167;
-$gold-accent: #bc9425;
-$border: #333;
-$icon-border: #000;
+
+/* ---- Palette ---- */
+$bronze-500: #b57f2a;
+$bronze-600: #a56f1e;
+$bronze-700: #8f5e17;
+$bronze-edge: #3a2b16;
+
+$marble-base: #ece9e4;
+/* warm marble */
+$marble-vein-1: #ffffff;
+$marble-vein-2: #ddd7cf;
+$marble-vein-3: #f6f3ef;
 
 $shadow-panel: 0 0 #0006, 0 0 #0000004d, inset 0 -4px #0003;
 $shadow-inset: inset 0 1px 0 #fff, inset 0 -1px 0 #000;
@@ -13,18 +22,42 @@ $bp-tablet: 1024px;
 $bp-mobile: 768px;
 $bp-phone: 480px;
 
+/* ---- Marble texture (pure CSS, no image) ---- */
+@mixin marble-bg {
+  background:
+    /* hairline veins */
+    radial-gradient(120px 40px at 20% 30%, rgba($marble-vein-2, .65), transparent 60%),
+    radial-gradient(140px 60px at 80% 20%, rgba($marble-vein-3, .55), transparent 70%),
+    radial-gradient(100px 50px at 40% 70%, rgba($marble-vein-2, .45), transparent 65%),
+    linear-gradient(180deg, rgba(#fff, .65), rgba(#fff, 0)),
+    $marble-base;
+  background-blend-mode: overlay, overlay, overlay, soft-light, normal;
+}
+
+/* ---- Bronze ring (subtle gradient) ---- */
+@mixin bronze-border {
+  border: 2px solid $bronze-edge;
+  box-shadow:
+    inset 0 1px 0 rgba(#fff, .45),
+    inset 0 -1px 0 rgba(#000, .2),
+    0 0 0 1px rgba(#000, .35),
+    0 4px 12px rgba(#000, .25);
+  background-image:
+    linear-gradient(180deg, $bronze-600, $bronze-600 50%, $bronze-500 50%, $bronze-500);
+}
+
 /* =========================
 📦 Layout
 ========================= */
 .left-sidebar-container {
   position: absolute;
   left: 0;
-  top: 180px;
+  top: 300px;
   z-index: 100;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  transition: transform 0.3s ease;
+  transition: transform .3s ease;
 
   &.collapsed,
   &.closed {
@@ -42,86 +75,139 @@ $bp-phone: 480px;
 }
 
 /* =========================
-🧱 Sidebar panel
+🧱 Sidebar panel (marble slab with bronze frame)
 ========================= */
 .left-sidebar {
-  background: $gold;
-  border-radius: 0 12px 12px 0;
-  border: 2px solid $border;
+  //@include marble-bg;
+  border-radius: 0 14px 14px 0;
+  @include bronze-border;
+  background:#8a662f;
+  /* adds bronze border + outer glow */
   border-left: none;
-  box-shadow: $shadow-panel;
   padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+}
 
-  /* Tooltips (desktop) */
-  .tooltip-container {
-    position: relative;
+/* =========================
+💬 Desktop Tooltips
+========================= */
+.tooltip-container {
+  position: relative;
 
-    .tooltip-text {
-      visibility: hidden;
-      opacity: 0;
-      transition: opacity 0.3s;
-      position: absolute;
-      left: 50px;
-      top: 50%;
-      transform: translateY(-50%);
-      white-space: nowrap;
-      z-index: 1;
-      background: #000;
-      color: #fff;
-      border-radius: 6px;
-      padding: 5px;
-      text-align: center;
-    }
+  .tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity .2s ease;
+    position: absolute;
+    left: 54px;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    z-index: 1;
+    background: #000;
+    color: #fff;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+  }
 
-    &:hover .tooltip-text {
-      visibility: visible;
-      opacity: 1;
-    }
+  &:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
   }
 }
 
 /* =========================
-🧲 Toggle button
+🧲 Toggle arrow (bronze pill with rotate)
 ========================= */
 .sidebar-toggle {
-  background: $gold;
-  color: #fff;
-  border: 1px solid $gold-accent;
-  border-radius: 0 12px 12px 0;
-  padding: 10px;
-  margin-top: 120px;
-  font-size: 24px;
+  width: 30px;
+  height: 52px;
+  margin-top: 230px;
   cursor: pointer;
-  box-shadow: $shadow-panel;
-  user-select: none;
-  z-index: 300;
-  /* keeps it above the panel edge */
+  position: relative;
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+  overflow: hidden;
+  transition: transform .28s ease, filter .2s ease;
+
+  /* bronze face */
+  background: linear-gradient(180deg, $bronze-600 0, $bronze-600 50%, $bronze-500 50%, $bronze-500);
+  border: 2px solid $bronze-edge;
+  box-shadow:
+    inset 0 1px 0 rgba(#fff, .4),
+    inset 0 -1px 0 rgba(#000, .25),
+    0 3px 10px rgba(#000, .25);
+
+  /* inner bevel */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 2px 2px 2px 0;
+    border-radius: 0 8px 8px 0;
+    background: linear-gradient(180deg, rgba(#fff, .12), rgba(#000, .06));
+    pointer-events: none;
+  }
+
+  /* chevron */
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 8px;
+    width: 12px;
+    height: 12px;
+    border-top: 3px solid #fff;
+    border-right: 3px solid #fff;
+    transform: translateY(-50%) rotate(135deg);
+    transition: transform .28s ease;
+    filter: drop-shadow(0 1px 0 rgba(#000, .35));
+  }
+
+  /* when container is closed, flip chevron */
+  &.closed::before {
+    transform: translateY(-50%) rotate(-45deg);
+  }
+
+  &:hover {
+    filter: brightness(1.05);
+  }
+
+  &:active {
+    transform: translateX(1px);
+  }
 }
 
 /* =========================
-🖼 Icons
+🖼 Icons (keep your images)
 ========================= */
 .sidebar-icon {
-  width: 50px;
-  height: 50px;
-  background: $gold-accent;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(180deg, rgba(#fff, .18), rgba(#000, .08)), $bronze-500;
+  background-blend-mode: soft-light, normal;
   background-repeat: no-repeat;
   background-size: cover;
-  /* use contain if you want inner padding feel */
-  border: 1px solid $icon-border;
-  border-radius: 8px;
-  box-shadow: $shadow-inset;
+  border: 1px solid rgba(#000, .75);
+  border-radius: 10px;
+  box-shadow: $shadow-inset, 0 2px 6px rgba(0, 0, 0, .25);
   cursor: pointer;
-  margin-bottom: 10px;
-  transition: transform 0.2s ease, filter 0.2s ease;
+  transition: transform .15s ease, filter .15s ease;
+  position: relative;
 
   &:hover {
-    filter: brightness(1.1);
+    transform: translateY(-1px);
+    filter: brightness(1.06);
   }
 
+  &:active {
+    transform: translateY(0);
+  }
+
+  /* your existing sprite paths remain unchanged */
   &.inventory {
     background-image: url('../../icons/inventory.png');
   }
@@ -145,13 +231,14 @@ $bp-phone: 480px;
   &.message.active {
     background-image: url('../../icons/chat2.png');
   }
+
   &.macros {
     background-image: url('../../icons/macros.png');
   }
 }
 
 /* =========================
-📐 Tablet-ish (<=1024px)
+📐 Tablet (<=1024px)
 ========================= */
 @media (max-width: $bp-tablet) {
   .left-sidebar-container {
@@ -159,30 +246,26 @@ $bp-phone: 480px;
   }
 
   .left-sidebar {
-    gap: 2px;
+    gap: 6px;
     padding: 8px;
   }
 
   .sidebar-icon {
-    width: 44px;
-    height: 44px;
-    margin-bottom: 8px;
+    width: 42px;
+    height: 42px;
   }
 
   .sidebar-toggle {
-    margin-top: 80px;
-    padding: 6px 10px;
-    font-size: 20px;
+    margin-top: 86px;
+    height: 48px;
   }
 }
 
 /* ==================================
 📱 Small tablets / large phones (<=768px)
-Convert to bottom dock
+Dock mode
 ================================== */
 @media (max-width: $bp-mobile) {
-
-  /* Dock the container at the bottom, centered */
   .left-sidebar-container {
     position: fixed;
     left: 50%;
@@ -195,31 +278,27 @@ Convert to bottom dock
 
     &.collapsed {
       transform: translate(-50%, 120%);
-      /* slide down to hide */
     }
   }
 
-  /* Sidebar becomes a horizontal dock */
   .left-sidebar {
     flex-direction: row;
     gap: 10px;
     padding: 8px 10px;
-    border-radius: 10px;
-    background: rgba(0, 0, 0, 0.6);
+    border-radius: 12px;
+    @include bronze-border;
+    @include marble-bg;
   }
 
   .sidebar-icon {
     width: 40px;
     height: 40px;
-    margin-bottom: 0;
   }
 
-  /* Toggle sits above the dock as a pill */
   .left-sidebar-wrapper {
     position: fixed;
     left: 50%;
     bottom: 64px;
-    /* a bit above the dock */
     top: auto;
     transform: translateX(-50%);
     z-index: 1100;
@@ -227,18 +306,25 @@ Convert to bottom dock
 
   .sidebar-toggle {
     margin-top: 0;
-    padding: 6px 10px;
-    font-size: 18px;
     border-radius: 999px;
+    width: 36px;
+    height: 36px;
+
+    &::before {
+      left: 11px;
+    }
+
+    &.closed::before {
+      transform: translateY(-50%) rotate(135deg);
+      /* points up in dock */
+    }
   }
 
-  /* Tooltips pop UP from dock */
-  .left-sidebar .tooltip-container .tooltip-text {
+  .tooltip-container .tooltip-text {
     left: 50%;
     top: auto;
     bottom: 48px;
     transform: translateX(-50%);
-    white-space: nowrap;
   }
 }
 
@@ -253,8 +339,7 @@ Convert to bottom dock
   .left-sidebar {
     gap: 8px;
     padding: 6px 8px;
-    border-width: 1px;
-    border-radius: 8px;
+    border-width: 2px;
   }
 
   .sidebar-icon {
@@ -263,11 +348,11 @@ Convert to bottom dock
   }
 
   .sidebar-toggle {
-    font-size: 16px;
-    padding: 6px 10px;
+    width: 32px;
+    height: 32px;
   }
 
-  .left-sidebar .tooltip-container .tooltip-text {
+  .tooltip-container .tooltip-text {
     font-size: 11px;
     padding: 4px 6px;
     max-width: 180px;
@@ -275,7 +360,7 @@ Convert to bottom dock
 }
 
 /* =========================
-🧭 Safe-area support (iOS)
+🧭 iOS safe areas
 ========================= */
 @supports (padding: max(0px)) {
   @media (max-width: $bp-mobile) {
@@ -286,5 +371,17 @@ Convert to bottom dock
     .left-sidebar-wrapper {
       bottom: calc(max(10px, env(safe-area-inset-bottom)) + 54px);
     }
+  }
+}
+
+/* =========================
+🦺 Motion Safety
+========================= */
+@media (prefers-reduced-motion: reduce) {
+
+  .left-sidebar-container,
+  .sidebar-toggle,
+  .sidebar-icon {
+    transition: none !important;
   }
 }

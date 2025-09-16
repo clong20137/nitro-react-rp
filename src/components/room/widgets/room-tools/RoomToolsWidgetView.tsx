@@ -94,14 +94,17 @@ export const RoomToolsWidgetView: FC<{}> = (props) => {
     }, [roomName, roomOwner, roomTags]);
  
     return (
+        
         <Flex className="nitro-room-tools-container" gap={2}>
             <Column center className="nitro-room-tools p-2">
+                 {/*
                 <Base
                     pointer
                     title={LocalizeText("room.settings.button.text")}
                     className="icon icon-cog"
                     onClick={() => handleToolClick("settings")}
                 />
+           
                 <Base
                     pointer
                     title={LocalizeText("room.zoom.button.text")}
@@ -114,6 +117,7 @@ export const RoomToolsWidgetView: FC<{}> = (props) => {
                         })
                     }
                 />
+
                 <Base
                     pointer
                     title={LocalizeText("room.chathistory.button.text")}
@@ -128,6 +132,7 @@ export const RoomToolsWidgetView: FC<{}> = (props) => {
                         className="icon icon-like-room"
                     />
                 )}
+                */}
             </Column>
             <Column justifyContent="center">
                 <TransitionAnimation

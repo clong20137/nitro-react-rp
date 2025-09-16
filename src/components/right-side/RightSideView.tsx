@@ -1,6 +1,10 @@
 import { FC, useEffect, useState } from "react";
 import { SettingsView } from "../roleplay/SettingsView";
-import { SendMessageComposer, GetSessionDataManager } from "../../api";
+import {
+    SendMessageComposer,
+    GetSessionDataManager,
+    CreateLinkEvent,
+} from "../../api";
 import { StartWorkComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/StartWorkComposer";
 import { PassiveModeComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PassiveModeComposer";
 import { CallPoliceComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CallPoliceComposer";
@@ -8,22 +12,19 @@ import { CallPoliceComposer } from "@nitrots/nitro-renderer/src/nitro/communicat
 type VRoomDetail = {
     virtualRoomId: number;
     name: string;
-    type: string; // "safe", "combat", etc.
+    type: string;
     credits?: number;
     userCount?: number;
-
-    // NEW: these arrive from VirtualRoomInfoComposer
-    inGameTime?: string; // "HH:mm"
+    inGameTime?: string;
     phase?: "DAY" | "DUSK" | "NIGHT" | "DAWN";
 };
 
 type TimeOfDayDetail = {
-    time: string; // "HH:mm"
+    time: string;
     phase: "DAY" | "DUSK" | "NIGHT" | "DAWN";
 };
 
 const fmt12h = (hhmm: string) => {
-    // expect "HH:mm"
     const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
     if (Number.isNaN(h) || Number.isNaN(m)) return "—:— —";
     const ampm = h >= 12 ? "PM" : "AM";
@@ -44,7 +45,6 @@ export const RightSideView: FC<{}> = () => {
     const [credits, setCredits] = useState<number>(0);
     const [showSettings, setShowSettings] = useState(false);
 
-    // quick-action state (mirrors StatsBar)
     const [working, setWorking] = useState(false);
     const [passive, setPassive] = useState(false);
     const [cooldown, setCooldown] = useState(0);
@@ -52,7 +52,6 @@ export const RightSideView: FC<{}> = () => {
     const [callMsg, setCallMsg] = useState("");
 
     useEffect(() => {
-        // SERVER-DRIVEN CLOCK (no local Date())
         const handleVRoomInfo = (e: any) => {
             const detail = e.detail as VRoomDetail;
             if (!detail) return;
@@ -64,21 +63,19 @@ export const RightSideView: FC<{}> = () => {
             if (typeof detail.userCount === "number")
                 setOnlineUsers(detail.userCount);
 
-            // seed time/phase on enter or virtual-room change
             if (detail.inGameTime) setGameTime(fmt12h(detail.inGameTime));
             if (detail.phase) setPhase(detail.phase);
         };
 
-        type TimeOfDayDetail = {
-            hhmm: string; // "HH:mm"
+        type TimeOfDayDetail2 = {
+            hhmm: string;
             phase: "DAY" | "DUSK" | "NIGHT" | "DAWN";
         };
 
-        // periodic push from TimeOfDayComposer
         const handleTimeOfDay = (e: any) => {
-            const d = e?.detail as TimeOfDayDetail;
+            const d = e?.detail as TimeOfDayDetail2;
             if (!d) return;
-            setGameTime(fmt12h(d.hhmm)); // ✅ use hhmm
+            setGameTime(fmt12h(d.hhmm));
             setPhase(d.phase);
         };
 
@@ -90,7 +87,7 @@ export const RightSideView: FC<{}> = () => {
         const onWork = (e: any) => setWorking(!!e?.detail?.isWorking);
 
         window.addEventListener("virtual_room_info_update", handleVRoomInfo);
-        window.addEventListener("time_of_day_update", handleTimeOfDay); // <— NEW
+        window.addEventListener("time_of_day_update", handleTimeOfDay);
         window.addEventListener("credit_balance_update", handleCreditUpdate);
         window.addEventListener("work_status_update", onWork as EventListener);
 
@@ -99,7 +96,7 @@ export const RightSideView: FC<{}> = () => {
                 "virtual_room_info_update",
                 handleVRoomInfo
             );
-            window.removeEventListener("time_of_day_update", handleTimeOfDay); // <— NEW
+            window.removeEventListener("time_of_day_update", handleTimeOfDay);
             window.removeEventListener(
                 "credit_balance_update",
                 handleCreditUpdate
@@ -111,14 +108,12 @@ export const RightSideView: FC<{}> = () => {
         };
     }, []);
 
-    // cooldown tick
     useEffect(() => {
         if (cooldown <= 0) return;
         const id = setTimeout(() => setCooldown(cooldown - 1), 1000);
         return () => clearTimeout(id);
     }, [cooldown]);
 
-    // actions (reuse exact packets from StatsBar)
     const toggleWork = () => {
         SendMessageComposer(new StartWorkComposer(!working));
         setWorking((v) => !v);
@@ -144,35 +139,54 @@ export const RightSideView: FC<{}> = () => {
         <div className={`nitro-right-compact phase-${phase.toLowerCase()}`}>
             {/* top mini bar (time • credits • gear) */}
             <div className="rs-mini">
-                <div className="rs-time">
+                <div className="chip">
                     <i className="ico ico-time" /> {gameTime}
                 </div>
 
-                <div className="rs-credits">
+                <div className="chip">
                     <i className="ico ico-coin" /> {credits}
                 </div>
 
-                <button
-                    className="ico ico-gear"
-                    title="Settings"
-                    onClick={() => setShowSettings(true)}
-                />
+                {/* settings (no outline) */}
+                <div className="chip">
+                    <button
+                        className="ico ico-gear"
+                        title="Settings"
+                        onClick={() => setShowSettings(true)}
+                        aria-label="Settings"
+                    />
+                </div>
             </div>
 
             {/* zone / virtual room card */}
             <div className="rs-card">
                 <div className="rs-title" title={virtualName}>
-                    <i className="ico ico-zone" />
-                    <span className="rs-title-text">
-                        {virtualId
-                            ? `[${virtualId}] - ${virtualName}`
-                            : virtualName}
-                    </span>
+                    <div className="chip chip-title">
+                        <i className="ico ico-zone" />
+                        <span className="rs-title-text">
+                            {virtualId
+                                ? `[${virtualId}] - ${virtualName}`
+                                : virtualName}
+                        </span>
+                    </div>
                 </div>
 
-                <div className="rs-counter">
-                    <span>{onlineUsers}</span>
-                    <i className="ico ico-flag" />
+                {/* online counter + CHAT LOG button on the right */}
+                <div className="rs-counter" title="Users online">
+                    <div className="chip">
+                         <span>{onlineUsers}</span>
+                        <i className="ico ico-flag" />
+                    </div>
+                    <div className="chip">
+                        <button
+                            className="ico ico-chatlog"
+                            title="Chat Log"
+                            aria-label="Chat Log"
+                            onClick={() =>
+                                CreateLinkEvent("chat-history/toggle")
+                            }
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -183,7 +197,7 @@ export const RightSideView: FC<{}> = () => {
             {/* Quick actions */}
             <div className="rs-quick">
                 {/* Call Police */}
-                <div className="qcall-wrap">
+                <div className="qcall-wrap chip">
                     <button
                         className={`qbtn police ${
                             cooldown > 0 ? "cooling" : ""
@@ -243,23 +257,25 @@ export const RightSideView: FC<{}> = () => {
                     )}
                 </div>
 
-                {/* Clock In / Out */}
-                <button
-                    className={`qbtn work ${working ? "on" : ""}`}
-                    title={working ? "Clock Out" : "Clock In"}
-                    onClick={toggleWork}
-                    aria-label={working ? "Clock Out" : "Clock In"}
-                />
+                <div className="chip">
+                    <button
+                        className={`qbtn work ${working ? "on" : ""}`}
+                        title={working ? "Clock Out" : "Clock In"}
+                        onClick={toggleWork}
+                        aria-label={working ? "Clock Out" : "Clock In"}
+                    />
+                </div>
 
-                {/* Aggressive / Passive */}
-                <button
-                    className={`qbtn mode ${
-                        passive ? "passive" : "aggressive"
-                    }`}
-                    title={passive ? "Passive Mode" : "Aggressive Mode"}
-                    onClick={togglePassive}
-                    aria-label="Toggle Aggressive / Passive"
-                />
+                <div className="chip">
+                    <button
+                        className={`qbtn mode ${
+                            passive ? "passive" : "aggressive"
+                        }`}
+                        title={passive ? "Passive Mode" : "Aggressive Mode"}
+                        onClick={togglePassive}
+                        aria-label="Toggle Aggressive / Passive"
+                    />
+                </div>
             </div>
         </div>
     );

@@ -1,227 +1,399 @@
-.create-gang-view {
-    transform: translate(-50%, -50%);
-    z-index: 9999;
+$ink: #000;
 
-    width: 880px;
-    max-width: 92vw;
-    /* keep the modal inside the viewport height; header/footer stay visible */
-    max-height: 90vh;
+/* ------------------- root container (kept) ------------------- */
+.create-gang-view {
+    transform: translateZ(0);
+    z-index: 9999;
+    max-width: 96vw;
+    max-height: 92vh;
     display: flex;
     flex-direction: column;
-
     background: #fff;
     color: #000;
-    border: 1px solid #000;
+    border: 1px solid $ink;
     border-radius: 8px;
-    box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .35), 0 2px 0 rgba(0, 0, 0, .45);
     overflow: hidden;
+
+    /* open/close */
+    opacity: 0;
+    transform: scale(.96);
+    transition: opacity .18s ease, transform .18s ease;
+
+    &.show {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
+/* drag & resize cursors (kept) */
+.is-dragging {
+    cursor: grabbing !important;
+}
+
+.is-resizing {
+    cursor: nwse-resize !important;
+}
+
+/* ------------------- header (kept) ------------------- */
 .create-gang-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px;
     padding: 8px 12px;
     font-weight: 700;
-    font-size: 20px;
-    background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
+    font-size: 18px;
+    background: linear-gradient(180deg, #b57f2a, #b57f2a 50%, #c38c35 0, #c38c35);
     color: #fff;
+    cursor: grab;
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        /* ► small live preview badge in the header */
+        .top-badge {
+            width: 22px;
+            height: 22px;
+            border: 1px solid #000;
+            background: #d9c7a0;
+            /* fallback—actual colors set inline */
+            image-rendering: pixelated;
+            border-radius: 3px;
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+        }
+
+        .top-badge-icon {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            image-rendering: pixelated;
+            pointer-events: none;
+            filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .15));
+        }
+    }
 }
 
-.create-gang-header .c-button {
+.c-button.close-button {
     appearance: none;
     border: 0;
-    background: transparent;
-    font-size: 16px;
-    line-height: 1;
-    cursor: pointer;
+    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
     color: #fff;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 5px;
+    box-shadow: 0 0 0 1.2px #fff, inset 0 1px 0 rgba(255, 255, 255, .35);
+    border: 2px solid #921911;
+    cursor: pointer;
+    transition: transform .08s ease, filter .12s ease;
+
+    &:hover {
+        filter: brightness(1.06);
+    }
+
+    &:active {
+        transform: translateY(1px);
+    }
 }
 
-/* ---------- 3-column layout (L | M | R) ---------- */
-/* L = icons (fixed) | M = swatches (flex) | R = preview (fixed) */
+/* ------------------- body layout ------------------- */
+/* L: icons (fixed) | M: palettes (flex) | R: preview (smaller) */
 .create-gang-body-horizontal {
     display: grid;
-    grid-template-columns: 136px 8px minmax(360px, 1fr) 8px 200px;
-    /* tighter spacing */
+    /* widen left column so 3×56px tiles + 2×10px gaps fit w/o clipping */
+    grid-template-columns: 216px 10px minmax(420px, 1fr) 10px 180px;
     gap: 0;
     align-items: stretch;
-    padding: 10px 12px;
-
-    /* the body area scrolls if content exceeds max-height */
+    padding: 12px;
     overflow: auto;
-    /* smooth iOS scrolling */
     -webkit-overflow-scrolling: touch;
 
-    /* keep children from overflowing their cell */
     >* {
         min-width: 0;
     }
 }
 
 .gang-divider {
-    width: 8px;
+    width: 10px;
 }
 
-/* ---------- LEFT: name + icons ---------- */
+.gang-column {
+    min-width: 0;
+}
+
+/* ------------------- LEFT: Name + Icons ------------------- */
 .gang-name-icon {
     display: flex;
     flex-direction: column;
     min-width: 0;
     overflow: hidden;
+
+    label {
+        display: block;
+        font-weight: 700;
+        margin: 6px 0 4px;
+    }
+
+    input[type="text"] {
+        width: 100%;
+        padding: 7px 9px;
+        border: 1px solid #c9c9c9;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    /* page wrapper with fade */
+    .icon-page {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        display: grid;
+        /* fixed 3 columns so no clipping; height per cell 56 */
+        grid-template-columns: repeat(3, 56px);
+        grid-auto-rows: 56px;
+        justify-content: space-between;
+        /* space 3 tiles across 216px nicely */
+        gap: 10px;
+        padding-right: 0;
+        animation: fadeSwap .18s ease;
+    }
+
+    .icon-option {
+        position: relative;
+        width: 56px;
+        height: 56px;
+        margin: 0 auto;
+        border: 1px solid $ink;
+        border-radius: 6px;
+        background: linear-gradient(180deg, hsla(0, 0%, 100%, .18), rgba(0, 0, 0, .08)), #b57f2a;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        padding: 3px;
+        transition: transform .12s ease, box-shadow .12s ease, filter .12s ease, outline-color .12s ease;
+
+        img {
+            width: 48px;
+            height: 48px;
+            display: block;
+        }
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 0 $ink, 0 6px 10px rgba(0, 0, 0, .25);
+
+            img {
+                animation: wiggle .35s ease-in-out;
+            }
+        }
+
+        &:active {
+            transform: translateY(0) scale(.98);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, .35);
+        }
+
+        &.selected {
+            outline: 2px solid rgba(0, 0, 0, .75);
+            animation: popIn .14s ease;
+        }
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 8px;
+
+        .habbo-action-button {
+            padding: 4px 10px;
+            border-radius: 6px;
+            transition: transform .08s ease, filter .12s ease, box-shadow .12s ease;
+
+            &:hover {
+                filter: brightness(1.1);
+                box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
+            }
+
+            &:active {
+                transform: translateY(1px);
+                box-shadow: none;
+            }
+        }
+    }
 }
 
-.gang-name-icon label {
-    display: block;
-    font-weight: 600;
-    margin: 6px 0 4px;
-}
-
-.gang-name-icon input[type="text"] {
-    width: 100%;
-    padding: 6px 8px;
-    border: 1px solid #c9c9c9;
-    border-radius: 4px;
-}
-
-.gang-name-icon .icon-selector {
-    margin-top: 8px;
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-}
-
-.gang-name-icon .icon-option {
-    border: 1px solid transparent;
-    border-radius: 4px;
-    padding: 4px;
-    cursor: pointer;
-}
-
-.gang-name-icon .icon-option.selected {
-    border-color: #6aa84f;
-}
-
-.gang-name-icon .icon-option img {
-    width: 100%;
-    height: auto;
-    display: block;
-    image-rendering: pixelated;
-}
-
-.gang-name-icon .pagination-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 6px;
-}
-
-.gang-name-icon .pagination-controls .habbo-action-button {
-    padding: 2px 8px;
-}
-
-/* ---------- MIDDLE: color swatches ---------- */
+/* ------------------- MIDDLE: Palettes (centered, secondary below) ------------------- */
 .gang-color-chooser {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    align-items: center;
 }
 
-.color-rows {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    /* primary | secondary side by side */
-    gap: 12px;
-    min-height: 0;
-}
-
-.color-block {
+.palette-stack {
     display: flex;
     flex-direction: column;
-    min-height: 0;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
 }
 
-.color-block label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 6px;
+.palette-block {
+    width: min(640px, 100%);
+    background: #f8f8f8;
+    border: 1px solid #e4e4e4;
+    border-radius: 10px;
+    padding: 12px 36px;
+    position: relative;
+    /* for arrows */
 }
 
-/* swatches scroll inside the middle column */
-.swatch-grid {
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-right: 4px;
+/* Header text + page count centered */
+.palette-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-weight: 700;
 
+    .page-indicator {
+        font-weight: 700;
+        min-width: 44px;
+        text-align: center;
+    }
+}
+
+/* edge arrows vertically centered */
+.palette-block .pager-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border: 1px solid #000;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
     display: grid;
-    grid-auto-rows: 20px;
-    grid-template-columns: repeat(14, 22px);
-    gap: 6px;
+    place-items: center;
+    line-height: 1;
+    font-weight: 900;
+    transition: transform .08s ease, filter .12s ease, box-shadow .12s ease;
+
+    &.left {
+        left: 6px;
+    }
+
+    &.right {
+        right: 6px;
+    }
+
+    &:hover {
+        filter: brightness(1.06);
+        box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
+    }
+
+    &:active {
+        transform: translateY(-50%) translateY(1px);
+        box-shadow: none;
+    }
+
+    &:disabled {
+        opacity: .45;
+        cursor: not-allowed;
+        filter: none;
+        box-shadow: none;
+    }
+}
+
+/* 3 rows × 10 columns page, with fade */
+.swatch-page {
+    display: grid;
+    grid-template-columns: repeat(10, 24px);
+    grid-auto-rows: 24px;
+    gap: 8px;
+    justify-content: center;
+    animation: fadeSwap .18s ease;
 }
 
 .swatch {
-    width: 22px;
-    height: 20px;
-    border: 1px solid rgba(0, 0, 0, .2);
-    border-radius: 2px;
+    width: 24px;
+    height: 24px;
+    border: 1px solid rgba(0, 0, 0, .25);
+    border-radius: 3px;
     cursor: pointer;
-}
+    transition: transform .06s ease, box-shadow .06s ease, outline-color .12s ease, filter .12s ease;
 
-.swatch.selected {
-    outline: 2px solid #6aa84f;
-    outline-offset: 1px;
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 1px 0 $ink;
+        filter: brightness(1.05);
+    }
+
+    &.selected {
+        outline: 2px solid #2ecc71;
+        outline-offset: 1px;
+    }
 }
 
 .swatch-loading {
-    grid-column: 1 / -1;
+    text-align: center;
     padding: 6px 0;
     color: #777;
     font-size: 12px;
 }
 
-/* ---------- RIGHT: preview (fixed width) ---------- */
+/* ------------------- RIGHT: Preview (no shield) ------------------- */
 .gang-preview {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    width: 200px;
-    /* match grid fixed column */
 }
 
-.gang-preview .preview-box {
+.preview-box {
     flex: 1;
     display: flex;
     flex-direction: column;
     border: 1px solid #cfcfcf;
-    border-radius: 6px;
-    overflow: hidden;
-    margin-top: 0;
-    color: #000;
+    border-radius: 10px;
     background: #fff;
+    overflow: hidden;
 }
 
-.gang-preview .preview-colors {
+/* Reuse .shield-wrap as the gradient stage, but without the shield image */
+.shield-wrap {
     flex: 1;
+    min-height: 132px;
+    /* ~same footprint as old shield area */
+    position: relative;
     display: grid;
     place-items: center;
-    position: relative;
+    transition: background .2s ease;
+
+    /* header & preview icons share these vibes */
+    .shield-icon {
+        position: relative;
+        /* centered by grid parent */
+        width: 48px;
+        height: 48px;
+        image-rendering: pixelated;
+        filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .15));
+        transition: transform .12s ease;
+        object-fit: contain;
+    }
 }
 
-.gang-preview .preview-colors .icon-overlay {
-    width: 56px;
-    height: 56px;
-    image-rendering: pixelated;
-}
-
-.gang-preview .gang-preview-name {
-    padding: 6px 8px;
+/* name footer of preview */
+.gang-preview-name {
+    padding: 8px;
     font-weight: 700;
     background: #f5f5f5;
     border-top: 1px solid #e3e3e3;
@@ -231,108 +403,149 @@
     text-overflow: ellipsis;
 }
 
-/* ---------- footer ---------- */
+/* ------------------- footer (kept) ------------------- */
 .create-gang-footer {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
     padding: 10px 12px 12px;
     border-top: 1px solid #e7e7e7;
+
+    .habbo-action-button.green {
+        padding: 8px 12px;
+        font-weight: 700;
+        transition: transform .08s ease, filter .12s ease, box-shadow .12s ease;
+
+        &:hover {
+            filter: brightness(1.08);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
+        }
+
+        &:active {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+    }
 }
 
-.create-gang-footer .habbo-action-button.green {
-    padding: 6px 12px;
+/* common buttons (kept) */
+.habbo-action-button {
+    background-color: #1a1a1a;
+    border: 2px solid #000;
+    color: #fff;
+    font-size: 12px;
     font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 5px;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
+    cursor: pointer;
+    transition: background-color .2s;
+
+    &:hover {
+        background-color: #2c2c2c;
+    }
+
+    &:active {
+        background-color: #000;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6);
+    }
+
+    &.green {
+        background-color: #007c17;
+        border-color: #003d0b;
+
+        &:hover {
+            background-color: #0aa127;
+        }
+
+        &:active {
+            background-color: #003d0b;
+        }
+    }
 }
 
-/* ---------- Medium screens ---------- */
+/* resize grip (kept) */
+.resize-handle {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 8px, rgba(0, 0, 0, .25) 8px) no-repeat 0 0 / 100% 100%;
+}
+
+/* ------------------- animations ------------------- */
+@keyframes popIn {
+    from {
+        transform: scale(.92);
+    }
+
+    to {
+        transform: scale(1);
+    }
+}
+
+@keyframes wiggle {
+
+    0%,
+    100% {
+        transform: rotate(0)
+    }
+
+    25% {
+        transform: rotate(2deg)
+    }
+
+    75% {
+        transform: rotate(-2deg)
+    }
+}
+
+@keyframes fadeSwap {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ------------------- responsive tweaks ------------------- */
 @media (max-width: 900px) {
-    .create-gang-view {
-        width: 720px;
-    }
-
     .create-gang-body-horizontal {
-        grid-template-columns: 132px 8px minmax(320px, 1fr) 8px 188px;
-    }
-
-    .swatch-grid {
-        grid-template-columns: repeat(12, 22px);
+        grid-template-columns: 216px 8px minmax(320px, 1fr) 8px 160px;
     }
 }
 
-/* ---------- Tablets & small laptops ---------- */
-@media (max-width: 700px) {
-    .create-gang-view {
-        width: 94vw;
-    }
-
+@media (max-width: 720px) {
     .create-gang-body-horizontal {
         grid-template-columns: 1fr;
-        /* stack */
         row-gap: 12px;
     }
 
     .gang-divider {
         display: none;
     }
-
-    .color-rows {
-        grid-template-columns: 1fr;
-    }
-
-    /* primary then secondary */
-    .swatch-grid {
-        grid-template-columns: repeat(12, 22px);
-        max-height: 240px;
-    }
-
-    .gang-preview {
-        width: auto;
-    }
 }
 
-/* ---------- iPhone 16 Pro / Pro Max (430px wide) ---------- */
 @media (max-width: 450px) {
-    .create-gang-view {
-        width: 96vw;
-        max-height: 88vh;
-        /* a bit shorter on iOS to avoid bars */
-    }
-
-    .create-gang-header {
-        padding: 6px 10px;
-        font-size: 18px;
-    }
-
-    .create-gang-body-horizontal {
-        padding: 8px 10px;
-    }
-
-    .gang-name-icon input[type="text"] {
-        padding: 5px 8px;
-    }
-
-    /* smaller swatches to fit comfortably */
-    .swatch-grid {
-        grid-auto-rows: 18px;
-        grid-template-columns: repeat(10, 18px);
-        gap: 5px;
+    .swatch-page {
+        grid-template-columns: repeat(8, 22px);
+        grid-auto-rows: 22px;
+        gap: 6px;
     }
 
     .swatch {
-        width: 18px;
-        height: 18px;
+        width: 22px;
+        height: 22px;
     }
 
-    /* make icon grid taller and scrollable */
-    .gang-name-icon .icon-selector {
-        max-height: 260px;
-    }
-}
-
-/* ---------- Very small phones (fallback) ---------- */
-@media (max-width: 360px) {
-    .swatch-grid {
-        grid-template-columns: repeat(9, 18px);
+    .gang-name-icon .icon-page {
+        grid-auto-rows: 52px;
     }
 }

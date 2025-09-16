@@ -1,125 +1,76 @@
 import { FC, useEffect, useRef, useState } from "react";
 import "./SettingsView.scss";
 
-interface SettingsViewProps {
-    onClose: () => void;
-}
+type Props = { onClose: () => void };
 
-export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
-    // Live Feed toggle
-    const [liveFeed, setLiveFeed] = useState(() => {
-        const stored = localStorage.getItem("liveFeedEnabled");
-        return stored ? JSON.parse(stored) : true;
-    });
-
-    // Gang Invites toggle
-    const [gangInvites, setGangInvites] = useState(() => {
-        const stored = localStorage.getItem("gangInvitesEnabled");
-        return stored ? JSON.parse(stored) : true;
-    });
-
-    // ✅ NEW: Disable Context Menu toggle
+export const SettingsView: FC<Props> = ({ onClose }) => {
+    // model
+    const [liveFeed, setLiveFeed] = useState<boolean>(() =>
+        JSON.parse(localStorage.getItem("liveFeedEnabled") ?? "true")
+    );
+    const [gangInvites, setGangInvites] = useState<boolean>(() =>
+        JSON.parse(localStorage.getItem("gangInvitesEnabled") ?? "true")
+    );
     const [contextMenuDisabled, setContextMenuDisabled] = useState<boolean>(
-        () => {
-            const stored = localStorage.getItem("contextMenuDisabled");
-            return stored ? JSON.parse(stored) : false;
-        }
+        () => JSON.parse(localStorage.getItem("contextMenuDisabled") ?? "false")
     );
 
-    // Position persistence (unchanged)
-    const [position, setPosition] = useState<{ x: number; y: number }>(() => {
-        const stored = localStorage.getItem("settingsPos");
-        return stored ? JSON.parse(stored) : { x: 100, y: 100 };
+    // mount anim
+    const [open, setOpen] = useState(true);
+
+    // draggable (kept, but optional — users can still move it)
+    const rootRef = useRef<HTMLDivElement | null>(null);
+    const startMouse = useRef<{ x: number; y: number } | null>(null);
+    const startPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+    const [offset, setOffset] = useState<{ x: number; y: number }>({
+        x: 0,
+        y: 0,
     });
 
-    const rootRef = useRef<HTMLDivElement | null>(null);
-    const startMouseRef = useRef<{ x: number; y: number } | null>(null);
-    const startPosRef = useRef<{ x: number; y: number }>(position);
-    const rafRef = useRef<number | null>(null);
-    const deltaRef = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
-    const draggingRef = useRef(false);
-
     useEffect(() => {
-        startPosRef.current = position;
-    }, [position]);
-
-    const applyTransform = () => {
+        // start near top-right, just under the mini bar
+        // (tweak these if you change your right-side UI height)
+        const TOP = 90; // ~just below .rs-mini
+        const RIGHT = 16; // snug to edge
         if (!rootRef.current) return;
-        const { dx, dy } = deltaRef.current;
-        rootRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
-    };
+        const w = rootRef.current.getBoundingClientRect().width || 360;
+        rootRef.current.style.left = `calc(100vw - ${w + RIGHT}px)`;
+        rootRef.current.style.top = `${TOP}px`;
+    }, []);
 
-    const onMouseMove = (e: MouseEvent) => {
-        if (!draggingRef.current || !startMouseRef.current) return;
-        const dx = e.clientX - startMouseRef.current.x;
-        const dy = e.clientY - startMouseRef.current.y;
-        deltaRef.current = { dx, dy };
-        if (rafRef.current == null) {
-            rafRef.current = requestAnimationFrame(() => {
-                applyTransform();
-                rafRef.current = null;
-            });
-        }
-    };
-
-    const cleanupListeners = () => {
-        window.removeEventListener("mousemove", onMouseMove as any);
-        window.removeEventListener("mouseup", onMouseUp as any);
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-    };
-
-    const onMouseUp = () => {
-        if (!draggingRef.current) return;
-        draggingRef.current = false;
-
-        const { dx, dy } = deltaRef.current;
-        const committed = {
-            x: startPosRef.current.x + dx,
-            y: startPosRef.current.y + dy,
-        };
-        setPosition(committed);
-        localStorage.setItem("settingsPos", JSON.stringify(committed));
-
-        requestAnimationFrame(() => {
-            if (rootRef.current) {
-                rootRef.current.style.transform = "translate(0px, 0px)";
-                rootRef.current.style.willChange = "auto";
-            }
-            document.body.classList.remove("dragging");
-        });
-
-        cleanupListeners();
-    };
-
-    const startDrag = (e: React.MouseEvent) => {
-        draggingRef.current = true;
-        startMouseRef.current = { x: e.clientX, y: e.clientY };
-        deltaRef.current = { dx: 0, dy: 0 };
-        if (rootRef.current) rootRef.current.style.willChange = "transform";
-        document.body.classList.add("dragging");
-        window.addEventListener("mousemove", onMouseMove as any, {
-            passive: true,
-        });
-        window.addEventListener("mouseup", onMouseUp as any);
-    };
-
+    // drag
     useEffect(() => {
+        const onMove = (e: MouseEvent) => {
+            if (!startMouse.current) return;
+            const dx = e.clientX - startMouse.current.x;
+            const dy = e.clientY - startMouse.current.y;
+            setOffset({ x: dx, y: dy });
+        };
+        const onUp = () => (startMouse.current = null);
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
         return () => {
-            cleanupListeners();
-            document.body.classList.remove("dragging");
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", onUp);
         };
     }, []);
 
-    const saveSettings = () => {
+    const beginDrag = (e: React.MouseEvent) => {
+        if (!rootRef.current) return;
+        const r = rootRef.current.getBoundingClientRect();
+        startPos.current = { x: r.left, y: r.top };
+        startMouse.current = { x: e.clientX, y: e.clientY };
+    };
+
+    // persist + broadcast
+    const save = () => {
         localStorage.setItem("liveFeedEnabled", JSON.stringify(liveFeed));
         localStorage.setItem("gangInvitesEnabled", JSON.stringify(gangInvites));
         localStorage.setItem(
             "contextMenuDisabled",
             JSON.stringify(contextMenuDisabled)
-        ); // ✅ persist
+        );
 
-        // Broadcast changes
         window.dispatchEvent(
             new CustomEvent("toggleLiveFeed", { detail: { enabled: liveFeed } })
         );
@@ -132,63 +83,112 @@ export const SettingsView: FC<SettingsViewProps> = ({ onClose }) => {
             new CustomEvent("toggleContextMenu", {
                 detail: { disabled: contextMenuDisabled },
             })
-        ); // ✅ notify UIs
+        );
 
-        onClose();
+        setOpen(false);
+        // let the exit animation finish
+        setTimeout(onClose, 220);
     };
 
     return (
         <div
             ref={rootRef}
-            className="settings-view"
-            style={{ left: position.x, top: position.y }}
+            className={`settings-view ${open ? "enter-tr" : "exit-tr"}`}
+            style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
+            role="dialog"
+            aria-label="Settings"
         >
-            <div className="settings-header" onMouseDown={startDrag}>
+            <div className="settings-header" onMouseDown={beginDrag}>
                 <span>Settings</span>
-                <button className="close-button" onClick={onClose}>
-                    ✖
-                </button>
-            </div>
-
-            <div className="setting-option">
-                <label htmlFor="liveFeed">Live Feed</label>
-                <input
-                    type="checkbox"
-                    id="liveFeed"
-                    checked={liveFeed}
-                    onChange={(e) => setLiveFeed(e.target.checked)}
-                />
-            </div>
-
-            <div className="setting-option">
-                <label htmlFor="gangInvites">Gang Invites</label>
-                <input
-                    type="checkbox"
-                    id="gangInvites"
-                    checked={gangInvites}
-                    onChange={(e) => setGangInvites(e.target.checked)}
-                />
-            </div>
-
-            {/* ✅ NEW: Disable Context Menu */}
-            <div className="setting-option">
-                <label htmlFor="disableContextMenu">Disable Context Menu</label>
-                <input
-                    type="checkbox"
-                    id="disableContextMenu"
-                    checked={contextMenuDisabled}
-                    onChange={(e) => setContextMenuDisabled(e.target.checked)}
-                />
-            </div>
-
-            <div style={{ marginTop: "20px", textAlign: "right" }}>
                 <button
-                    className="habbo-action-button green"
-                    onClick={saveSettings}
+                    className="close-button"
+                    onClick={() => {
+                        setOpen(false);
+                        setTimeout(onClose, 220);
+                    }}
+                    aria-label="Close settings"
                 >
-                    Save
+                    ×
                 </button>
+            </div>
+
+            <div className="settings-body">
+                <section className="setting-row">
+                    <div className="setting-copy">
+                        <div className="setting-title">Live Feed</div>
+                        <div className="setting-sub">
+                            Show live events and alerts in the feed.
+                        </div>
+                    </div>
+                    <Toggle
+                        checked={liveFeed}
+                        onChange={setLiveFeed}
+                        ariaLabel="Toggle live feed"
+                    />
+                </section>
+
+                <section className="setting-row">
+                    <div className="setting-copy">
+                        <div className="setting-title">Gang Invites</div>
+                        <div className="setting-sub">
+                            Allow other players to invite you to gangs.
+                        </div>
+                    </div>
+                    <Toggle
+                        checked={gangInvites}
+                        onChange={setGangInvites}
+                        ariaLabel="Toggle gang invites"
+                    />
+                </section>
+
+                <section className="setting-row">
+                    <div className="setting-copy">
+                        <div className="setting-title">
+                            Disable Context Menu
+                        </div>
+                        <div className="setting-sub">
+                            Turn off right-click menus for a cleaner UI.
+                        </div>
+                    </div>
+                    <Toggle
+                        checked={contextMenuDisabled}
+                        onChange={setContextMenuDisabled}
+                        ariaLabel="Disable context menus"
+                    />
+                </section>
+
+                <div className="actions">
+                    <button
+                        className="habbo-action-button green"
+                        onClick={save}
+                    >
+                        Save
+                    </button>
+                </div>
             </div>
         </div>
     );
 };
+
+/* --- Pixel-style Toggle -------------------------------------------------- */
+const Toggle: FC<{
+    checked: boolean;
+    onChange: (v: boolean) => void;
+    ariaLabel?: string;
+}> = ({ checked, onChange, ariaLabel }) => {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            aria-label={ariaLabel}
+            className={`olrp-toggle ${checked ? "on" : "off"}`}
+            onClick={() => onChange(!checked)}
+        >
+            <span className="track" />
+            <span className="thumb" />
+        </button>
+    );
+};
+
+export default SettingsView;
