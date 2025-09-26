@@ -10,50 +10,60 @@
     border-radius: 10px;
     box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
     font-size: 12px;
-    color: #000000;
+    color: #000;
     z-index: 9999;
     transform-origin: top left;
     will-change: transform, opacity, box-shadow;
 }
 
-/* Enter / Exit animations */
-@keyframes invPopIn {
+/* ==== Open / Close animations ======================================= */
+
+@keyframes invEnter {
     0% {
         opacity: 0;
-        transform: translateY(-6px) scale(.98);
+        transform: translateX(-16px) translateY(-6px) scale(.985);
     }
 
     100% {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateX(0) translateY(0) scale(1);
     }
 }
 
-@keyframes invPopOut {
+@keyframes invExit {
     0% {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateX(0) translateY(0) scale(1);
     }
 
     100% {
         opacity: 0;
-        transform: translateY(-6px) scale(.98);
+        transform: translateX(-12px) translateY(-4px) scale(.985);
     }
 }
 
-.inventory-module.animate-in {
-    animation: invPopIn 200ms ease-out forwards;
+.inventory-module.is-entering {
+    animation: invEnter 220ms cubic-bezier(.2, .8, .25, 1) forwards;
 }
 
-.inventory-module.animate-out {
-    animation: invPopOut 180ms ease-in forwards;
+.inventory-module.is-exiting {
+    animation: invExit 180ms ease-in forwards;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+    .inventory-module.is-entering,
+    .inventory-module.is-exiting {
+        animation: none;
+    }
 }
 
 /* ==== Header ======================================================== */
 
 .inventory-header {
     position: relative;
-    color: #ffffff;
+    color: #fff;
     background: linear-gradient(180deg, #b57f2a, #b57f2a 50%, #c38c35 0, #c38c35);
     font-weight: bold;
     text-align: center;
@@ -67,18 +77,23 @@
     cursor: move;
 }
 
-/* button element now for a11y, with CSS X */
+.inventory-header.is-grabbing {
+    cursor: grabbing;
+}
+
+/* Close button is a real button for a11y */
 .inventory-close {
     position: absolute;
     top: 6px;
     right: 8px;
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     border: 2px solid #921911;
     background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
     border-radius: 4px;
     box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
     cursor: pointer;
+    padding: 0;
 }
 
 .inventory-close::before,
@@ -123,23 +138,39 @@
 
 /* ==== Slots ========================================================= */
 
+.slot-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.slot-label {
+    font-size: 11px;
+    font-weight: bold;
+    margin-bottom: 2px;
+    color: #fff;
+    text-shadow: 0 0 2px #000;
+    line-height: 1;
+}
+
+/* Core slot */
 .inventory-slot {
     width: 48px;
     height: 48px;
     background-color: #7a7a7a;
-    border: 2px solid #000000;
+    border: 2px solid #000;
     border-radius: 6px;
-    box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 #000000;
+    box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 #000;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: grab;
     position: relative;
-    transition: background-color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
     overflow: hidden;
     padding: 2px;
-    /* gives room so images never clip the border */
-    will-change: transform, box-shadow;
+    /* prevents icon clipping */
+    transition: background-color 120ms ease, box-shadow 150ms ease;
+    /* NOTE: Removed transform transitions to eliminate “bounce-left” feel */
 }
 
 .inventory-slot:active {
@@ -150,17 +181,16 @@
     background-color: #8e8e8e;
 }
 
-/* Active categories for 0–2 (visual only) */
+/* Equip states (visual only) */
 .inventory-slot.active-weapon,
 .inventory-slot.active-shield,
 .inventory-slot.active-potion {
     background-color: #c3c3c3;
 }
 
-/* DnD feedback */
+/* DnD feedback: ONLY shadow/outline, no transform-scale */
 .inventory-slot.slot-over {
     outline: 2px dashed #4caf50;
-    transform: scale(1.03);
     box-shadow: 0 0 0 3px rgba(76, 175, 80, .15) inset;
 }
 
@@ -169,14 +199,14 @@
     box-shadow: 0 0 0 3px rgba(229, 57, 53, .18) inset;
 }
 
-/* drop pulse */
+/* Drop pulse — shadow-based, no movement */
 @keyframes slotPulse {
     0% {
-        box-shadow: 0 0 0 0 rgba(76, 175, 80, .7);
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, .7) inset;
     }
 
     100% {
-        box-shadow: 0 0 0 12px rgba(76, 175, 80, 0);
+        box-shadow: 0 0 0 12px rgba(76, 175, 80, 0) inset;
     }
 }
 
@@ -205,23 +235,6 @@
     background-color: #f4b942;
 }
 
-/* Slot wrapper aligns label & slot */
-.slot-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-/* Top labels for 0..2 (Weapon/Shield/Potion) */
-.slot-label {
-    font-size: 11px;
-    font-weight: bold;
-    margin-bottom: 2px;
-    color: #fff;
-    text-shadow: 0 0 2px #000;
-    line-height: 1;
-}
-
 /* Number labels */
 .slot-number.filled-corner {
     position: absolute;
@@ -246,7 +259,7 @@
     text-shadow: 0 1px 0 rgba(255, 255, 255, .35);
 }
 
-/* Divider (if needed) across columns */
+/* Divider (if you ever need one across columns) */
 .inventory-divider {
     width: 100%;
     height: 1px;
@@ -264,31 +277,26 @@
     display: flex;
     align-items: center;
     justify-content: center;
-
-    img {
-        width: 90%;
-        height: 90%;
-        object-fit: contain;
-        /* prevents cropping */
-        image-rendering: auto;
-        /* avoid forced pixelation */
-        -ms-interpolation-mode: bicubic;
-        pointer-events: none;
-        transition: transform 140ms ease;
-    }
 }
 
-.inventory-item-wrapper:hover img {
-    transform: translateY(-1px);
+.inventory-item-wrapper img {
+    width: 90%;
+    height: 90%;
+    object-fit: contain;
+    image-rendering: auto;
+    -ms-interpolation-mode: bicubic;
+    pointer-events: none;
+    /* NOTE: Removed image transform on hover to avoid micro “jumps” */
+    transition: none;
 }
 
+/* Draggable feel — removed scale to prevent bounce */
 .inventory-item-wrapper[draggable="true"] {
     cursor: grab;
 }
 
 .inventory-item-wrapper[draggable="true"]:active {
-    transform: scale(1.035);
-    transition: transform 80ms ease;
+    transform: none;
 }
 
 /* Quantity chip */
@@ -296,8 +304,8 @@
     position: absolute;
     bottom: 4px;
     right: 6px;
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
+    background: rgba(0, 0, 0, .7);
+    color: #fff;
     padding: 1px 4px;
     font-size: 10px;
     border-radius: 4px;
@@ -315,12 +323,12 @@
     border: 1px solid #222;
     border-radius: 3px;
     overflow: hidden;
+}
 
-    .durability-fill {
-        height: 100%;
-        background-color: #00cc00;
-        transition: width 0.3s ease;
-    }
+.durability-bar .durability-fill {
+    height: 100%;
+    background-color: #00cc00;
+    transition: width .25s ease;
 }
 
 /* Tooltip */
@@ -338,23 +346,23 @@
     white-space: nowrap;
     z-index: 999;
     border-radius: 4px;
-    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    box-shadow: rgba(0, 0, 0, .24) 0px 3px 8px;
     min-width: 120px;
     max-width: 180px;
     text-align: left;
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transition: opacity .2s ease, transform .2s ease;
     pointer-events: none;
+}
 
-    &::after {
-        content: '';
-        position: absolute;
-        top: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        border-width: 5px;
-        border-style: solid;
-        border-color: #f9f3e7 transparent transparent transparent;
-    }
+.inventory-item-wrapper .item-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: #f9f3e7 transparent transparent transparent;
 }
 
 .inventory-item-wrapper:hover .item-tooltip {
@@ -362,7 +370,7 @@
     transform: translateX(-50%) translateY(0);
 }
 
-/* invalid shake (kept from before) */
+/* Invalid shake is still available if you want to trigger it */
 @keyframes slotShake {
     0% {
         transform: translateX(0);

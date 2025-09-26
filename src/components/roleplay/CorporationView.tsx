@@ -15,9 +15,7 @@ import { FireCorporationMemberComposer } from "@nitrots/nitro-renderer/src/nitro
 
 interface CorporationsViewProps {
     onClose: () => void;
-    /** logged-in user id (to detect if user is a manager of the selected corp) */
     currentUserId: number;
-    /** optional global staff override */
     isStaff?: boolean;
 }
 
@@ -47,7 +45,7 @@ interface RankMeta {
     rankName: string;
     rankOrder: number;
     pay?: number;
-    isManager?: boolean; // server should include this for visibility rules
+    isManager?: boolean;
 }
 
 type Pos = { x: number; y: number };
@@ -58,9 +56,8 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
     currentUserId,
     isStaff = false,
 }) => {
-    // entrance animation
+    // entrance / exit
     const [opening, setOpening] = useState(true);
-    // exit animation
     const [closing, setClosing] = useState(false);
     const handleClose = () => setClosing(true);
 
@@ -80,7 +77,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
     const [memberSearch, setMemberSearch] = useState("");
     const [hiring, setHiring] = useState(false);
 
-    // per-user busy state + refresh flash
+    // busy/flash
     const [busyUserIds, setBusyUserIds] = useState<Set<number>>(new Set());
     const [refreshFlash, setRefreshFlash] = useState(false);
 
@@ -98,18 +95,22 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
     const rootRef = useRef<HTMLDivElement | null>(null);
     const headerRef = useRef<HTMLDivElement | null>(null);
 
-    // --- helpers --------------------------------------------------------------
-    const getCenteredPosition = (size: { w: number; h: number }): Pos => {
+    // hover popover for icons
+    const [hoverCorpId, setHoverCorpId] = useState<number | null>(null);
+    const [hoverPos, setHoverPos] = useState<Pos | null>(null);
+
+    // helpers
+    const getCenteredPosition = (s: { w: number; h: number }): Pos => {
         const vw = window.innerWidth,
             vh = window.innerHeight;
         return {
-            x: Math.max(0, Math.round((vw - size.w) / 2)),
-            y: Math.max(0, Math.round((vh - size.h) / 2)),
+            x: Math.max(0, Math.round((vw - s.w) / 2)),
+            y: Math.max(0, Math.round((vh - s.h) / 2)),
         };
     };
-    const clampToViewport = (p: Pos, size: { w: number; h: number }): Pos => {
-        const maxX = Math.max(0, window.innerWidth - size.w);
-        const maxY = Math.max(0, window.innerHeight - size.h);
+    const clampToViewport = (p: Pos, s: { w: number; h: number }): Pos => {
+        const maxX = Math.max(0, window.innerWidth - s.w);
+        const maxY = Math.max(0, window.innerHeight - s.h);
         return {
             x: Math.min(Math.max(0, p.x), maxX),
             y: Math.min(Math.max(0, p.y), maxY),
@@ -127,8 +128,12 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
             localStorage.setItem(key, JSON.stringify(value));
         } catch {}
     };
-    const getIconUrl = (icon: string) =>
-        /^https?:\/\//i.test(icon) ? icon : `/icons/corporations/${icon}`;
+    const getIconUrl = (icon?: string) =>
+        icon
+            ? /^https?:\/\//i.test(icon)
+                ? icon
+                : `/icons/corporations/${icon}`
+            : "";
     const badgeTone = (stock?: number) => {
         if (typeof stock !== "number") return "neutral";
         if (stock <= 0) return "danger";
@@ -226,7 +231,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         };
     }, []);
 
-    // 🔴 LIVE STOCK UPDATES
+    // live stock updates
     useEffect(() => {
         const applyStockPatch = (
             id: number,
@@ -319,14 +324,14 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         };
     }, []);
 
-    // auto-select first corporation
+    // auto-select first
     useEffect(() => {
         if (!loading && selectedCorpId == null && corporations.length > 0) {
             handleSelectCorp(corporations[0].id);
         }
     }, [loading, corporations, selectedCorpId]);
 
-    // members result (DOM bridge)
+    // members result
     useEffect(() => {
         const onMembers = (ev: Event) => {
             const detail: any = (ev as CustomEvent).detail;
@@ -364,7 +369,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         };
     }, []);
 
-    // ranks result (DOM bridge)
+    // ranks result
     useEffect(() => {
         const onRanks = (ev: Event) => {
             const detail: any = (ev as CustomEvent).detail;
@@ -435,7 +440,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         };
     }, []);
 
-    // request/refresh both lists
+    // refresh helpers
     const refreshCorpData = (corpId: number) => {
         try {
             setMembersLoading(true);
@@ -450,7 +455,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         } catch {}
     };
 
-    // interactions
     const handleSelectCorp = (corpId: number) => {
         setSelectedCorpId(corpId);
         setMembersLoading(true);
@@ -490,7 +494,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
             }, 180);
         }
     };
-
     const handlePromote = (userId: number) => {
         if (!selectedCorpId) return;
         withUserBusy(userId, () => {
@@ -533,7 +536,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         ? sortRanksDesc(ranksByCorp[selectedCorpId] || [])
         : [];
     const membersByRank = groupMembersByRankId(members);
-
     const userIsManagerInCorp = (() => {
         if (!selectedCorpId) return false;
         const my = members.find((m) => m.userId === currentUserId);
@@ -544,6 +546,12 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         return !!meta?.isManager;
     })();
     const canManage = isStaff || userIsManagerInCorp;
+
+    // popover content
+    const hoveredCorp =
+        hoverCorpId != null
+            ? corporations.find((c) => c.id === hoverCorpId)
+            : undefined;
 
     return (
         <>
@@ -579,56 +587,102 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                 </div>
 
                 <div className="corporations-body">
-                    {/* LEFT: corp list */}
+                    {/* LEFT: icon grid */}
                     <div className="corporations-list">
-                        <h3>Corporations</h3>
-                        {loading && <div className="loading">Loading...</div>}
-                        {!loading && corporations.length === 0 && (
-                            <div className="empty">No corporations found.</div>
-                        )}
-                        {!loading &&
-                            corporations.map((corp) => (
-                                <div
-                                    key={corp.id}
-                                    className={`corporation-item ${
-                                        selectedCorpId === corp.id
-                                            ? "selected"
-                                            : ""
-                                    }`}
-                                    onClick={() => handleSelectCorp(corp.id)}
-                                >
-                                    <div className="icon">
-                                        {corp.icon ? (
-                                            <img
-                                                src={getIconUrl(corp.icon)}
-                                                alt=""
-                                                aria-hidden="true"
-                                            />
-                                        ) : (
-                                            <div className="placeholder">
-                                                🏢
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="info">
-                                        <div className="name">{corp.name}</div>
-                                        {!!corp.desc && (
-                                            <div className="description">
-                                                {corp.desc}
-                                            </div>
-                                        )}
-                                        <div className="meta">
-                                            <span
-                                                className={`badge ${badgeTone(
-                                                    corp.stock
-                                                )}`}
-                                            >
-                                                {corp.stock ?? 0} in stock
-                                            </span>
-                                        </div>
-                                    </div>
+                        <div
+                            className="corp-icons"
+                            role="list"
+                            aria-label="Corporations"
+                        >
+                            {loading && <div className="loading">Loading…</div>}
+                            {!loading && corporations.length === 0 && (
+                                <div className="empty">
+                                    No corporations found.
                                 </div>
-                            ))}
+                            )}
+
+                            {!loading &&
+                                corporations.map((corp) => {
+                                    const selected = selectedCorpId === corp.id;
+                                    const stock =
+                                        typeof corp.stock === "number"
+                                            ? corp.stock
+                                            : 0;
+                                    const tone = badgeTone(stock);
+                                    const iconUrl = getIconUrl(corp.icon);
+                                    return (
+                                        <button
+                                            key={corp.id}
+                                            role="listitem"
+                                            className={`corp-icon ${
+                                                selected ? "selected" : ""
+                                            }`}
+                                            onClick={() =>
+                                                handleSelectCorp(corp.id)
+                                            }
+                                            onMouseEnter={(e) => {
+                                                setHoverCorpId(corp.id);
+                                                setHoverPos({
+                                                    x: e.clientX,
+                                                    y: e.clientY,
+                                                });
+                                            }}
+                                            onMouseMove={(e) => {
+                                                if (hoverCorpId === corp.id)
+                                                    setHoverPos({
+                                                        x: e.clientX,
+                                                        y: e.clientY,
+                                                    });
+                                            }}
+                                            onMouseLeave={() => {
+                                                setHoverCorpId(null);
+                                                setHoverPos(null);
+                                            }}
+                                            onFocus={(e) => {
+                                                setHoverCorpId(corp.id);
+                                                const r = (
+                                                    e.target as HTMLElement
+                                                ).getBoundingClientRect();
+                                                setHoverPos({
+                                                    x: r.right + 6,
+                                                    y: r.top + 6,
+                                                });
+                                            }}
+                                            onBlur={() => {
+                                                setHoverCorpId(null);
+                                                setHoverPos(null);
+                                            }}
+                                            aria-pressed={selected}
+                                            aria-label={`${corp.name}${
+                                                typeof stock === "number"
+                                                    ? `, ${stock} in stock`
+                                                    : ""
+                                            }`}
+                                        >
+                                            {iconUrl ? (
+                                                <img
+                                                    src={iconUrl}
+                                                    alt=""
+                                                    aria-hidden="true"
+                                                />
+                                            ) : (
+                                                <span
+                                                    className="placeholder"
+                                                    aria-hidden="true"
+                                                >
+                                                    🏢
+                                                </span>
+                                            )}
+                                            <span
+                                                className={`badge ${tone}`}
+                                                aria-hidden="true"
+                                            >
+                                                {stock}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                        </div>
                     </div>
 
                     <div className="corp-divider" />
@@ -707,9 +761,9 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                                               )
                                         ).map((rank, idx) => {
                                             const mlist =
-                                                membersByRank.get(
-                                                    rank.rankId
-                                                ) || [];
+                                                groupMembersByRankId(
+                                                    members
+                                                ).get(rank.rankId) || [];
                                             return (
                                                 <div
                                                     key={rank.rankId}
@@ -783,7 +837,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                                                                                     }
                                                                                 </span>
                                                                             </div>
-
                                                                             <div className="member-stats">
                                                                                 {typeof m.weeklyShifts ===
                                                                                     "number" && (
@@ -872,6 +925,32 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                         )}
                     </div>
                 </div>
+
+                {/* Hover popover (portal-less, positioned with fixed coords) */}
+                {hoverCorpId != null && hoveredCorp && hoverPos && (
+                    <div
+                        className="corp-popover"
+                        style={{
+                            position: "fixed",
+                            left: Math.min(
+                                window.innerWidth - 240,
+                                hoverPos.x + 14
+                            ),
+                            top: Math.max(8, hoverPos.y + 10),
+                            zIndex: 2000,
+                        }}
+                    >
+                        <div className="name">{hoveredCorp.name}</div>
+                        {hoveredCorp.desc && (
+                            <div className="desc">{hoveredCorp.desc}</div>
+                        )}
+                        <div
+                            className={`badge ${badgeTone(hoveredCorp.stock)}`}
+                        >
+                            {hoveredCorp.stock ?? 0} in stock
+                        </div>
+                    </div>
+                )}
             </div>
         </>
     );

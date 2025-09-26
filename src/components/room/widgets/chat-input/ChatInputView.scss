@@ -6,13 +6,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 650px;
+    width: 900px;
     /* fixed width prevents layout jitter */
     max-width: 95%;
-    height: 54px;
+    height: 60px;
     padding: 0 10px 0 14px;
-    background: #EDEDED;
-    border: 2px solid #000;
+    background: linear-gradient(180deg, #f7f5ec, #f7f5ec 50%, #f2e7bf 0,#f2e7bf);
+    border: 4px solid #e7bd42;
     border-radius: 10px;
     z-index: 1000;
 
@@ -40,7 +40,7 @@
         }
     }
 
-    /* single emoji button on the far right, fixed width to avoid movement */
+    /* single emoji button */
     .emoji-btn {
         width: 28px;
         height: 28px;
@@ -49,52 +49,56 @@
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        border:none;
-        font-size:28px;
-        /* keep the grow subtle so it doesn’t hit the border as much */
+        border: none;
+        font-size: 28px;
         transition: transform .12s ease, background-color .12s ease, box-shadow .12s ease;
         transform-origin: center center;
+        border-radius: 6px;
     }
 
     .emoji-btn:hover {
         transform: scale(1.05);
-        /* was likely higher; smaller = less bleed */
         background: #f7f7f7;
         box-shadow: inset 0 0 0 1px #eaeaea;
     }
 
-    /* make emoji glyphs fit the box height so they don’t protrude vertically */
     .emoji-btn>span {
         display: block;
         line-height: 1;
-        /* remove font extra leading */
         font-size: 18px;
-        /* adjust so it visually centers */
+        /* visually centers emoji */
     }
-
 }
 
-/* Popover is OUTSIDE the bar; positioned via inline style from TSX */
+/* Emoji popover */
 .emoji-popover {
     position: fixed;
-    /* or absolute if you anchor to the chat bar */
     overflow: hidden;
-    /* <-- clip children to rounded corners */
     border-radius: 10px;
     background: #fff;
     box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
     padding: 10px;
-    /* give the grid some breathing room */
     z-index: 2000;
     box-sizing: border-box;
-    /* keep width/height sane */
+    animation: popoverFadeIn 180ms cubic-bezier(.22, .9, .24, 1);
+    transform-origin: top center;
 }
 
+@keyframes popoverFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
 
 .emoji-grid {
     display: grid;
     grid-template-columns: repeat(8, 28px);
-    /* match your desired columns */
     gap: 6px;
 }
 
@@ -109,12 +113,13 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    transition: background-color .12s ease, transform .1s ease;
 
     &:hover {
         background: #f2f2f2;
     }
 
     &:active {
-        transform: translateY(1px);
+        transform: translateY(1px) scale(0.96);
     }
 }

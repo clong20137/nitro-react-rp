@@ -13,28 +13,31 @@ interface InventoryViewProps {
 
 type DragPayload = { id: number; fromSlot: number };
 
-// helper: item type checks
 const isType = (it: InventoryContext | undefined, t: string) =>
     (it?.item_type || "").toLowerCase() === t;
 
-// which slots accept which types
 const slotAccepts = (slot: number, it: InventoryContext | undefined) => {
     if (slot === 0) return isType(it, "weapon");
     if (slot === 1) return isType(it, "shield");
     if (slot === 2) return isType(it, "potion");
-    return true; // 3..11 accept anything
+    return true;
 };
 
 export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
     const [items, setItems] = useState<InventoryContext[]>([]);
     const winRef = useRef<HTMLDivElement>(null);
 
+    // animation mount/unmount
+    const [isEntering, setIsEntering] = useState(true);
+    const [isExiting, setIsExiting] = useState(false);
+
     // rAF throttle for dragging the window
     const rafRef = useRef<number | null>(null);
     const dragRef = useRef<{ dx: number; dy: number } | null>(null);
     const isDraggingRef = useRef(false);
+    const [headerGrabbing, setHeaderGrabbing] = useState(false);
 
-    // load persisted position
+    // persisted position
     const [position, setPosition] = useState<{ x: number; y: number }>(() => {
         try {
             const s = localStorage.getItem("inventoryPos");
@@ -80,6 +83,7 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         const curX = rect?.left ?? position.x;
         const curY = rect?.top ?? position.y;
         dragRef.current = { dx: cx - curX, dy: cy - curY };
+        setHeaderGrabbing(true);
     };
 
     const moveDrag = (cx: number, cy: number) => {
@@ -94,6 +98,7 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
 
     const stopDrag = () => {
         dragRef.current = null;
+        setHeaderGrabbing(false);
         if (rafRef.current) {
             cancelAnimationFrame(rafRef.current);
             rafRef.current = null;
@@ -192,19 +197,36 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
     const [dragFromSlot, setDragFromSlot] = useState<number | null>(null);
     const [pulseSlot, setPulseSlot] = useState<number | null>(null);
 
+    // Transparent drag image to avoid native “jump”
+    const transparentImgRef = useRef<HTMLImageElement | null>(null);
+    useEffect(() => {
+        const img = new Image();
+        img.width = 1;
+        img.height = 1;
+        // 1x1 transparent PNG
+        img.src =
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
+        transparentImgRef.current = img;
+    }, []);
+
     const onItemDragStart = (e: React.DragEvent, item: InventoryContext) => {
         isDraggingRef.current = true;
         setDragFromSlot(item.slot);
         const payload: DragPayload = { id: item.id, fromSlot: item.slot };
         e.dataTransfer.setData("application/x-inv", JSON.stringify(payload));
         e.dataTransfer.effectAllowed = "move";
+
+        // Use transparent drag image so the browser ghost doesn’t shift left
+        if (transparentImgRef.current) {
+            e.dataTransfer.setDragImage(transparentImgRef.current, 0, 0);
+        }
+
         setDragOverSlot(null);
         setDragInvalid(false);
     };
     const onItemDragEnd = () =>
         setTimeout(() => (isDraggingRef.current = false), 0);
 
-    // local move helper (instant UI), emits event for your server layer to persist
     const applyLocalMove = (id: number, fromSlot: number, toSlot: number) => {
         setItems((prev) =>
             prev.map((it) => (it.id === id ? { ...it, slot: toSlot } : it))
@@ -221,42 +243,23 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         );
     };
 
-    // Send equip/unequip semantics after a drop (covers swap cases, too)
     const syncEquipStateAfterDrop = (
         movingId: number,
         movingNewSlot: number,
         occupying?: { id: number; newSlot: number }
     ) => {
-        // anything in 0..2 should be "equipped"
-        const equipIfInEquipSlot = (id: number, newSlot: number) => {
-            const shouldBeEquipped = newSlot >= 0 && newSlot <= 2;
-            if (shouldBeEquipped) {
-                GetCommunication().connection.send(
-                    new UseInventoryItemComposer(id)
-                );
-            } else {
-                // many backends use the same composer to toggle; sending again unequips
-                GetCommunication().connection.send(
-                    new UseInventoryItemComposer(id)
-                );
-            }
+        const toggleEquip = (id: number, newSlot: number) => {
+            GetCommunication().connection.send(
+                new UseInventoryItemComposer(id)
+            );
         };
 
-        // moving item
         const movingEndsInEquip = movingNewSlot <= 2;
         const movingWasInEquip = (dragFromSlot ?? -1) <= 2;
-        if (movingEndsInEquip !== movingWasInEquip) {
-            equipIfInEquipSlot(movingId, movingNewSlot);
-        }
+        if (movingEndsInEquip !== movingWasInEquip)
+            toggleEquip(movingId, movingNewSlot);
 
-        // swapped item (if any)
-        if (occupying) {
-            const occEndsInEquip = occupying.newSlot <= 2;
-            const occWasInEquip = !movingWasInEquip && movingEndsInEquip; // occupied the target before swap
-            // We can’t know original slot of occupying from here easily; however the toggle
-            // approach makes this safe: just send once; server will set correct state.
-            equipIfInEquipSlot(occupying.id, occupying.newSlot);
-        }
+        if (occupying) toggleEquip(occupying.id, occupying.newSlot);
     };
 
     const onSlotDrop = (e: React.DragEvent, toSlot: number) => {
@@ -272,7 +275,6 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         const moving = items.find((i) => i.id === id);
         if (!moving) return;
 
-        // validate by slot type
         if (!slotAccepts(toSlot, moving)) {
             setDragInvalid(true);
             return;
@@ -280,7 +282,6 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
 
         const occupying = items.find((i) => i.slot === toSlot);
 
-        // 1) Local swap/move for instant UI
         if (occupying) {
             setItems((prev) =>
                 prev.map((it) =>
@@ -300,15 +301,12 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                 })
             );
 
-            // 2) Server: equip/unequip according to final positions
             syncEquipStateAfterDrop(moving.id, toSlot, {
                 id: occupying.id,
                 newSlot: fromSlot,
             });
         } else {
             applyLocalMove(id, fromSlot, toSlot);
-
-            // 2) Server: equip/unequip for simple move
             syncEquipStateAfterDrop(moving.id, toSlot);
         }
     };
@@ -322,24 +320,46 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
             ? "Potion"
             : null;
 
-    // number label for slots 3..11 -> 1..9
     const bottomNumberFor = (slot: number) =>
         slot >= 3 ? String(slot - 2) : null;
+
+    // Close with exit animation
+    const handleClose = () => {
+        if (isExiting) return;
+        setIsExiting(true);
+    };
+    const handleAnimEnd: React.AnimationEventHandler<HTMLDivElement> = (e) => {
+        if (e.currentTarget !== winRef.current) return;
+        if (isExiting) onClose();
+        if (isEntering) setIsEntering(false);
+    };
 
     return (
         <div
             ref={winRef}
-            className="inventory-module"
+            className={`inventory-module ${isEntering ? "is-entering" : ""} ${
+                isExiting ? "is-exiting" : ""
+            }`}
             style={{ position: "absolute", left: position.x, top: position.y }}
+            onAnimationEnd={handleAnimEnd}
+            role="dialog"
+            aria-label="Inventory"
         >
             <div
-                className="inventory-header"
+                className={`inventory-header ${
+                    headerGrabbing ? "is-grabbing" : ""
+                }`}
                 onMouseDown={onHeaderMouseDown}
                 onTouchStart={onHeaderTouchStart}
+                aria-grabbed={headerGrabbing}
             >
                 Inventory
-                {/* no inner glyph; CSS draws the X */}
-                <div className="inventory-close" onClick={onClose} />
+                <button
+                    type="button"
+                    className="inventory-close"
+                    aria-label="Close inventory"
+                    onClick={handleClose}
+                />
             </div>
 
             <div className="inventory-grid">
@@ -348,7 +368,9 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                     const topLabel = labelForTop(slotIndex);
                     const numberLabel = bottomNumberFor(slotIndex);
 
-                    const moving = items.find((i) => i.slot === dragFromSlot!);
+                    const moving = items.find(
+                        (i) => i.slot === (dragFromSlot ?? -999)
+                    );
                     const over = dragOverSlot === slotIndex;
                     const validOver = slotAccepts(slotIndex, moving);
 
@@ -387,13 +409,11 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                             }}
                             onDrop={(e) => onSlotDrop(e, slotIndex)}
                         >
-                            {/* top labels for 0..2 */}
                             {topLabel && (
                                 <div className="slot-label">{topLabel}</div>
                             )}
 
                             <div className={cls}>
-                                {/* empty-number label for 3..11 */}
                                 {!item && numberLabel && (
                                     <div className="slot-number centered">
                                         {numberLabel}
@@ -417,14 +437,12 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                                             draggable={false}
                                         />
 
-                                        {/* quantity */}
                                         {item.quantity > 1 && (
                                             <div className="quantity-label">
                                                 x{item.quantity}
                                             </div>
                                         )}
 
-                                        {/* durability */}
                                         {typeof item.durability ===
                                             "number" && (
                                             <div className="durability-bar">
@@ -443,14 +461,12 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                                             </div>
                                         )}
 
-                                        {/* faint corner number even when filled (optional) */}
                                         {numberLabel && (
                                             <div className="slot-number filled-corner">
                                                 {numberLabel}
                                             </div>
                                         )}
 
-                                        {/* tooltip */}
                                         <div className="item-tooltip">
                                             <strong>{item.name}</strong>
                                             <br />

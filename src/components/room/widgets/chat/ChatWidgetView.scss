@@ -50,7 +50,9 @@
     transition: top 0.2s ease 0s;
     user-select: none;
     pointer-events: all;
-
+    animation: bubblePopIn 180ms ease-out both;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
     // -webkit-animation-duration: 0.2s;
     // animation-duration: 0.2s;
     // -webkit-animation-fill-mode: both;
@@ -937,3 +939,21 @@
         }
     }
 }
+
+    @keyframes bubblePopIn {
+        0% {
+            transform: scale(0.8);
+            opacity: 0;
+        }
+
+        60% {
+
+            transform: scale(1.1);
+            opacity: 1;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
