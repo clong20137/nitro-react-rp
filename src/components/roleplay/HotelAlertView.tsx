@@ -98,15 +98,7 @@ export const HotelAlertView: FC = () => {
     return (
         <div className="hotel-alert-container" aria-live="polite" role="status">
             <div className="hotel-alert" onClick={dismiss}>
-                <div className="hotel-alert__icon">
-                    {/* prefer provided icon; fallback to inline SVG */}
-                    <img
-                        src={current.icon || DEFAULT_ICON}
-                        alt=""
-                        aria-hidden="true"
-                        draggable={false}
-                    />
-                </div>
+               
                 <div className="hotel-alert__content">
                     <div className="hotel-alert__title">
                         {current.title || DEFAULT_TITLE}

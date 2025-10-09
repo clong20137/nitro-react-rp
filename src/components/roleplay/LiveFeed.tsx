@@ -1,14 +1,14 @@
 import { FC, useEffect, useRef, useState } from "react";
 import "./LiveFeed.scss";
 
-// ✅ add these two imports (same pattern as your ItemOfferPopupView)
+// ✅ composers
 import { SendMessageComposer } from "../../api";
 import { EmsCallDecisionComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/EmsCallDecisionComposer";
 
 interface FeedMessage {
     id: number;
     text: string;
-    username: string; // <-- victim username (server puts this in LiveFeedComposer)
+    username: string; // victim username
     figure: string;
     type?: string;
     persistent?: boolean;
@@ -16,11 +16,17 @@ interface FeedMessage {
     isPoliceCall?: boolean;
     isEMSCall?: boolean;
 
-    victimId?: number; // optional (unused here since we send username)
+    victimId?: number;
     location?: string;
+
+    // ✅ for fade-out animation
+    closing?: boolean;
 }
 
 let messageId = 0;
+
+// single source of truth for animation timing (keep in sync with SCSS)
+const ANIM_MS = 250;
 
 export const LiveFeed: FC = () => {
     const [messages, setMessages] = useState<FeedMessage[]>([]);
@@ -34,6 +40,7 @@ export const LiveFeed: FC = () => {
             audio.volume = volume;
             audioMapRef.current.set(id, audio);
             audio.play().catch(() => {});
+            // stop any lingering audio after 60s
             window.setTimeout(() => stopLoop(id), 60_000);
         } catch {}
     };
@@ -47,6 +54,16 @@ export const LiveFeed: FC = () => {
             } catch {}
             audioMapRef.current.delete(id);
         }
+    };
+
+    // helper to animate out then remove
+    const animateOutThenRemove = (id: number) => {
+        setMessages((prev) =>
+            prev.map((m) => (m.id === id ? { ...m, closing: true } : m))
+        );
+        window.setTimeout(() => {
+            setMessages((prev) => prev.filter((m) => m.id !== id));
+        }, ANIM_MS);
     };
 
     useEffect(() => {
@@ -78,10 +95,10 @@ export const LiveFeed: FC = () => {
             else if (newMsg.isEMSCall)
                 playLoop(newMsg.id, "/sounds/ambulance.mp3", 0.6);
             else if (!newMsg.persistent) {
+                // 🔔 timed notices now fade out before removal
                 window.setTimeout(() => {
-                    setMessages((prev) =>
-                        prev.filter((m) => m.id !== newMsg.id)
-                    );
+                    stopLoop(newMsg.id);
+                    animateOutThenRemove(newMsg.id);
                 }, 5000);
             }
         };
@@ -109,10 +126,10 @@ export const LiveFeed: FC = () => {
 
     const dismiss = (id: number) => {
         stopLoop(id);
-        setMessages((prev) => prev.filter((m) => m.id !== id));
+        animateOutThenRemove(id);
     };
 
-    // ✅ send the composer directly from the button, like your ItemOffer popup
+    // send composers directly
     const acceptEMS = (msg: FeedMessage) => {
         SendMessageComposer(new EmsCallDecisionComposer(msg.username, true));
         dismiss(msg.id);
@@ -128,20 +145,21 @@ export const LiveFeed: FC = () => {
             {messages.map((msg) => (
                 <div
                     key={msg.id}
-                    className={`live-feed-message ${
-                        msg.isPoliceCall
-                            ? "police-call"
-                            : msg.isEMSCall
-                            ? "ems-call"
-                            : ""
-                    }`}
+                    className={[
+                        "live-feed-message",
+                        msg.isPoliceCall ? "police-call" : "",
+                        msg.isEMSCall ? "ems-call" : "",
+                        msg.closing ? "closing" : "enter",
+                    ]
+                        .join(" ")
+                        .trim()}
                 >
                     <img
                         className="avatar-head"
                         src={`https://www.habbo.com/habbo-imaging/avatarimage?figure=${msg.figure}&direction=2&headonly=1&size=m`}
                         alt={`${msg.username}'s avatar`}
                     />
-                    <span>{msg.text}</span>
+                    <span className="message-text">{msg.text}</span>
 
                     {msg.isPoliceCall && (
                         <div className="call-buttons">

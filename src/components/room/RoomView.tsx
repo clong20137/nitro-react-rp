@@ -9,9 +9,6 @@ import { useRoom } from "../../hooks";
 import { LeftSidebarView } from "../roleplay/LeftSideBarView";
 import { RoomSpectatorView } from "./spectator/RoomSpectatorView";
 import { RoomWidgetsView } from "./widgets/RoomWidgetsView";
-import ZeusStatsBar from "../roleplay/ZeusStatsBar";
-import StatsBar from "../roleplay/StatsBar";
-import { PoliceCallView } from "../roleplay/PoliceCallView";
 import { GatheringProgressBar } from "../roleplay/GatheringProgressBar";
 
 import { SellModuleView } from "../roleplay/SellModuleView";
@@ -23,11 +20,6 @@ import { GangInviteContainer } from "../roleplay/GangInviteContainer";
 export const RoomView: FC = () => {
     const { roomSession = null } = useRoom();
     const elementRef = useRef<HTMLDivElement>(null);
-
-    const [zeusStats, setZeusStats] = useState({
-        health: 0,
-        maxHealth: 150,
-    });
    
     useEffect(() => {
         const instance = GetNitroInstance();
@@ -49,20 +41,6 @@ export const RoomView: FC = () => {
         const element = elementRef.current;
         if (!element || element.contains(canvas)) return;
         element.appendChild(canvas);
-    }, []);
-
-    useEffect(() => {
-        const handleZeusStatsUpdate = (event: Event) => {
-            const customEvent = event as CustomEvent<{
-                health: number;
-                maxHealth: number;
-            }>;
-            setZeusStats(customEvent.detail);
-        };
-
-        window.addEventListener("zeus_stats_update", handleZeusStatsUpdate);
-        return () =>
-            window.removeEventListener("zeus_stats_update", handleZeusStatsUpdate);
     }, []);
 
     return (

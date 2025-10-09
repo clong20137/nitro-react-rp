@@ -3,27 +3,33 @@
     top: 12px;
     left: 0;
     right: 0;
-    z-index: 9999; // above most UI
+    z-index: 9999;
     display: flex;
     justify-content: center;
-    pointer-events: none; // let clicks pass through except the alert itself
+    pointer-events: none;
 }
 
 .hotel-alert {
     pointer-events: auto;
     max-width: 720px;
     width: calc(100% - 24px);
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px 12px;
-    align-items: start;
 
-    background: rgba(20, 22, 26, 0.96);
+    /* 3 columns: [icon] [content] [close] */
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+    /* title row, message row */
+    column-gap: 12px;
+    row-gap: 6px;
+    align-items: center;
+    /* vertically center items by default */
+
+    background: #426e8f;
     color: #fff;
     border-radius: 10px;
-    padding: 14px 16px 14px 16px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 14px 16px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
+    border: 1px solid #22425d;
     backdrop-filter: blur(3px);
 
     transform: translateY(-12px);
@@ -35,56 +41,86 @@
     animation: hotelAlertOut 220ms ease-in forwards;
 }
 
-.hotel-alert__title {
-    font-weight: 700;
-    letter-spacing: 0.2px;
-    font-size: 28px;
-    opacity: 0.95;
+/* Icon cell (col 1, spans both rows) */
+.hotel-alert__icon {
     grid-column: 1 / 2;
-}
-
-.hotel-alert__message {
-    grid-column: 1 / 2;
-    font-size: 18px;
-    line-height: 1.35;
-    opacity: 0.95;
-    white-space: pre-wrap; // keeps your \r\n formatting from the server
-}
-
-.hotel-alert__close {
-    grid-column: 2 / 3;
     grid-row: 1 / 3;
-    width:24px;
-    height:24px;
-    align-self: start;
-    border: none;
-    border-radius: 4px;
-    background: repeating-linear-gradient(#f55041, #f55041, 50%, #c23027 0, #c23027);
-    box-shadow: 0 0 0 1.6px #fff;
-    color: #fff;
-    font-size: 18px;
-    border: solid 2px #921911;
-    line-height: 1;
-    cursor: pointer;
-    padding: 4px 2px;
-    transition: opacity 120ms ease;
-
-    &:hover {
-        background: repeating-linear-gradient(#f55749, #f55749, 50%, #d33a32 0, #d33a32);
-        transition: opacity 120ms ease;
-    }
+    /* cover title + message rows */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
 }
 
-img {
+.hotel-alert__icon img {
     width: 28px;
     height: 28px;
     object-fit: contain;
     user-select: none;
 }
 
+/* Title immediately to the right of icon */
+.hotel-alert__title {
+    grid-column: 2 / 3;
+    /* right of icon */
+    grid-row: 1 / 2;
+    font-weight: 700;
+    letter-spacing: .2px;
+    font-size: 22px;
+    /* a bit smaller so it sits nicely next to icon */
+    line-height: 1.1;
+    opacity: .95;
+    margin: 0;
+}
 
+/* Message under the title, still in the middle column */
+.hotel-alert__message {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+    font-size: 16px;
+    line-height: 1.35;
+    background: #3c5e78;
+    padding: 10px;
+    border-radius: 6px;
+    opacity: .95;
+    white-space: pre-wrap;
+}
 
+/* Close button in the far-right column, vertically centered across both rows */
+.hotel-alert__close {
+    grid-column: 3 / 4;
+    grid-row: 1 / 3;
+    /* span both rows */
+    align-self: center;
+    /* <-- vertical centering */
+    justify-self: center;
+    /* horizontal centering in its column */
 
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 4px;
+    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
+    box-shadow: 0 0 0 1.6px #fff;
+    color: #fff;
+    font-size: 18px;
+    border: 2px solid #921911;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: opacity 120ms ease;
+
+    &:hover {
+        background: repeating-linear-gradient(#f55749, #f55749 50%, #d33a32 0, #d33a32);
+    }
+}
+
+/* Animations */
 @keyframes hotelAlertIn {
     from {
         transform: translateY(-12px);
@@ -92,14 +128,14 @@ img {
     }
 
     to {
-        transform: translateY(0px);
+        transform: translateY(0);
         opacity: 1;
     }
 }
 
 @keyframes hotelAlertOut {
     from {
-        transform: translateY(0px);
+        transform: translateY(0);
         opacity: 1;
     }
 
@@ -109,16 +145,18 @@ img {
     }
 }
 
-/* small screens */
+/* Small screens */
 @media (max-width: 420px) {
     .hotel-alert {
-        font-size: 13px;
-        padding: 12px 12px 12px 12px;
+        padding: 12px;
+    }
+
+    .hotel-alert__title {
+        font-size: 18px;
     }
 
     .hotel-alert__message {
         font-size: 14px;
-        margin-top:10px;
-        margin-bottom:10px;
+        margin: 8px 0;
     }
 }

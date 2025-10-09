@@ -19,11 +19,6 @@ type VRoomDetail = {
     phase?: "DAY" | "DUSK" | "NIGHT" | "DAWN";
 };
 
-type TimeOfDayDetail = {
-    time: string;
-    phase: "DAY" | "DUSK" | "NIGHT" | "DAWN";
-};
-
 const fmt12h = (hhmm: string) => {
     const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
     if (Number.isNaN(h) || Number.isNaN(m)) return "—:— —";
@@ -67,13 +62,11 @@ export const RightSideView: FC<{}> = () => {
             if (detail.phase) setPhase(detail.phase);
         };
 
-        type TimeOfDayDetail2 = {
-            hhmm: string;
-            phase: "DAY" | "DUSK" | "NIGHT" | "DAWN";
-        };
-
         const handleTimeOfDay = (e: any) => {
-            const d = e?.detail as TimeOfDayDetail2;
+            const d = e?.detail as {
+                hhmm: string;
+                phase: "DAY" | "DUSK" | "NIGHT" | "DAWN";
+            };
             if (!d) return;
             setGameTime(fmt12h(d.hhmm));
             setPhase(d.phase);
@@ -137,31 +130,32 @@ export const RightSideView: FC<{}> = () => {
 
     return (
         <div className={`nitro-right-compact phase-${phase.toLowerCase()}`}>
-            {/* top mini bar (time • credits • gear) */}
+            {/* top mini bar */}
             <div className="rs-mini">
-                <div className="chip">
+                <div className="chip has-tip" data-tip="In-game Time">
                     <i className="ico ico-time" /> {gameTime}
                 </div>
 
-                <div className="chip">
+                <div className="chip has-tip" data-tip="Your Credits">
                     <i className="ico ico-coin" /> {credits}
                 </div>
 
-                {/* settings (no outline) */}
-                <div className="chip">
+                <div className="chip chip--icon has-tip" data-tip="Settings">
                     <button
                         className="ico ico-gear"
-                        title="Settings"
                         onClick={() => setShowSettings(true)}
                         aria-label="Settings"
                     />
                 </div>
             </div>
 
-            {/* zone / virtual room card */}
+            {/* virtual room info card */}
             <div className="rs-card">
                 <div className="rs-title" title={virtualName}>
-                    <div className="chip chip-title">
+                    <div
+                        className="chip chip-title has-tip"
+                        data-tip="Current Room"
+                    >
                         <i className="ico ico-zone" />
                         <span className="rs-title-text">
                             {virtualId
@@ -171,16 +165,19 @@ export const RightSideView: FC<{}> = () => {
                     </div>
                 </div>
 
-                {/* online counter + CHAT LOG button on the right */}
-                <div className="rs-counter" title="Users online">
-                    <div className="chip">
-                         <span>{onlineUsers}</span>
+                {/* online user count + chat log */}
+                <div className="rs-counter">
+                    <div className="chip has-tip" data-tip="Users Online">
+                        <span>{onlineUsers}</span>
                         <i className="ico ico-flag" />
                     </div>
-                    <div className="chip">
+
+                    <div
+                        className="chip chip--icon has-tip"
+                        data-tip="Chat Log"
+                    >
                         <button
                             className="ico ico-chatlog"
-                            title="Chat Log"
                             aria-label="Chat Log"
                             onClick={() =>
                                 CreateLinkEvent("chat-history/toggle")
@@ -193,90 +190,8 @@ export const RightSideView: FC<{}> = () => {
             {showSettings && (
                 <SettingsView onClose={() => setShowSettings(false)} />
             )}
-
-            {/* Quick actions */}
-            <div className="rs-quick">
-                {/* Call Police */}
-                <div className="qcall-wrap chip">
-                    <button
-                        className={`qbtn police ${
-                            cooldown > 0 ? "cooling" : ""
-                        }`}
-                        title={
-                            cooldown > 0
-                                ? `Cooldown: ${cooldown}s`
-                                : "Call Police"
-                        }
-                        onClick={() =>
-                            cooldown > 0 ? null : setShowCall((v) => !v)
-                        }
-                        disabled={cooldown > 0}
-                        aria-label="Call Police"
-                    >
-                        {cooldown > 0 && (
-                            <div className="cooldown-ring">
-                                <svg
-                                    viewBox="0 0 36 36"
-                                    className="cooldown-svg"
-                                >
-                                    <path
-                                        className="circle-bg"
-                                        d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0 -31.831"
-                                    />
-                                    <path
-                                        className="circle-progress"
-                                        strokeDasharray={`${
-                                            (cooldown / 30) * 100
-                                        }, 100`}
-                                        d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0 -31.831"
-                                    />
-                                </svg>
-                                <span className="cooldown-text">
-                                    {cooldown}
-                                </span>
-                            </div>
-                        )}
-                    </button>
-
-                    {showCall && cooldown === 0 && (
-                        <div className="q-pop">
-                            <div className="arrow-right" />
-                            <textarea
-                                maxLength={200}
-                                placeholder="What's your emergency?"
-                                value={callMsg}
-                                onChange={(e) => setCallMsg(e.target.value)}
-                            />
-                            <button
-                                className="habbo-action-button green"
-                                onClick={sendPolice}
-                            >
-                                Send Call
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                <div className="chip">
-                    <button
-                        className={`qbtn work ${working ? "on" : ""}`}
-                        title={working ? "Clock Out" : "Clock In"}
-                        onClick={toggleWork}
-                        aria-label={working ? "Clock Out" : "Clock In"}
-                    />
-                </div>
-
-                <div className="chip">
-                    <button
-                        className={`qbtn mode ${
-                            passive ? "passive" : "aggressive"
-                        }`}
-                        title={passive ? "Passive Mode" : "Aggressive Mode"}
-                        onClick={togglePassive}
-                        aria-label="Toggle Aggressive / Passive"
-                    />
-                </div>
-            </div>
         </div>
     );
 };
+
+export default RightSideView;

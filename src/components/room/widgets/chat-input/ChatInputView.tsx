@@ -53,7 +53,8 @@ const readNumberLS = (key: string, fallback: number) => {
     return Number.isFinite(n) && n >= 0 ? n : fallback;
 };
 
-const readActiveMacros = (): { enabled: boolean; macros: Macro[] } => {
+type ReadMacrosResult = { enabled: boolean; macros: Macro[] };
+const readActiveMacros = (): ReadMacrosResult => {
     try {
         const enabled = JSON.parse(localStorage.getItem(LS_ENABLED) || "true");
         const presets: Preset[] = JSON.parse(
@@ -68,7 +69,7 @@ const readActiveMacros = (): { enabled: boolean; macros: Macro[] } => {
     }
 };
 
-export const ChatInputView: FC<{}> = (props) => {
+export const ChatInputView: FC<{}> = () => {
     const [chatValue, setChatValue] = useState<string>("");
     const { chatStyleId = 0 } = useSessionInfo();
     const {
@@ -79,7 +80,7 @@ export const ChatInputView: FC<{}> = (props) => {
         setIsIdle = null,
         sendChat = null,
     } = useChatInputWidget();
-    const inputRef = useRef<HTMLInputElement>();
+    const inputRef = useRef<HTMLInputElement>(null);
 
     // Emoji popover
     const [emojiOpen, setEmojiOpen] = useState(false);
@@ -114,8 +115,10 @@ export const ChatInputView: FC<{}> = (props) => {
         );
     }, []);
 
+    // Initial load + cross-tab sync + same-tab custom signal
     useEffect(() => {
         hydrateMacros();
+
         const onStorage = (e: StorageEvent) => {
             if (
                 [
@@ -125,12 +128,41 @@ export const ChatInputView: FC<{}> = (props) => {
                     LS_COOLDOWN_PER_KEY,
                     LS_COOLDOWN_GLOBAL,
                 ].includes(e.key || "")
-            ) {
+            )
                 hydrateMacros();
+        };
+
+        const onMacrosChanged = () => hydrateMacros(); // <-- same-tab refresh
+        const onMacroRun = (ev: Event) => {
+            // Allow other UIs to trigger a macro directly
+            const detail = (ev as CustomEvent)?.detail as
+                | { command?: string }
+                | undefined;
+            if (detail?.command) {
+                setChatValue(detail.command);
+                sendChatValue(detail.command, false);
+                setEmojiOpen(false);
             }
         };
+
         window.addEventListener("storage", onStorage);
-        return () => window.removeEventListener("storage", onStorage);
+        window.addEventListener(
+            "olrp_macros_changed",
+            onMacrosChanged as EventListener
+        );
+        window.addEventListener("macro_run", onMacroRun as EventListener);
+
+        return () => {
+            window.removeEventListener("storage", onStorage);
+            window.removeEventListener(
+                "olrp_macros_changed",
+                onMacrosChanged as EventListener
+            );
+            window.removeEventListener(
+                "macro_run",
+                onMacroRun as EventListener
+            );
+        };
     }, [hydrateMacros]);
 
     // curated emojis
@@ -202,23 +234,22 @@ export const ChatInputView: FC<{}> = (props) => {
     const anotherInputHasFocus = useCallback(() => {
         const activeElement = document.activeElement;
         if (!activeElement) return false;
-        if (inputRef && inputRef.current === activeElement) return false;
+        if (inputRef.current && inputRef.current === activeElement)
+            return false;
         if (
             !(activeElement instanceof HTMLInputElement) &&
             !(activeElement instanceof HTMLTextAreaElement)
         )
             return false;
         return true;
-    }, [inputRef]);
+    }, []);
 
     const setInputFocus = useCallback(() => {
         if (!inputRef.current) return;
         inputRef.current.focus();
-        inputRef.current.setSelectionRange(
-            inputRef.current.value.length * 2,
-            inputRef.current.value.length * 2
-        );
-    }, [inputRef]);
+        const len = inputRef.current.value.length;
+        inputRef.current.setSelectionRange(len, len);
+    }, []);
 
     const checkSpecialKeywordForInput = useCallback(() => {
         setChatValue((prevValue) => {
@@ -238,7 +269,6 @@ export const ChatInputView: FC<{}> = (props) => {
             let text = value;
 
             const parts = text.split(" ");
-
             let recipientName = "";
             let append = "";
 
@@ -304,34 +334,30 @@ export const ChatInputView: FC<{}> = (props) => {
     /* ===== Global keydown: includes macro hotkeys with cooldowns ===== */
     const onKeyDownEvent = useCallback(
         (event: KeyboardEvent) => {
-            // 1) Try macro first — also block auto-repeat to avoid spam when key is held
-            if (event.repeat) {
-                // ignore key-hold repeats
-                return;
-            }
+            // 1) Try macro first — block auto-repeat to avoid spam
+            if (event.repeat) return;
+
             const k = eventToKeyString(event);
             if (k && macrosEnabledRef.current) {
                 const macroCmd = macrosMapRef.current.get(k);
                 if (macroCmd && !floodBlocked) {
                     const now = performance.now();
 
-                    // global cooldown check
-                    const sinceGlobal = now - lastGlobalFireRef.current;
-                    if (sinceGlobal < globalCooldownRef.current) {
-                        // still on global cooldown → ignore
+                    // global cooldown
+                    if (
+                        now - lastGlobalFireRef.current <
+                        globalCooldownRef.current
+                    ) {
                         event.preventDefault();
                         return;
                     }
-
-                    // per-key cooldown check
+                    // per-key cooldown
                     const lastForKey = lastKeyFireRef.current.get(k) || 0;
-                    const sinceKey = now - lastForKey;
-                    if (sinceKey < perKeyCooldownRef.current) {
+                    if (now - lastForKey < perKeyCooldownRef.current) {
                         event.preventDefault();
                         return;
                     }
 
-                    // pass both checks → fire macro
                     event.preventDefault();
                     lastGlobalFireRef.current = now;
                     lastKeyFireRef.current.set(k, now);
@@ -345,7 +371,7 @@ export const ChatInputView: FC<{}> = (props) => {
                     setChatValue(macroCmd);
                     sendChatValue(macroCmd, false);
                     setEmojiOpen(false);
-                    return; // stop further handling
+                    return;
                 }
             }
 
@@ -355,7 +381,7 @@ export const ChatInputView: FC<{}> = (props) => {
 
             if (document.activeElement !== inputRef.current) setInputFocus();
 
-            const value = (event.target as HTMLInputElement).value;
+            const value = inputRef.current.value; // <— use the real input
 
             switch (event.key) {
                 case " ":
@@ -383,7 +409,6 @@ export const ChatInputView: FC<{}> = (props) => {
         },
         [
             floodBlocked,
-            inputRef,
             anotherInputHasFocus,
             setInputFocus,
             checkSpecialKeywordForInput,
@@ -406,7 +431,7 @@ export const ChatInputView: FC<{}> = (props) => {
     );
 
     // Styles list still computed (no UI)
-    const chatStyleIds = useMemo(() => {
+    useMemo(() => {
         let styleIds: number[] = [];
         const styles = GetConfiguration<
             {
@@ -476,7 +501,7 @@ export const ChatInputView: FC<{}> = (props) => {
 
     useEffect(() => {
         if (!inputRef.current) return;
-        inputRef.current.parentElement.dataset.value = chatValue;
+        inputRef.current.parentElement!.dataset.value = chatValue;
     }, [chatValue]);
 
     // Close popover if clicking outside
@@ -592,6 +617,6 @@ export const ChatInputView: FC<{}> = (props) => {
                     document.body
                 )}
         </>,
-        document.getElementById("toolbar-chat-input-container")
+        document.getElementById("toolbar-chat-input-container")!
     );
 };

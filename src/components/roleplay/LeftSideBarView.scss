@@ -1,202 +1,148 @@
 /* =========================
-Marble & Bronze theme (Greek vibes)
-Drop-in for LeftSideBarView.scss
+OlympusRP — Left Sidebar (spec-tuned)
 ========================= */
 
-/* ---- Palette ---- */
-$bronze-500: #b57f2a;
-$bronze-600: #a56f1e;
-$bronze-700: #8f5e17;
-$bronze-edge: #3a2b16;
+/* ---- Theme (from your request) ---- */
+$sidebar-border: #22425d; // border color
+$sidebar-bg: #426e8f; // sidebar background
+$pill-bg: #3c5e78; // pill background
 
-$marble-base: #ece9e4;
-/* warm marble */
-$marble-vein-1: #ffffff;
-$marble-vein-2: #ddd7cf;
-$marble-vein-3: #f6f3ef;
+$shadow-panel: 0 8px 18px rgba(0, 0, 0, .28);
+$shadow-inset: inset 0 1px 0 rgba(255, 255, 255, .35),
+  inset 0 -1px 0 rgba(0, 0, 0, .22);
 
-$shadow-panel: 0 0 #0006, 0 0 #0000004d, inset 0 -4px #0003;
-$shadow-inset: inset 0 1px 0 #fff, inset 0 -1px 0 #000;
+/* Dimensions */
+$sidebar-width: 76px;
+$chip-size: 56px; // pill size
+$icon-size: 48px; // a smidge bigger than before
+$arrow-width: 22px; // peeking tab width
+$arrow-height: 60px;
 
-$bp-tablet: 1024px;
-$bp-mobile: 768px;
-$bp-phone: 480px;
-
-/* ---- Marble texture (pure CSS, no image) ---- */
-@mixin marble-bg {
-  background:
-    /* hairline veins */
-    radial-gradient(120px 40px at 20% 30%, rgba($marble-vein-2, .65), transparent 60%),
-    radial-gradient(140px 60px at 80% 20%, rgba($marble-vein-3, .55), transparent 70%),
-    radial-gradient(100px 50px at 40% 70%, rgba($marble-vein-2, .45), transparent 65%),
-    linear-gradient(180deg, rgba(#fff, .65), rgba(#fff, 0)),
-    $marble-base;
-  background-blend-mode: overlay, overlay, overlay, soft-light, normal;
-}
-
-/* ---- Bronze ring (subtle gradient) ---- */
-@mixin bronze-border {
-  border: 2px solid $bronze-edge;
-  box-shadow:
-    inset 0 1px 0 rgba(#fff, .45),
-    inset 0 -1px 0 rgba(#000, .2),
-    0 0 0 1px rgba(#000, .35),
-    0 4px 12px rgba(#000, .25);
-  background-image:
-    linear-gradient(180deg, $bronze-600, $bronze-600 50%, $bronze-500 50%, $bronze-500);
-}
-
-/* =========================
-📦 Layout
-========================= */
-.left-sidebar-container {
-  position: absolute;
-  left: 0;
-  top: 300px;
-  z-index: 100;
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  transition: transform .3s ease;
-
-  &.collapsed,
-  &.closed {
-    transform: translateX(-100%);
-  }
-}
-
+/* ---- Shell & positioning ---- */
 .left-sidebar-wrapper {
   position: absolute;
-  top: 100px;
-  left: 0;
-  display: flex;
-  align-items: flex-start;
   z-index: 200;
+  left: 0;
+  top: 220px;
+  /* ↓ Lowered so it doesn't overlap the stats bar */
 }
 
-/* =========================
-🧱 Sidebar panel (marble slab with bronze frame)
-========================= */
+.left-sidebar-container {
+  position: relative;
+  display: inline-block;
+  transition: transform .28s ease;
+  will-change: transform;
+
+  /* Hidden: slide fully off-screen but keep the arrow visible */
+  &.closed,
+  &.collapsed {
+    transform: translateX(calc(-100% + #{$arrow-width}));
+  }
+}
+
+/* ---- Sidebar (vertical pill column) ---- */
 .left-sidebar {
-  //@include marble-bg;
-  border-radius: 0 14px 14px 0;
-  @include bronze-border;
-  background:#8a662f;
-  /* adds bronze border + outer glow */
-  border-left: none;
-  padding: 10px;
+  position: relative;
+  width: $sidebar-width;
+  padding: 10px 12px;
+  background: $sidebar-bg;
+  border: 2px solid $sidebar-border;
+  border-left: 0;
+  border-radius: 0 16px 16px 0;
+  box-shadow: $shadow-panel, inset 0 -3px rgba(0, 0, 0, .18);
+
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
+  align-items: center;
+  gap: 10px;
 
-/* =========================
-💬 Desktop Tooltips
-========================= */
-.tooltip-container {
-  position: relative;
-
-  .tooltip-text {
-    visibility: hidden;
-    opacity: 0;
-    transition: opacity .2s ease;
-    position: absolute;
-    left: 54px;
-    top: 50%;
-    transform: translateY(-50%);
-    white-space: nowrap;
-    z-index: 1;
-    background: #000;
-    color: #fff;
-    border-radius: 6px;
-    padding: 6px 8px;
-    font-size: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
-  }
-
-  &:hover .tooltip-text {
-    visibility: visible;
-    opacity: 1;
-  }
-}
-
-/* =========================
-🧲 Toggle arrow (bronze pill with rotate)
-========================= */
-.sidebar-toggle {
-  width: 30px;
-  height: 52px;
-  margin-top: 230px;
-  cursor: pointer;
-  position: relative;
-  border-left: none;
-  border-radius: 0 10px 10px 0;
-  overflow: hidden;
-  transition: transform .28s ease, filter .2s ease;
-
-  /* bronze face */
-  background: linear-gradient(180deg, $bronze-600 0, $bronze-600 50%, $bronze-500 50%, $bronze-500);
-  border: 2px solid $bronze-edge;
-  box-shadow:
-    inset 0 1px 0 rgba(#fff, .4),
-    inset 0 -1px 0 rgba(#000, .25),
-    0 3px 10px rgba(#000, .25);
-
-  /* inner bevel */
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 2px 2px 2px 0;
-    border-radius: 0 8px 8px 0;
-    background: linear-gradient(180deg, rgba(#fff, .12), rgba(#000, .06));
-    pointer-events: none;
-  }
-
-  /* chevron */
+  /* slim inner seam on the right edge */
   &::before {
     content: "";
     position: absolute;
+    right: 10px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  /* === Integrated toggle tab (unified with sidebar) === */
+  &__toggle {
+    position: absolute;
     top: 50%;
-    left: 8px;
-    width: 12px;
-    height: 12px;
-    border-top: 3px solid #fff;
-    border-right: 3px solid #fff;
-    transform: translateY(-50%) rotate(135deg);
-    transition: transform .28s ease;
-    filter: drop-shadow(0 1px 0 rgba(#000, .35));
-  }
+    right: -22px;
+    /* tuck under border so it feels unified */
+    transform: translateY(-50%);
+    width: $arrow-width;
+    height: $arrow-height;
+    border-radius: 0 10px 10px 0;
+    background: $sidebar-bg;
+    /* same bg to blend */
+    border: 2px solid $sidebar-border;
+    border-left: 0;
+    cursor: pointer;
+    //box-shadow: $shadow-panel;
+    transition: filter .12s ease, transform .12s ease;
 
-  /* when container is closed, flip chevron */
-  &.closed::before {
-    transform: translateY(-50%) rotate(-45deg);
-  }
+    /* subtle sheen */
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 2px 2px 2px 0;
+      border-radius: 0 8px 8px 0;
+      background: linear-gradient(180deg, rgba(#fff, .10), rgba(#000, .06));
+      pointer-events: none;
+    }
 
-  &:hover {
-    filter: brightness(1.05);
-  }
+    /* chevron */
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 6px;
+      width: 10px;
+      height: 10px;
+      border-top: 3px solid #fff;
+      border-right: 3px solid #fff;
+      transform: translateY(-50%) rotate(135deg);
+      /* default: LEFT (expanded) */
+      filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .35));
+      transition: transform .18s ease;
+    }
 
-  &:active {
-    transform: translateX(1px);
+    &:hover {
+      filter: brightness(1.06);
+    }
+
+    &:active {
+      transform: translate(1px, -50%);
+    }
   }
 }
 
-/* =========================
-🖼 Icons (keep your images)
-========================= */
-.sidebar-icon {
-  width: 44px;
-  height: 44px;
-  background: linear-gradient(180deg, rgba(#fff, .18), rgba(#000, .08)), $bronze-500;
-  background-blend-mode: soft-light, normal;
-  background-repeat: no-repeat;
-  background-size: cover;
-  border: 1px solid rgba(#000, .75);
-  border-radius: 10px;
+/* When container is closed: point chevron RIGHT */
+.left-sidebar-container.closed .left-sidebar__toggle::before,
+.left-sidebar-container.collapsed .left-sidebar__toggle::before {
+  transform: translateY(-50%) rotate(-135deg);
+  
+}
+
+/* ---- Pills (icon holders) ---- */
+.sidebar-chip {
+  width: $chip-size;
+  height: $chip-size;
+  border-radius: 12px;
+  background: $pill-bg;
+  /* your pill color */
+  border: 2px solid $sidebar-border;
   box-shadow: $shadow-inset, 0 2px 6px rgba(0, 0, 0, .25);
-  cursor: pointer;
-  transition: transform .15s ease, filter .15s ease;
   position: relative;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
 
   &:hover {
     transform: translateY(-1px);
@@ -207,181 +153,200 @@ $bp-phone: 480px;
     transform: translateY(0);
   }
 
-  /* your existing sprite paths remain unchanged */
-  &.inventory {
-    background-image: url('../../icons/inventory.png');
+  &:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(34, 66, 93, .45);
   }
 
-  &.wanted {
-    background-image: url('../../icons/wanted.png');
+  /* unread badge */
+  &::after {
+    content: attr(data-badge);
+    display: none;
+    position: absolute;
+    right: -4px;
+    top: -4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #22425d;
+    color: #fff;
+    font-size: 11px;
+    text-align: center;
+    line-height: 18px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(#fff, .25);
   }
 
-  &.corps {
-    background-image: url('../../icons/corporations.png');
-  }
-
-  &.skull {
-    background-image: url('../../icons/gangs.png');
-  }
-
-  &.message {
-    background-image: url('../../icons/chat.png');
-  }
-
-  &.message.active {
-    background-image: url('../../icons/chat2.png');
-  }
-
-  &.macros {
-    background-image: url('../../icons/macros.png');
+  &[data-badge]:not([data-badge="0"])::after {
+    display: inline-block;
   }
 }
 
-/* =========================
-📐 Tablet (<=1024px)
-========================= */
-@media (max-width: $bp-tablet) {
-  .left-sidebar-container {
-    top: 120px;
-  }
+/* ---- Icon images inside pills ---- */
+.sidebar-chip .chip-icon {
+  width: $icon-size;
+  height: $icon-size;
+  background-repeat: no-repeat;
+  background-size: contain;
+  /* remove pixelation per request */
+  /* image-rendering: pixelated; <-- removed */
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .25));
+  transition: filter .12s ease;
+}
 
+.sidebar-chip:hover .chip-icon {
+  filter: brightness(1.06) drop-shadow(0 1px 0 rgba(0, 0, 0, .35));
+}
+
+/* sprite mappings (update paths as needed) */
+.chip-inventory .chip-icon {
+  background-image: url('../../icons/inventory.png');
+}
+
+.chip-wanted .chip-icon {
+  background-image: url('../../icons/wanted.png');
+}
+
+.chip-gangs .chip-icon {
+  background-image: url('../../icons/gangs.png');
+}
+
+.chip-corps .chip-icon {
+  background-image: url('../../icons/corporations.png');
+}
+
+.chip-chat .chip-icon {
+  background-image: url('../../icons/chat.png');
+}
+
+.chip-chat.is-on .chip-icon {
+  background-image: url('../../icons/chat2.png');
+}
+
+.chip-macros .chip-icon {
+  background-image: url('../../icons/macros.png');
+}
+
+/* ---- Tooltips (simple, right side) ---- */
+.sidebar-chip[data-tip]::before,
+.sidebar-chip[data-tip]::after {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+
+.sidebar-chip[data-tip]::before {
+  content: attr(data-tip);
+  background: rgba(0, 0, 0, .9);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+}
+
+.sidebar-chip[data-tip]::after {
+  content: "";
+  margin-left: 4px;
+  border-left: 6px solid rgba(0, 0, 0, .9);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+}
+
+.sidebar-chip:hover[data-tip]::before,
+.sidebar-chip:hover[data-tip]::after {
+  opacity: 1;
+}
+
+/* ---- Tablet tweaks ---- */
+@media (max-width: 1024px) {
   .left-sidebar {
-    gap: 6px;
-    padding: 8px;
+    width: $sidebar-width;
   }
 
-  .sidebar-icon {
-    width: 42px;
-    height: 42px;
-  }
-
-  .sidebar-toggle {
-    margin-top: 86px;
-    height: 48px;
+  .sidebar-chip {
+    width: 54px;
+    height: 54px;
   }
 }
 
-/* ==================================
-📱 Small tablets / large phones (<=768px)
-Dock mode
-================================== */
-@media (max-width: $bp-mobile) {
-  .left-sidebar-container {
+/* ---- Mobile dock (<=768px) ---- */
+@media (max-width: 768px) {
+  .left-sidebar-wrapper {
     position: fixed;
     left: 50%;
     bottom: 10px;
     top: auto;
     transform: translateX(-50%);
-    flex-direction: column;
-    align-items: center;
     z-index: 1000;
+  }
 
+  .left-sidebar-container {
+    transform: translateX(-50%);
+
+    &.closed,
     &.collapsed {
-      transform: translate(-50%, 120%);
+      transform: translate(-50%, 130%);
     }
   }
 
   .left-sidebar {
     flex-direction: row;
-    gap: 10px;
-    padding: 8px 10px;
+    padding: 10px 12px;
     border-radius: 12px;
-    @include bronze-border;
-    @include marble-bg;
-  }
+    width: auto;
 
-  .sidebar-icon {
-    width: 40px;
-    height: 40px;
-  }
+    &__toggle {
+      right: 50%;
+      top: -14px;
+      transform: translate(50%, 0);
+      width: 60px;
+      height: 22px;
+      border-radius: 10px 10px 0 0;
 
-  .left-sidebar-wrapper {
-    position: fixed;
-    left: 50%;
-    bottom: 64px;
-    top: auto;
-    transform: translateX(-50%);
-    z-index: 1100;
-  }
-
-  .sidebar-toggle {
-    margin-top: 0;
-    border-radius: 999px;
-    width: 36px;
-    height: 36px;
-
-    &::before {
-      left: 11px;
-    }
-
-    &.closed::before {
-      transform: translateY(-50%) rotate(135deg);
-      /* points up in dock */
+      /* up chevron when docked */
+      &::before {
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(45deg);
+      }
     }
   }
 
-  .tooltip-container .tooltip-text {
+  .sidebar-chip {
+    width: 52px;
+    height: 52px;
+  }
+
+  .sidebar-chip[data-tip]::before,
+  .sidebar-chip[data-tip]::after {
     left: 50%;
     top: auto;
-    bottom: 48px;
+    bottom: calc(100% + 8px);
     transform: translateX(-50%);
   }
-}
 
-/* =========================
-📲 Phones (<=480px)
-========================= */
-@media (max-width: $bp-phone) {
-  .left-sidebar-container {
-    bottom: 8px;
-  }
-
-  .left-sidebar {
-    gap: 8px;
-    padding: 6px 8px;
-    border-width: 2px;
-  }
-
-  .sidebar-icon {
-    width: 36px;
-    height: 36px;
-  }
-
-  .sidebar-toggle {
-    width: 32px;
-    height: 32px;
-  }
-
-  .tooltip-container .tooltip-text {
-    font-size: 11px;
-    padding: 4px 6px;
-    max-width: 180px;
+  .sidebar-chip[data-tip]::after {
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid rgba(0, 0, 0, .9);
+    margin-left: 0;
   }
 }
 
-/* =========================
-🧭 iOS safe areas
-========================= */
-@supports (padding: max(0px)) {
-  @media (max-width: $bp-mobile) {
-    .left-sidebar-container {
-      bottom: max(10px, env(safe-area-inset-bottom));
-    }
-
-    .left-sidebar-wrapper {
-      bottom: calc(max(10px, env(safe-area-inset-bottom)) + 54px);
-    }
-  }
-}
-
-/* =========================
-🦺 Motion Safety
-========================= */
+/* ---- Reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
 
   .left-sidebar-container,
-  .sidebar-toggle,
-  .sidebar-icon {
+  .left-sidebar,
+  .left-sidebar__toggle,
+  .sidebar-chip {
     transition: none !important;
   }
 }

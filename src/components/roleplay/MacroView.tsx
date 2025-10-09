@@ -11,9 +11,8 @@ const LS_ENABLED = "olrp.macros.enabled.v1";
 const LS_ACTIVE = "olrp.macros.activePreset.v1";
 const MAX_PRESETS = 5;
 
-function uid() {
-    return Math.random().toString(36).slice(2, 10);
-}
+const uid = () => Math.random().toString(36).slice(2, 10);
+
 function eventToKeyString(e: KeyboardEvent): KeyString | null {
     if (
         e.key === "Shift" ||
@@ -26,7 +25,6 @@ function eventToKeyString(e: KeyboardEvent): KeyString | null {
     return code === " " ? "Space" : code;
 }
 
-/** Broadcast to ChatInputView (same-tab immediate hydration) */
 function broadcastMacrosChanged() {
     try {
         window.dispatchEvent(new CustomEvent("olrp_macros_changed"));
@@ -64,9 +62,11 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
         }
     });
 
+    // keep active preset valid
     useEffect(() => {
+        if (!presets.length) return;
         if (!activePresetId || !presets.find((p) => p.id === activePresetId)) {
-            setActivePresetId(presets[0]?.id || "");
+            setActivePresetId(presets[0].id);
         }
     }, [activePresetId, presets]);
 
@@ -106,6 +106,7 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
     useEffect(() => {
         const onKeydown = (e: KeyboardEvent) => {
             if (!enabledRef.current) return;
+
             const t = e.target as HTMLElement | null;
             if (
                 t &&
@@ -136,9 +137,9 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
         return () => window.removeEventListener("keydown", onKeydown);
     }, [onSendCommand]);
 
-    /** ======== Preset CRUD (limited to 5; only rename & delete) ======== */
+    /** ======== Preset CRUD ======== */
     const addPreset = () => {
-        if (presets.length >= MAX_PRESETS) return; // hard stop at 5
+        if (presets.length >= MAX_PRESETS) return;
         const base = "Preset";
         let i = 1;
         const names = new Set(presets.map((p) => p.name.toLowerCase()));
@@ -157,18 +158,16 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
     };
 
     const deletePreset = (id: string) => {
-        if (presets.length <= 1) return; // keep at least one
+        if (presets.length <= 1) return;
         setPresets((prev) => {
             const next = prev.filter((p) => p.id !== id);
-            // fix active if needed
-            if (!next.find((p) => p.id === activePresetId)) {
+            if (!next.find((p) => p.id === activePresetId))
                 setActivePresetId(next[0]?.id || "");
-            }
             return next;
         });
     };
 
-    /** ======== Macro CRUD within active preset (unchanged) ======== */
+    /** ======== Macro CRUD ======== */
     const updateMacro = (id: string, patch: Partial<Macro>) => {
         if (!activePreset) return;
         setPresets((prev) =>
@@ -213,11 +212,19 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
         );
     };
 
-    /** ======== Add Macro Modal (same as before) ======== */
+    /** ======== Add Macro Modal ======== */
     const [modalOpen, setModalOpen] = useState(false);
     const [captureArmed, setCaptureArmed] = useState(false);
     const [capturedKey, setCapturedKey] = useState<KeyString>("");
     const [newCmd, setNewCmd] = useState("");
+
+    // open modal: this was missing!
+    const openAddModal = () => {
+        setCapturedKey("");
+        setNewCmd("");
+        setCaptureArmed(false);
+        setModalOpen(true);
+    };
 
     useEffect(() => {
         if (!modalOpen || !captureArmed) return;
@@ -243,7 +250,7 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
         setCaptureArmed(false);
     };
 
-    /** ======== DRAGGABLE (header) ======== */
+    /** ======== DRAGGABLE ======== */
     const rootRef = useRef<HTMLDivElement | null>(null);
     const [dragging, setDragging] = useState(false);
     const [pos, setPos] = useState<{ x: number; y: number }>(() => {
@@ -394,18 +401,17 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                                 ))}
                             </select>
 
-                            {/* Rename / Delete only */}
                             <input
                                 className="preset-rename"
                                 value={renameText}
                                 onChange={(e) => setRenameText(e.target.value)}
                                 onBlur={() =>
+                                    activePreset &&
                                     renamePreset(activePreset.id, renameText)
                                 }
                                 onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
+                                    if (e.key === "Enter")
                                         e.currentTarget.blur();
-                                    }
                                 }}
                                 placeholder="Preset name"
                             />
@@ -414,6 +420,7 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                                 className="habbo-red-btn"
                                 onClick={() =>
                                     canDeleteThisPreset &&
+                                    activePreset &&
                                     deletePreset(activePreset.id)
                                 }
                                 disabled={!canDeleteThisPreset}
@@ -429,7 +436,18 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                         </div>
                     </div>
 
-                    {(activePreset?.macros ?? []).length === 0 ? (
+                    {/* Add Macro button */}
+                    <div className="row" style={{ marginBottom: 8 }}>
+                        <button
+                            className="habbo-green-btn"
+                            type="button"
+                            onClick={openAddModal}
+                        >
+                            + Add Macro
+                        </button>
+                    </div>
+
+                    {macros.length === 0 ? (
                         <div className="empty-card">
                             No macros set in{" "}
                             <b>
@@ -438,10 +456,18 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                                 ).toLowerCase()}
                             </b>
                             .
+                            <button
+                                className="habbo-link"
+                                type="button"
+                                onClick={openAddModal}
+                                style={{ marginLeft: 8 }}
+                            >
+                                Add one now
+                            </button>
                         </div>
                     ) : (
                         <div className="macro-list">
-                            {activePreset!.macros.map((m) => (
+                            {macros.map((m) => (
                                 <div className="macro-row" key={m.id}>
                                     <div className="key-chip">{m.key}</div>
                                     <input
@@ -495,6 +521,7 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                             className={`capture ${captureArmed ? "armed" : ""}`}
                             onClick={() => setCaptureArmed(true)}
                             title="Click then press a key"
+                            type="button"
                         >
                             {capturedKey ? capturedKey : "Press a key"}
                         </button>
@@ -511,9 +538,11 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                                 className="habbo-green-btn"
                                 onClick={confirmAdd}
                                 disabled={!capturedKey || !newCmd.trim()}
+                                type="button"
                             >
                                 Add Macro
                             </button>
+
                             <button
                                 className="habbo-red-btn"
                                 onClick={() => {
@@ -521,6 +550,7 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                                     setNewCmd("");
                                     setCaptureArmed(false);
                                 }}
+                                type="button"
                             >
                                 Reset Keys
                             </button>

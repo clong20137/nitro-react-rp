@@ -1,640 +1,145 @@
-.profile-container {
-    position: fixed !important;
-    top: 60px;
+.xp-gain-popup {
+    /* configurable duration (default set from TS) */
+    --xp-duration: 5000ms;
+
+    position: fixed;
+    top: 14px;
     left: 50%;
-    transform: translateX(-50%);
-    width: 750px;
-    box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
-    border: solid 1px #000;
-    background: #eaece7;
-    color: #000;
-    z-index: 9999;
-    border-radius: 8px;
-}
+    transform: translateX(-50%) translateY(-8px) scale(.96);
+    z-index: 10000;
+    pointer-events: none;
 
-/* ---------- Header ---------- */
-.profile-header {
-    background:linear-gradient(180deg, #b57f2a, #b57f2a 50%, #c38c35 0, #c38c35);
-    color: #fff;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 12px;
     padding: 8px 12px;
-    font-weight: bold;
-    font-size: 20px;
-    border-radius: 8px 8px 0 0;
-}
-
-.close-btn,
-.close-button {
-    /* alias for your TSX class */
-    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
-    border: 2px solid #fff;
-    border-radius: 5px;
-    font-size: 20px;
+    border-radius: 12px;
+    background: #426e8f;
+    border: 2px solid #22425d;
     color: #fff;
-    cursor: pointer;
-    transition: 0.2s;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .35), inset 0 1px rgba(255, 255, 255, .08);
 
-    &:hover {
-        background: repeating-linear-gradient(#f55749, #f55749 50%, #d33a32 0, #d33a32);
-    }
-}
+    /* enter quick, float/fade for --xp-duration */
+    animation:
+        xp-enter .18s cubic-bezier(.2, .9, .2, 1.2) forwards,
+        xp-float var(--xp-duration) ease-out forwards;
 
-/* ---------- Body layout ---------- */
-.profile-body {
-    display: flex;
-    gap: 20px;
-    padding: 12px;
-}
-
-.profile-left,
-.profile-right {
-    flex: 1;
-}
-
-/* ===================== AVATAR / LEFT COLUMN ===================== */
-
-.avatar-section {
-    padding: 1vw;
-    background: #e2dcc0;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-
-    .avatar-frame {
+    .xp-ring {
         position: relative;
-        padding: 4px;
-        border-radius: 8px;
+        width: 58px;
+        height: 58px;
+        flex: 0 0 58px;
+        filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .35));
 
-        .profile-avatar {
-            display: block;
-            width: 86px;
-            height: 110px;
-            background: #fff;
-            border-radius: 6px;
-        }
-
-        .presence-badge {
+        svg {
             position: absolute;
-            top: -6px;
-            right: -6px;
-            width: 32px;
-            height: 16px;
+            inset: 0;
         }
 
-        .gang-badge {
+        .ring-bg {
+            stroke: rgba(255, 255, 255, .18);
+        }
+
+        .ring-fg {
+            stroke: url(#xpGrad);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1.2s cubic-bezier(.2, .9, .2, 1);
+            filter: drop-shadow(0 0 6px rgba(63, 211, 123, .55));
+        }
+
+        /* Center avatar perfectly inside ring */
+        .xp-avatar {
             position: absolute;
-            right: -6px;
-            bottom: -6px;
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            background: #fff;
-        }
-    }
-
-    .username {
-        font-weight: 700;
-    }
-
-    .motto {
-        font-style: italic;
-        color: #666;
-        font-size: 12px;
-        text-align: center;
-        max-width: 160px;
-    }
-}
-
-/* card stack under avatar */
-.info-section {
-    display: grid;
-    gap: 6px;
-    margin-top: 10px;
-    font-size: 13px;
-    background: #e1dcbf;
-    border-radius: 8px;
-    padding: 6px;
-}
-
-.work-status {
-    font-weight: 700;
-    text-align: center;
-
-    &.green {
-        color: #27ae60;
-    }
-
-    &.red {
-        color: #c0392b;
-    }
-}
-
-.corp-card {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #f6f7fb;
-    border: 1px solid #e5e7f0;
-    border-radius: 6px;
-    padding: 10px;
-    margin: 10px;
-
-    img {
-        width: 22px;
-        height: 22px;
-        border-radius: 4px;
-    }
-
-    .corp-lines {
-        .corp-title {
-            font-weight: 700;
-        }
-
-        .corp-sub {
-            font-size: 12px;
-            color: #666;
-        }
-    }
-}
-
-/* gang line + split color pill like you asked */
-.gang-line {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px;
-
-    .muted {
-        color: #888;
-    }
-
-    .gang-color-split-box {
-        position: relative;
-        width: 34px;
-        height: 20px;
-        border-radius: 4px;
-        overflow: hidden;
-        border: 1px solid rgba(0, 0, 0, .25);
-        display: inline-block;
-
-        .color-half {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 50%;
-        }
-
-        .left {
-            left: 0;
-        }
-
-        .right {
-            right: 0;
-        }
-
-        .gang-icon {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 16px;
-            height: 16px;
-        }
-    }
-}
-
-/* ===================== RIGHT COLUMN ===================== */
-
-/* Tabs like the Navigator (centered) */
-.profile-tabs {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-    margin: 8px 0 0px;
-
-
-    .tab-btn {
-        min-width: 120px;
-        padding: 10px 16px;
-        border: 1px solid #8e7a38;
-        border-bottom: none;
-        background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
-        color: #FFF;
-        font-weight: 700;
-        text-align: center;
-        border-radius: 8px 8px 0 0;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6);
-        cursor: pointer;
-
-        &.active {
-
-            background: #f1eedb;
-            color: #2b2b2b;
-        }
-    }
-}
-
-.tab-content {
-    background: #f0ecda;
-    border-radius: 0 8px 8px 8px;
-    padding: 10px;
-}
-
-/* Level & XP */
-.level-xp {
-    font-size: 14px;
-    background: #e1dcbf;
-    border-radius: 8px;
-    padding: 8px;
-
-    .xp-bar {
-        background: #d8d5cc;
-        height: 20px;
-        margin: 6px 0;
-        border-radius: 2px;
-        overflow: hidden;
-
-        .xp-fill {
-            height: 100%;
-            background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
-            border-radius: 2px;
-        }
-    }
-
-    .points-left {
-        background: #eaece7;
-        text-align: center;
-        padding: 5px;
-        font-weight: 700;
-        width: 110px;
-        margin-top: 10px;
-        border-radius: 5px;
-    }
-}
-
-/* Skills */
-.skills {
-    margin-top: 10px;
-    font-size: 14px;
-    padding: 8px;
-    background: #dfdcc3;
-    border-radius: 8px;
-}
-
-.skill-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-}
-
-.skill-name {
-    width: 150px;
-    font-weight: 700;
-    color: #000;
-}
-
-.skill-bar-wrapper {
-    flex: 1;
-    height: 24px;
-    background: #d8d5cb;
-    border-radius: 2px;
-    overflow: hidden;
-
-    .skill-bar-fill {
-        background: linear-gradient(180deg, #bd9426, #bd9426 50%, #cdb267 0, #cdb267);
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: width .3s ease;
-        border-radius: 2px;
-
-        .skill-bar-text {
-            font-size: 10px;
-            font-weight: 700;
-            color: #fff;
-        }
-    }
-}
-
-.upgrade-btn {
-    margin-left: 6px;
-    background: #3c9e4d;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-/* Totals */
-.stats-breakdown {
-    margin-top: 15px;
-    font-size: 13px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 4px;
-
-    .stat-badge {
-        background: #e1dcbf;
-        border-radius: 5px;
-        padding: 3px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #000;
-    }
-}
-
-/* ===================== ACHIEVEMENTS TAB ===================== */
-
-.achievements-panel {
-    background: #dfdcc3;
-    border-radius: 8px;
-    padding: 8px;
-}
-
-.achievements-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.ach-row {
-    display: grid;
-    grid-template-columns: 42px 1fr;
-    grid-template-rows: auto auto;
-    /* title/reward + progress */
-    column-gap: 10px;
-    row-gap: 4px;
-    align-items: center;
-    background: #f6f7fb;
-    border: 1px solid #e5e7f0;
-    border-radius: 6px;
-    padding: 8px;
-
-    .ach-icon {
-        grid-row: 1 / span 2;
-        width: 42px;
-        height: 42px;
-        border-radius: 4px;
-        background: #fff;
-    }
-
-    .ach-line {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 10px;
-
-        .ach-title {
-            font-weight: 700;
-        }
-
-        .ach-reward {
-            font-size: 12px;
-            color: #666;
-        }
-    }
-
-    .ach-progress {
-        .ach-bar {
-            background: #e9edf3;
-            height: 16px;
-            border-radius: 6px;
+            inset: 6px;
+            border-radius: 999px;
             overflow: hidden;
+            background: #0c141c;
+            box-shadow: inset 0 1px rgba(255, 255, 255, .1);
+            image-rendering: auto;
 
-            .ach-fill {
-                height: 100%;
-                width: 0%;
-                background: linear-gradient(180deg, #0154aa, #0154aa 50%, #024b7c 0, #024b7c);
+            /* hard center regardless of internal layout */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            /* Nitro's inner node centering */
+            .avatar-image,
+            img,
+            canvas {
+                position: absolute !important;
+                top: 50% !important;
+                left: 50% !important;
+                transform: translate(-50%, -50%) !important;
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: contain;
+                margin: 0 !important;
             }
         }
-
-        .ach-text {
-            font-size: 11px;
-            color: #555;
-            margin-top: 2px;
-        }
-    }
-}
-
-/* ===================== MISC / RESPONSIVE ===================== */
-
-@media (max-width: 860px) {
-    .profile-container {
-        width: 92vw;
     }
 
-    .profile-body {
+    .xp-meta {
+        display: flex;
         flex-direction: column;
-    }
-}
-
-/* iPhone 16 Pro / Pro Max portrait (logical 430 x 932) */
-@media only screen and (max-width: 430px) and (max-height: 932px) {
-    .profile-container {
-        top: calc(env(safe-area-inset-top, 0px) + 12px);
-        left: 50%;
-        transform: translateX(-50%);
-        width: 94vw;
-        border-radius: 6px;
+        gap: 2px;
     }
 
-    .profile-header {
-        font-size: 16px;
-        padding: 8px 10px;
-    }
-
-    .close-btn,
-    .close-button {
-        font-size: 16px;
-        padding: 2px 8px;
-    }
-
-    .profile-body {
-        flex-direction: column;
-        gap: 12px;
-        padding: 10px;
-    }
-
-    .avatar-section {
-        gap: 6px;
-        padding: 10px;
-    }
-
-    .avatar-section .avatar-frame .profile-avatar {
-        width: 64px;
-        height: 82px;
-        border-radius: 6px;
-    }
-
-    .avatar-section .avatar-frame .presence-badge {
-        width: 24px;
-        height: 12px;
-        top: -4px;
-        right: -4px;
-    }
-
-    .avatar-section .avatar-frame .gang-badge {
-        width: 22px;
-        height: 22px;
-        right: -4px;
-        bottom: -4px;
-    }
-
-    .avatar-section .motto {
-        max-width: 70vw;
-        font-size: 11px;
-    }
-
-    .info-section {
-        padding: 6px;
-        gap: 6px;
-        font-size: 12px;
-    }
-
-    .corp-card {
-        margin: 8px 6px;
-        padding: 8px;
-    }
-
-    .corp-card img {
-        width: 20px;
-        height: 20px;
-    }
-
-    .gang-line {
-        padding: 8px;
-    }
-
-    .gang-line .gang-color-split-box {
-        width: 30px;
-        height: 18px;
-    }
-
-    .gang-line .gang-color-split-box .gang-icon {
-        width: 14px;
-        height: 14px;
-    }
-
-    /* Tabs */
-    .profile-tabs {
-        margin-top: 6px;
-        gap: 4px;
-        padding: 0 6px;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .profile-tabs .tab-btn {
-        min-width: 110px;
-        padding: 8px 12px;
+    .xp-amount {
+        font-weight: 800;
         font-size: 14px;
+        line-height: 1;
+        padding: 6px 10px;
+        border-radius: 999px;
+         background:#3c5e78;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, .45);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, .3), inset 0 1px rgba(255, 255, 255, .25);
+        white-space: nowrap;
     }
 
-    .tab-content {
-        padding: 8px;
-        border-radius: 0 6px 6px 6px;
-    }
-
-    /* Level / XP */
-    .level-xp {
-        padding: 8px;
-        font-size: 13px;
-    }
-
-    .level-xp .xp-bar {
-        height: 16px;
-        margin: 6px 0;
-    }
-
-    .level-xp .points-left {
-        width: auto;
-        padding: 4px 8px;
-        font-size: 12px;
-    }
-
-    /* Skills */
-    .skills {
-        padding: 8px;
-        font-size: 13px;
-    }
-
-    .skill-row {
-        gap: 8px;
-        margin-bottom: 8px;
-    }
-
-    .skill-name {
-        width: 120px;
-        font-size: 13px;
-    }
-
-    .skill-bar-wrapper {
-        height: 18px;
-    }
-
-    .skill-bar-wrapper .skill-bar-fill .skill-bar-text {
-        font-size: 9px;
-    }
-
-    .upgrade-btn {
-        padding: 2px 6px;
-        font-size: 12px;
-    }
-
-    /* Totals */
-    .stats-breakdown {
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
-    }
-
-    .stats-breakdown .stat-badge {
+    .xp-caption {
         font-size: 11px;
-        padding: 4px;
-    }
-
-    /* Achievements */
-    .achievements-panel {
-        padding: 8px;
-    }
-
-    .ach-row {
-        column-gap: 8px;
-        padding: 8px;
-    }
-
-    .ach-row .ach-icon {
-        width: 36px;
-        height: 36px;
-    }
-
-    .ach-row .ach-progress .ach-bar {
-        height: 14px;
-    }
-
-    .ach-row .ach-line .ach-reward {
-        font-size: 11px;
-    }
-
-    .ach-row .ach-progress .ach-text {
-        font-size: 10px;
+        opacity: .9;
+        margin-top: -2px;
     }
 }
 
-/* Tiny phones fallback (just in case 390–414 widths are used) */
-@media only screen and (max-width: 400px) {
-    .profile-container {
-        width: 96vw;
+/* motion */
+@keyframes xp-enter {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-4px) scale(.96);
     }
 
-    .profile-tabs .tab-btn {
-        min-width: 100px;
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-8px) scale(1);
+    }
+}
+
+/* includes fade-out to 0 opacity */
+@keyframes xp-float {
+    0% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-8px) scale(1);
+    }
+
+    85% {
+        opacity: .98;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-38px) scale(.98);
+    }
+}
+
+/* accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .xp-gain-popup {
+        animation: none;
+    }
+
+    .xp-gain-popup .ring-fg {
+        transition: none;
     }
 }

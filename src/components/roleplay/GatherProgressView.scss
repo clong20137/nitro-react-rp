@@ -1,28 +1,103 @@
-/* GatherProgressView.scss */
-
-/* track */
+/* The whole HUD card */
 .gathering-bar-horizontal-wrapper {
     position: absolute;
-    top: 170px;
-    right: -90px;
+    left: 50%;
+    bottom: 88px;
+    /* sit above chat input; tweak if needed */
     transform: translateX(-50%);
-    width: 220px;
-    height: 20px;
-    background: rgba(255, 255, 255, .2);
-    border: 1px solid rgba(255, 255, 255, .35);
-    border-radius: 2px;
-    overflow: hidden;
+
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 10px 12px;
+    //background: rgba(15, 21, 28, .78);
+    background:#426e8f;
+    border: 2px solid #22425d;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
+        0 2px 0 rgba(0, 0, 0, 0.25),
+        inset 0 -4px rgba(0, 0, 0, 0.12);
+
+    width: max(320px, 48vw);
+    max-width: 720px;
+
     z-index: 9999;
     pointer-events: none;
+    /* don’t block clicks below */
 }
 
-/* fill */
+/* Left: item image */
+.gathering-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 8px;
+    background: #1f2d3a;
+    border: 1px solid rgba(0, 0, 0, .35);
+    box-shadow: inset 0 1px rgba(255, 255, 255, .08);
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        image-rendering: pixelated;
+        /* nice for sprites */
+    }
+
+    .placeholder {
+        color: #9fb7cc;
+        font-weight: 900;
+        font-size: 18px;
+        line-height: 1;
+    }
+}
+
+/* Right side: label + bar */
+.gathering-content {
+    flex: 1 1 auto;
+    min-width: 220px;
+}
+
+.gathering-label {
+    color: #eaf3ff;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: .2px;
+    line-height: 1.1;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Bar track (reuse your original class name) */
 .gathering-bar-horizontal {
+    width: 100%;
+    height: 18px;
+    background: linear-gradient(180deg, #101821, #0f1822);
+    border: 1px solid #24455f;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+
+    /* The animated fill lives inside as a pseudo element so
+we can keep your class name for the track. */
+    --gather-dur: 30000ms;
+}
+
+.gathering-bar-horizontal::before {
+    content: '';
+    display: block;
     width: 0%;
     height: 100%;
-    background: linear-gradient(180deg, #f1c40f, #f1c40f 50%, #f5d65a 0, #f5d65a);
-    /* animate width from 0 → 100% over --gather-dur */
-    animation: gather-fill var(--gather-dur, 60000ms) linear forwards;
+    background: linear-gradient(180deg, #426f90, #426f90 50%, #507c9c 0, #507c9c);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), inset -6px 0 10px rgba(0, 0, 0, .25);
+    animation: gather-fill var(--gather-dur) linear forwards;
     will-change: width;
 }
 
@@ -33,5 +108,19 @@
 
     to {
         width: 100%;
+    }
+}
+
+/* Small screens */
+@media (max-width: 560px) {
+    .gathering-bar-horizontal-wrapper {
+        width: calc(100vw - 24px);
+        padding: 8px 10px;
+        gap: 10px;
+    }
+
+    .gathering-icon {
+        width: 40px;
+        height: 40px;
     }
 }

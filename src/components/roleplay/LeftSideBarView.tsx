@@ -1,12 +1,13 @@
 import {
     FC,
-    useState,
     useEffect,
     useRef,
+    useState,
     MutableRefObject,
     useLayoutEffect,
 } from "react";
 import { GetSessionDataManager, SendMessageComposer } from "../../api";
+
 import { CreateGangView } from "../roleplay/CreateGangView";
 import { GangsDetailView } from "../roleplay/GangsDetailView";
 import { CorporationsView } from "./CorporationView";
@@ -19,34 +20,10 @@ import { CheckGangStatusComposer } from "@nitrots/nitro-renderer/src/nitro/commu
 import { ToggleGangChatComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ToggleGangChatComposer";
 import { GetWantedListComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetWantedListComposer";
 import { GetCorporationsComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetCorporationsComposer";
+
 import "./LeftSideBarView.scss";
 
-/** ---- optional onboarding anchor hook (same as above) ---- */
-type AnchorEventDetail = { id: string; el: HTMLElement | null };
-const OB_REGISTER_EVT = "ob-register-anchor";
-function useOnboardingAnchor(
-    id: string,
-    ref: MutableRefObject<HTMLElement | null>
-) {
-    useLayoutEffect(() => {
-        const el = ref.current;
-        if (!el) return;
-        window.dispatchEvent(
-            new CustomEvent<AnchorEventDetail>(OB_REGISTER_EVT, {
-                detail: { id, el },
-            })
-        );
-        const re = () =>
-            window.dispatchEvent(
-                new CustomEvent<AnchorEventDetail>(OB_REGISTER_EVT, {
-                    detail: { id, el: ref.current },
-                })
-            );
-        window.addEventListener("resize", re);
-        return () => window.removeEventListener("resize", re);
-    }, [id, ref]);
-}
-/** ------------------------------------------------------- */
+/** (optional) onboarding anchors omitted for brevity **/
 
 export const LeftSidebarView: FC = () => {
     const [showInventory, setShowInventory] = useState(false);
@@ -59,11 +36,6 @@ export const LeftSidebarView: FC = () => {
         "none"
     );
     const [showMacros, setShowMacros] = useState(false);
-
-    const gangModeRef = useRef<"none" | "create" | "details">("none");
-    useEffect(() => {
-        gangModeRef.current = gangMode;
-    }, [gangMode]);
 
     const userId = GetSessionDataManager().userId;
 
@@ -109,7 +81,7 @@ export const LeftSidebarView: FC = () => {
         };
     }, []);
 
-    const onClickInventory = () => setShowInventory((prev) => !prev);
+    const onClickInventory = () => setShowInventory((p) => !p);
     const onClickWanted = () => {
         setShowWantedList((prev) => {
             const next = !prev;
@@ -125,11 +97,11 @@ export const LeftSidebarView: FC = () => {
         });
     };
     const onClickGangs = () => {
-        if (gangModeRef.current !== "none") {
-            setGangMode("none");
-            return;
-        }
-        SendMessageComposer(new CheckGangStatusComposer());
+        setGangMode((m) =>
+            m !== "none"
+                ? "none"
+                : (SendMessageComposer(new CheckGangStatusComposer()), m)
+        );
     };
     const onClickGangChatToggle = () => {
         setIsGangChatEnabled((prev) => {
@@ -141,14 +113,7 @@ export const LeftSidebarView: FC = () => {
             return next;
         });
     };
-    const onClickMacros = () => setShowMacros((prev) => !prev);
-
-    // Example: if you ever want to force anchors for specific icons
-    const skullRef = useRef<HTMLDivElement | null>(null);
-    const messageRef = useRef<HTMLDivElement | null>(null);
-    // (optional) register them — the overlay already finds them via CSS
-    // useOnboardingAnchor('gangs', skullRef);
-    // useOnboardingAnchor('gangchat', messageRef);
+    const onClickMacros = () => setShowMacros((p) => !p);
 
     return (
         <>
@@ -159,75 +124,82 @@ export const LeftSidebarView: FC = () => {
                     }`}
                 >
                     <div className="left-sidebar">
-                        <div className="sidebar-icon tooltip-container">
-                            <div
-                                className="sidebar-icon inventory"
-                                title="Inventory"
-                                onClick={onClickInventory}
-                            />
-                            <span className="tooltip-text">Inventory</span>
+                        {/* Integrated toggle that flips left/right via CSS */}
+                        <div
+                            className="left-sidebar__toggle"
+                            role="button"
+                            aria-label={
+                                sidebarOpen
+                                    ? "Collapse sidebar"
+                                    : "Expand sidebar"
+                            }
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                        />
+
+                        {/* Stack of pills */}
+                        <div
+                            className="sidebar-chip chip-inventory"
+                            data-tip="Inventory"
+                            onClick={onClickInventory}
+                            role="button"
+                            aria-label="Inventory"
+                        >
+                            <div className="chip-icon" />
                         </div>
 
-                        <div className="sidebar-icon tooltip-container">
-                            <div
-                                className="sidebar-icon wanted"
-                                title="Wanted"
-                                onClick={onClickWanted}
-                            />
-                            <span className="tooltip-text">Wanted List</span>
+                        <div
+                            className="sidebar-chip chip-wanted"
+                            data-tip="Wanted List"
+                            onClick={onClickWanted}
+                            role="button"
+                            aria-label="Wanted List"
+                        >
+                            <div className="chip-icon" />
                         </div>
 
-                        <div className="sidebar-icon tooltip-container">
-                            <div
-                                className="sidebar-icon corps"
-                                title="Corporations"
-                                onClick={onClickCorporations}
-                            />
-                            <span className="tooltip-text">Corporations</span>
+                        <div
+                            className="sidebar-chip chip-gangs"
+                            data-tip="Gangs"
+                            onClick={onClickGangs}
+                            role="button"
+                            aria-label="Gangs"
+                        >
+                            <div className="chip-icon" />
                         </div>
 
-                        <div className="sidebar-icon tooltip-container">
-                            <div
-                                ref={skullRef}
-                                className="sidebar-icon skull"
-                                title="Gangs"
-                                onClick={onClickGangs}
-                            />
-                            <span className="tooltip-text">Gangs</span>
+                        <div
+                            className="sidebar-chip chip-corps"
+                            data-tip="Corporations"
+                            onClick={onClickCorporations}
+                            role="button"
+                            aria-label="Corporations"
+                        >
+                            <div className="chip-icon" />
                         </div>
 
-                        <div className="sidebar-icon tooltip-container">
-                            <div
-                                ref={messageRef}
-                                className={`sidebar-icon message ${
-                                    isGangChatEnabled ? "active" : ""
-                                }`}
-                                title="Gang Chat Toggle"
-                                onClick={onClickGangChatToggle}
-                            />
-                            <span className="tooltip-text">
-                                Gang Chat Toggle
-                            </span>
+                        <div
+                            className={`sidebar-chip chip-chat ${
+                                isGangChatEnabled ? "is-on" : ""
+                            }`}
+                            data-tip="Gang Chat Toggle"
+                            onClick={onClickGangChatToggle}
+                            role="button"
+                            aria-label="Gang Chat Toggle"
+                        >
+                            <div className="chip-icon" />
                         </div>
 
-                        <div className="sidebar-icon tooltip-container">
-                            <div
-                                className="sidebar-icon macros"
-                                title="Macros"
-                                onClick={onClickMacros}
-                            />
-                            <span className="tooltip-text">Macros</span>
+                        <div
+                            className="sidebar-chip chip-macros"
+                            data-tip="Macros"
+                            onClick={onClickMacros}
+                            role="button"
+                            aria-label="Macros"
+                        >
+                            <div className="chip-icon" />
                         </div>
                     </div>
                 </div>
-
-                {/* NEW ARROW BUTTON */}
-                <div
-                    className={`sidebar-toggle ${
-                        sidebarOpen ? "open" : "closed"
-                    }`}
-                    onClick={() => setSidebarOpen(!sidebarOpen)}
-                />
             </div>
 
             {showInventory && (

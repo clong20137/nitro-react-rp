@@ -1,281 +1,149 @@
-.nitro-right-side {
-    position: absolute;
-    top: 0px;
-    right: 10px;
-    min-width: 200px;
-    max-width: 280px;
-    height: calc(100% - #{$toolbar-height});
-}
-
-.right-status-buttons {
-    display: flex;
-    flex-direction: row;
-    gap: 6px;
-    justify-content: center;
-    margin-top: 10px;
-
-    .right-btn {
-        background: #d4b373;
-        border: 2px solid #8b5c28;
-        border-radius: 6px;
-        padding: 4px 8px;
-        color: #fff;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background 0.2s ease;
-
-        &:hover {
-            background: #b38340;
-        }
-
-        &.police {
-            background: #b0413e;
-        }
-
-        &.work {
-            background: #4a7c59;
-        }
-    }
-}
-
-.ok-button {
-    background: linear-gradient(to bottom, #ffffff 0%, #cccccc 100%);
-    border: 2px solid #666;
-    border-radius: 3px;
-    color: #000;
-    font-family: Verdana, sans-serif;
-    font-size: 12px;
-    font-weight: bold;
-    padding: 4px 14px;
-    text-align: center;
-    cursor: pointer;
-    box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(0, 0, 0, 0.2);
-    transition: background 0.2s ease-in-out;
-}
-
-.ok-button:hover {
-    background: linear-gradient(to bottom, #eeeeee 0%, #bbbbbb 100%);
-}
-
-.ok-button:active {
-    background: linear-gradient(to bottom, #bbbbbb 0%, #999999 100%);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-.right-status-panel {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: #b57f2a;
-    border-radius: 8px;
-    padding: 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-family: var(--font-greek-theme);
-    font-size: 12px;
-    color: #fff;
-    width: 250px;
-    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
-
-    .right-status-item {
-        background: #b57f2a;
-        padding: 4px 8px;
-        border-radius: 4px;
-        text-align: center;
-
-        &.currency {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-
-            .currency-icon {
-                width: 14px;
-                height: 14px;
-                background-size: contain;
-            }
-        }
-    }
-}
-
-.habbo-action-button {
-    background-color: #1a1a1a;
-    border: 2px solid #000;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 8px 10px;
-    margin: 2px;
-    border-radius: 5px;
-    text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
-    cursor: pointer;
-    transition: background-color .2s
-}
-
-.habbo-action-button:hover {
-    background-color: #2c2c2c
-}
-
-.habbo-action-button:active {
-    background-color: #000;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6)
-}
-
-.habbo-action-button.green {
-    background-color: #007c17;
-    border-color: #003d0b
-}
-
-.habbo-action-button.green:hover {
-    background-color: #0aa127
-}
-
-.habbo-action-button.green:active {
-    background-color: #003d0b;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6)
-}
-
-.habbo-action-button.red {
-    background-color: #aa1c1c;
-    border-color: #5a0000
-}
-
-.habbo-action-button.red:hover {
-    background-color: #c52b2b
-}
-
-.habbo-action-button.red:active {
-    background-color: #5a0000;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6)
-}
-
-.habbo-action-button.yellow {
-    background-color: #e2b500;
-    border-color: #8f7400;
-}
-
-.habbo-action-button.yellow:hover {
-    background-color: #ecc010;
-}
-
-.habbo-action-button.yellow:active {
-    background-color: #b7950a;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6)
-}
-
-.settings-view {
-    position: fixed;
-    top: 150px;
-    left: 150px;
-    z-index: 9999;
-    pointer-events: auto;
-}
-
-/* ===== Right-side compact HUD ===== */
-
 .nitro-right-compact {
-    position: absolute;
+    position: fixed;
     top: 10px;
     right: 10px;
-    width: 230px;
+    width: auto;
+    max-width: 340px;
     pointer-events: none;
-    z-index: 10;
+    z-index: 1000;
 
     * {
         pointer-events: auto;
     }
 }
 
-/* ---------- Chips (padded backgrounds) ---------- */
-.chip {
-    background: #8A662F;
-    padding: 6px;
-    border-radius: 6px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+/* Cards + layout */
+.rs-card {
+    background: #426e8f;
+    border: 1px solid #22425d;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
+        0 2px 0 rgba(0, 0, 0, 0.25),
+        inset 0 -4px rgba(0, 0, 0, 0.12);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-gap: 10px;
+    font-family: var(--font-greek-theme);
     color: #fff;
+    position: relative;
+    z-index: 1005;
+    overflow: visible;
 }
 
-.chip-title {
-    padding: 6px 12px;
-}
-
-.rs-title .chip-title {
-    /* make the location box a little wider */
-    flex: 1 1 auto;
-    min-width: 0;
-    max-width: 100%;
-}
-
-/* Top mini bar: time • credits • gear */
 .rs-mini {
     display: flex;
     align-items: center;
     justify-content: space-between;
-        background:#b57f2a;
-    border:1px solid #a37637;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
-        0 2px 0 rgba(0, 0, 0, .25),
-        inset 0 -4px rgba(0, 0, 0, .12);
+    background: #426e8f;
+    border: 2px solid #22425d;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
+        0 2px 0 rgba(0, 0, 0, 0.25),
+        inset 0 -4px rgba(0, 0, 0, 0.12);
     border-radius: 8px;
     padding: 6px 8px;
     margin-bottom: 8px;
     font-family: var(--font-greek-theme);
     font-size: 12px;
     color: #e9eef5;
+    position: relative;
+    z-index: 1010;
+    overflow: visible;
 }
 
-.rs-time,
-.rs-credits {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-/* Zone/virtual card */
-.rs-card {
-        background:#b57f2a;
-    border:1px solid #a37637;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
-        0 2px 0 rgba(0, 0, 0, .25),
-        inset 0 -4px rgba(0, 0, 0, .12);
-    display: grid;
-    grid-template-columns: 1fr auto;
-    grid-row-gap: 10px;
-    grid-column-gap: 10px;
-    font-family: var(--font-greek-theme);
-    color: #fff;
-}
-
-/* Title row */
 .rs-title {
-    grid-column: 1 / 2;
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 14px;
-    white-space: nowrap;
-    overflow: hidden;
+    min-width: 0;
+    white-space: normal;
+}
+
+.rs-counter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chip-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .rs-title-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    line-height: 1.1;
+    word-break: break-word;
 }
 
-/* Online counter row (right side of card) */
-.rs-counter {
+/* ---- CHIP STYLING ---- */
+.chip {
+    background: #3c5e78;
+    padding: 6px 10px;
+    border-radius: 6px;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
+    gap: 6px;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: filter 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
 }
 
-/* Icon sprites */
+.chip--icon {
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    min-width: 28px;
+}
+
+.chip--icon>button {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background-color: transparent;
+    /* <-- not the shorthand */
+    appearance: none;
+    display: inline-block;
+    line-height: 0;
+}
+
+/* hover lift + glow */
+.chip:hover:not(.chip--static),
+.chip:focus-visible:not(.chip--static) {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 2px 6px rgba(0, 0, 0, 0.24);
+    cursor: pointer;
+    outline: none;
+}
+
+.chip:focus-visible {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85),
+        0 0 0 4px rgba(34, 66, 93, 0.85);
+    transform: none;
+}
+
+/* static (non-interactive) chips */
+.chip--static {
+    cursor: default;
+    pointer-events: none;
+}
+
+.chip--static>* {
+    pointer-events: auto;
+}
+
+/* Icons */
 .ico {
     display: inline-block;
     width: 20px;
@@ -284,432 +152,106 @@
     background-repeat: no-repeat;
 }
 
-.ico-time::before {
-    background-image: url('../../icons/clock.png');
-}
-
-.ico-gear,
-.ico-chatlog {
-    appearance: none;
-    -webkit-appearance: none;
-    border: 0;
-    outline: none;
-    background-color: transparent;
-    box-shadow: none;
-    padding: 0;
-}
-
-.ico-gear {
-    background-image: url('../../icons/settings.png');
-    width: 24px;
-    height: 24px;
-    background-repeat: no-repeat;
-    background-size: contain;
-}
-
-.ico-gear:hover {
-    filter: brightness(1.1);
-    cursor: pointer;
-    transition: transform 0.8s ease, background-image 0.8s ease;
-}
-
-.ico-gear:focus {
-    outline: none;
-    box-shadow: none;
-}
-
-.ico-chatlog {
-    width: 22px;
-    height: 22px;
-    background-image: url('../../icons/chatlog.png');
-    background-repeat: no-repeat;
-    background-size: contain;
-    cursor: pointer;
-    transition: transform .12s ease, filter .12s ease;
-}
-
-.ico-chatlog:hover {
-    transform: scale(1.06);
-    filter: brightness(1.15);
+.ico-time {
+    background-image: url("../../icons/clock.png");
 }
 
 .ico-coin {
-    background-image: url('../../icons/coins.gif');
-    background-size: contain;
-    background-repeat: no-repeat;
+    background-image: url("../../icons/coins.gif");
 }
 
 .ico-zone {
-    background-image: url('../../icons/room.gif');
+    background-image: url("../../icons/room.gif");
 }
 
 .ico-flag {
-    background-image: url('../../icons/online.gif');
+    background-image: url("../../icons/online.gif");
 }
 
-/* Quick action row */
-.rs-quick {
-    display: flex;
-    align-items: center;
-    justify-content: space-evenly;
-    gap: 10px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
-        0 2px 0 rgba(0, 0, 0, .25),
-        inset 0 -4px rgba(0, 0, 0, .12);
-
-    background:#b57f2a;
-    border:1px solid #a37637;
-    border-radius: 8px;
-    padding: 6px 8px;
-    margin-top: 6px;
-    margin-bottom: 6px;
-
-    /* make chips align nicely around the 3 buttons */
-    .chip {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
+.ico-chatlog {
+    background-image: url("../../icons/chatlog.png");
 }
 
-/* compact square buttons */
-.qbtn {
-    position: relative;
-    width: 32px;
-    height: 32px;
-    border: 0;
-    border-radius: 6px;
-    background: transparent no-repeat center/contain;
+.ico-gear {
+    background-image: url("../../icons/settings.png");
+}
+
+.ico-chatlog,
+.ico-gear {
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-color: transparent;
+    border: none;
     cursor: pointer;
-    outline: none;
-    transition: transform 0.8s ease, background-image 0.8s ease;
-
-    &:hover {
-        transform: scale(1.1);
-        filter: brightness(1.2);
-        cursor: pointer;
-        transition: transform 0.8s ease, background-image 0.8s ease;
-    }
-
-    &:active {
-        transform: translateY(0);
-    }
-
-    &:disabled {
-        opacity: .6;
-        cursor: not-allowed;
-    }
+    transition: transform 0.15s ease, filter 0.15s ease;
 }
 
-.qbtn.work {
-    background-image: url('../../icons/job.gif');
+.ico-chatlog:hover,
+.ico-gear:hover {
+    transform: scale(1.08);
+    filter: brightness(1.15);
 }
 
-.qbtn.work.on {
-    box-shadow: 0 0 0 2px rgba(0, 128, 0, .25) inset;
-}
-
-.qbtn.mode.aggressive {
-    background-image: url('../../icons/passive.gif');
-}
-
-.qbtn.mode.passive {
-    background-image: url('../../icons/passive.gif');
-}
-
-.qbtn.police {
-    background-image: url('../../icons/police.png');
-}
-
-.qsvg {
-    width: 18px;
-    height: 18px;
-    stroke: #000;
-}
-
-.qbtn.clock.on {
-    box-shadow: 0 0 0 2px rgba(0, 128, 0, .25) inset;
-}
-
-.qbtn.mode .icon-aggressive {
-    display: block;
-}
-
-.qbtn.mode .icon-passive {
-    display: none;
-}
-
-.qbtn.mode.passive .icon-aggressive {
-    display: none;
-}
-
-.qbtn.mode.passive .icon-passive {
-    display: block;
-}
-
-/* call + cooldown */
-.qcall-wrap {
+/* =======================================================
+TOOLTIP FIX: BELOW CHIP, ARROW POINTS UP
+======================================================= */
+.has-tip {
     position: relative;
+    z-index: 1020;
 }
 
-.qbtn.call .cooldown-ring {
+.has-tip[data-tip]::after,
+.has-tip[data-tip]::before {
     position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
     pointer-events: none;
+    transition: opacity 0.12s ease, transform 0.12s ease;
+    z-index: 1030;
 }
 
-.cooldown-svg {
-    width: 30px;
-    height: 30px;
+/* tooltip box BELOW the chip */
+.has-tip[data-tip]::after {
+    content: attr(data-tip);
+    top: calc(100% + 10px);
+    background: #171a1f;
+    color: #fff;
+    font: 600 12px/1.1 var(--font-greek-theme, inherit);
+    padding: 6px 10px;
+    border-radius: 8px;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35),
+        inset 0 1px rgba(255, 255, 255, 0.08);
 }
 
-.circle-bg {
-    stroke: rgba(0, 0, 0, .1);
-    fill: none;
-    stroke-width: 2;
+/* arrow under tooltip, pointing UP toward chip */
+.has-tip[data-tip]::before {
+    content: "";
+    top: calc(100% + 4px);
+    border: 6px solid transparent;
+    border-bottom-color: #171a1f;
 }
 
-.circle-progress {
-    stroke: #bd2a2a;
-    fill: none;
-    stroke-width: 2;
+.has-tip:hover::after,
+.has-tip:hover::before,
+.has-tip:focus-visible::after,
+.has-tip:focus-visible::before {
+    opacity: 1;
+    transform: translateX(-50%) translateY(2px);
 }
 
-.cooldown-text {
-    position: absolute;
-    font-size: 10px;
-    font-weight: 700;
-}
-
-/* popover to the left of the call button */
-.q-pop {
-    position: absolute;
-    right: 38px;
-    top: 0;
-    width: 220px;
-    background: #eaece7;
-    border: 1px solid #cfcfcf;
-    border-radius: 6px;
-    padding: 8px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .15);
-    z-index: 50;
-
-    textarea {
-        width: 100%;
-        height: 68px;
-        resize: none;
-        border: 1px solid #cfcfcf;
-        border-radius: 4px;
-        padding: 6px;
-        background: #fff;
-        margin-bottom: 6px;
-        color: #000;
-    }
-
-    .arrow-right {
-        position: absolute;
-        right: -6px;
-        top: 10px;
-        width: 0;
-        height: 0;
-        border-top: 6px solid transparent;
-        border-bottom: 6px solid transparent;
-        border-left: 6px solid #cfcfcf;
-    }
-}
-
-/* reuse your existing button styles if present */
-.habbo-action-button.green {
-    background-color: #007c17;
-    border-color: #003d0b;
-}
-
-/* ===== right-side HUD: responsive tweaks ===== */
-
-@media (max-width: 1024px) {
-    .nitro-right-side {
-        right: max(10px, env(safe-area-inset-right));
-        top: max(6px, env(safe-area-inset-top));
-        max-width: 220px;
-        min-width: 220px;
-    }
-
-    .right-status-panel {
-        width: 230px;
-        padding: 8px;
-        gap: 6px;
-    }
-
-    .rs-mini {
-        font-size: 11px;
-        padding: 5px 8px;
-    }
-
-    .rs-card {
-        grid-column-gap: 8px;
-        grid-row-gap: 8px;
-    }
-
-    .qbtn {
-        width: 30px;
-        height: 30px;
-    }
-}
-
-@media (max-width: 768px) {
-    .nitro-right-side {
-        right: max(8px, env(safe-area-inset-right));
-        top: max(8px, env(safe-area-inset-top));
-        max-width: min(48vw, 220px);
-        min-width: auto;
-        z-index: 12;
-    }
-
-    .right-status-panel {
-        width: min(48vw, 220px);
-        padding: 8px;
-        border-radius: 8px;
-    }
-
-    .rs-mini {
-        padding: 6px 8px;
-        font-size: 11px;
-
-        .rs-time,
-        .rs-credits {
-            gap: 4px;
-        }
-
-        .ico-gear {
-            width: 22px;
-            height: 22px;
-        }
-    }
-
-    .rs-card {
-        grid-template-columns: 1fr;
-        grid-row-gap: 8px;
-    }
-
-    .rs-counter {
-        justify-self: start;
-    }
-
-    .rs-quick {
-        gap: 8px;
-        padding: 6px;
-        flex-wrap: wrap;
-    }
-
-    .qbtn {
-        width: 34px;
-        height: 34px;
-    }
-
-    .cooldown-svg {
-        width: 28px;
-        height: 28px;
-    }
-
-    .cooldown-text {
-        font-size: 10px;
-    }
-}
-
+/* =======================================================
+RESPONSIVE
+======================================================= */
 @media (max-width: 480px) {
+    .rs-title-text {
+        overflow: visible;
+        text-overflow: clip;
+        white-space: normal;
+    }
 
-    .nitro-right-side,
     .nitro-right-compact {
-        right: max(6px, env(safe-area-inset-right));
-        top: max(6px, env(safe-area-inset-top));
-        width: min(86vw, 280px);
-    }
-
-    .right-status-panel {
-        width: 100%;
-        padding: 8px;
-        gap: 6px;
-    }
-
-    .right-status-buttons {
-        gap: 6px;
-
-        .right-btn {
-            padding: 4px 6px;
-            font-size: 11px;
-        }
-    }
-
-    .rs-mini {
-        font-size: 10px;
-
-        .rs-time,
-        .rs-credits {
-            gap: 4px;
-        }
-    }
-
-    .rs-title {
-        min-width: 0;
-
-        .rs-title-text {
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-    }
-
-    .qbtn {
-        width: 36px;
-        height: 36px;
-    }
-
-    .qbtn:active {
-        transform: translateY(0);
-    }
-
-    .q-pop {
-        right: 0;
-        left: auto;
-        transform: translateX(-6px);
-        width: min(78vw, 220px);
-    }
-}
-
-@media (max-height: 480px) and (orientation: landscape) {
-
-    .nitro-right-side,
-    .nitro-right-compact {
-        top: max(4px, env(safe-area-inset-top));
-    }
-
-    .right-status-panel {
-        max-height: calc(100vh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-        overflow: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .rs-quick {
-        gap: 6px;
-        padding: 4px 6px;
-    }
-
-    .qbtn {
-        width: 30px;
-        height: 30px;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-    .qbtn,
-    .ico-gear,
-    .rs-mini,
-    .rs-card,
-    .rs-quick {
-        transition: none !important;
+        max-width: 300px;
     }
 }
