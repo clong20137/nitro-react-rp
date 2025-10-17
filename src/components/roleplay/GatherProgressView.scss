@@ -1,104 +1,94 @@
-/* The whole HUD card */
 .gathering-bar-horizontal-wrapper {
+    --gather-dur: 30000ms; // default, replaced inline by React
     position: absolute;
     left: 50%;
-    bottom: 88px;
-    /* sit above chat input; tweak if needed */
+    bottom: 90px;
     transform: translateX(-50%);
-
     display: flex;
     align-items: center;
-    gap: 12px;
-
-    padding: 10px 12px;
-    //background: rgba(15, 21, 28, .78);
-    background:#426e8f;
+    gap: 10px;
+    padding: 8px 10px;
+    min-width: 280px;
+    max-width: 420px;
+    background: #426e8f;
     border: 2px solid #22425d;
     border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
-        0 2px 0 rgba(0, 0, 0, 0.25),
-        inset 0 -4px rgba(0, 0, 0, 0.12);
-
-    width: max(320px, 48vw);
-    max-width: 720px;
-
+    box-shadow: 0 10px 24px rgba(0,0,0,.22),0 2px 0 rgba(0,0,0,.25),inset 0 -4px rgba(0,0,0,.12);
     z-index: 9999;
-    pointer-events: none;
-    /* don’t block clicks below */
+    user-select: none;
+
+    /* ✨ fade in/out defaults */
+    opacity: 0;
+    transform-origin: center bottom;
+    transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
-/* Left: item image */
+/* shown state (React adds .fade-in) */
+.gathering-bar-horizontal-wrapper.fade-in {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* hidden state (React adds .fade-out) */
+.gathering-bar-horizontal-wrapper.fade-out {
+    opacity: 0;
+    transform: translateX(-50%) translateY(15px);
+}
+
+/* === Icon === */
 .gathering-icon {
-    width: 46px;
-    height: 46px;
-    border-radius: 8px;
-    background: #1f2d3a;
-    border: 1px solid rgba(0, 0, 0, .35);
-    box-shadow: inset 0 1px rgba(255, 255, 255, .08);
-    overflow: hidden;
+    width: 34px;
+    height: 34px;
+    background: #3c5e78;
+    border: 2px solid #22425d;
+    border-radius: 6px;
     display: grid;
     place-items: center;
-    flex: 0 0 auto;
-
-    img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        image-rendering: pixelated;
-        /* nice for sprites */
-    }
-
-    .placeholder {
-        color: #9fb7cc;
-        font-weight: 900;
-        font-size: 18px;
-        line-height: 1;
-    }
+    overflow: hidden;
 }
 
-/* Right side: label + bar */
+.gathering-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+/* === Content === */
 .gathering-content {
-    flex: 1 1 auto;
-    min-width: 220px;
+    flex: 1;
+    min-width: 0;
 }
 
 .gathering-label {
-    color: #eaf3ff;
-    font-weight: 800;
+    font-weight: 700;
     font-size: 13px;
-    letter-spacing: .2px;
-    line-height: 1.1;
-    margin-bottom: 6px;
+    color: #eaf3ff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: 6px;
 }
 
-/* Bar track (reuse your original class name) */
+/* === Bar === */
 .gathering-bar-horizontal {
-    width: 100%;
-    height: 18px;
-    background: linear-gradient(180deg, #101821, #0f1822);
-    border: 1px solid #24455f;
-    border-radius: 8px;
-    overflow: hidden;
     position: relative;
-
-    /* The animated fill lives inside as a pseudo element so
-we can keep your class name for the track. */
-    --gather-dur: 30000ms;
+    height: 10px;
+    border: 2px solid #22425d;
+    border-radius: 999px;
+    background: #426e8f;
+    overflow: hidden;
 }
 
 .gathering-bar-horizontal::before {
-    content: '';
-    display: block;
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
     width: 0%;
-    height: 100%;
-    background: linear-gradient(180deg, #426f90, #426f90 50%, #507c9c 0, #507c9c);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), inset -6px 0 10px rgba(0, 0, 0, .25);
+    background: linear-gradient(#426e8f, #5687ac);
     animation: gather-fill var(--gather-dur) linear forwards;
-    will-change: width;
 }
 
 @keyframes gather-fill {
@@ -111,16 +101,20 @@ we can keep your class name for the track. */
     }
 }
 
-/* Small screens */
-@media (max-width: 560px) {
-    .gathering-bar-horizontal-wrapper {
-        width: calc(100vw - 24px);
-        padding: 8px 10px;
-        gap: 10px;
-    }
+/* === Countdown text === */
+.gathering-count {
+    margin-left: 8px;
+    font-weight: 700;
+    font-size: 12px;
+    min-width: 44px;
+    text-align: right;
+    color: #eaf3ff;
+}
 
-    .gathering-icon {
-        width: 40px;
-        height: 40px;
+/* === Accessibility === */
+@media (prefers-reduced-motion: reduce) {
+    .gathering-bar-horizontal::before {
+        animation: none;
+        width: 100%;
     }
 }
