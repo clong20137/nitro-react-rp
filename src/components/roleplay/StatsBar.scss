@@ -1,15 +1,14 @@
 .stats-bar-container {
     display: flex;
     align-items: center;
-    background: #426e8f;
-
-    padding: 10px;
-    border-radius: 0.5vw;
+    background: rgba(24, 24, 24, .88);
+    padding: 4px;
+    border-radius: 6px;
     position: absolute;
     top: 20px;
     left: 5px;
-    border: 1px solid #22425d;
-    box-shadow: 0 10px 24px rgba(0,0,0,.22),0 2px 0 rgba(0,0,0,.25),inset 0 -4px rgba(0,0,0,.12);
+    border:solid 2px #FFFFFF;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
     animation: fadeIn 0.8s;
     z-index: 100;
 }
@@ -131,7 +130,7 @@
     right: 44px;
     top: 0;
     width: 220px;
-    background: #eaece7;
+    background: #000000;
     border: 1px solid #cfcfcf;
     border-radius: 6px;
     padding: 8px;
@@ -274,7 +273,7 @@
             .fill {
                 height: 100%;
                 transition: width 0.3s ease;
-                box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 #000;
+                box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 #000;
             }
 
             &.health .fill {
@@ -374,7 +373,7 @@
 
             .xp-ring-progress {
                 fill: none;
-                stroke: #bc9425;
+                stroke: #38ac5b;
                 stroke-width: 3;
                 stroke-linecap: round;
                 transition: stroke-dasharray 0.8s ease;
@@ -389,7 +388,6 @@
             object-fit: cover;
             margin-top: 4px;
             margin-bottom: 5px;
-            margin-left: 10px;
             cursor: pointer;
 
         }
@@ -444,9 +442,9 @@
 
 .bar {
     position: relative;
-    width: 220px;
-    height: 18px;
-    background: #3c5e78;
+    width: 180px;
+    height: 14px;
+    background: rgba(24, 24, 24, .88);
     border-radius: 2px;
     margin-left: 20px;
     overflow: hidden;
@@ -475,11 +473,14 @@
     width: 100%;
     text-align: center;
     color: #fff;
-    font-weight: bold;
+    font-weight: 500;
     text-shadow: 1px 1px 2px #000;
     top: 50%;
     transform: translateY(-50%);
+    font-size: 12px;
+    line-height: 3;
     z-index: 3;
+
     pointer-events: none;
 }
 
@@ -519,20 +520,34 @@
 }
 
 .aggression-bar-wrapper {
-    width: 220px;
+    width: 180px;
     height: 10px;
+    /* bump height so it's visible */
     margin-top: 6px;
-    background: #3c5e78;
+    margin-left: 18px;
+    background: rgba(24, 24, 24, .88);
+    border: 1px solid rgba(255, 255, 255, .2);
     border-radius: 4px;
     overflow: hidden;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .05),
+        0 2px 4px rgba(0, 0, 0, .25);
     transition: all 0.3s ease;
-    margin-left: 18px;
+    position: relative;
 }
 
 .aggression-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
     height: 100%;
-    background: linear-gradient(to right, #ff0000, #cc0000);
-    transition: width 0.1s ease;
+    width: var(--aggression-width, 0%);
+    /* driven by inline style or JS */
+    background: #ff6200;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .25),
+        0 1px 2px rgba(0, 0, 0, .35);
+    transition: width 0.15s ease;
 }
 
 

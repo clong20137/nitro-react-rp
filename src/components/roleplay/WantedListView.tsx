@@ -1,12 +1,14 @@
 import { FC, useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./WantedListView.scss";
 
+type ChargesValue = string[] | string;
+
 interface WantedUser {
     userId: number;
     username: string;
     figure: string;
-    charges: string;
     wantedLevel: number;
+    charges: ChargesValue; // now supports string[] (new) or string (legacy)
 }
 
 interface WantedListViewProps {
@@ -22,10 +24,11 @@ const STAR_EMPTY = "../../icons/star-empty.gif";
 
 export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
     const [wantedUsers, setWantedUsers] = useState<WantedUser[]>([]);
+    const [closing, setClosing] = useState(false);
 
     const containerRef = useRef<HTMLDivElement | null>(null);
 
-    // draggable
+    // position (draggable)
     const [position, setPosition] = useState<{ x: number; y: number }>({
         x: 120,
         y: 120,
@@ -33,7 +36,7 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
     const dragging = useRef(false);
     const dragOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-    // resizable
+    // size (resizable)
     const [size, setSize] = useState<{ width: number; height: number }>({
         width: 340,
         height: 420,
@@ -46,32 +49,63 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
         h: 420,
     });
 
-    // closing state for exit animation
-    const [closing, setClosing] = useState(false);
-    const handleClose = () => setClosing(true);
-
+    // load persisted pos/size
     useLayoutEffect(() => {
         try {
             const p = localStorage.getItem(POS_KEY);
             if (p) {
-                const { x, y } = JSON.parse(p);
-                setPosition({ x: Number(x) || 120, y: Number(y) || 120 });
+                const parsed = JSON.parse(p);
+                const x = Number(parsed?.x);
+                const y = Number(parsed?.y);
+                setPosition({
+                    x: Number.isFinite(x) ? x : 120,
+                    y: Number.isFinite(y) ? y : 120,
+                });
             }
             const s = localStorage.getItem(SIZE_KEY);
             if (s) {
-                const { width, height } = JSON.parse(s);
+                const parsed = JSON.parse(s);
+                const w = Number(parsed?.width);
+                const h = Number(parsed?.height);
                 setSize({
-                    width: Math.max(280, Number(width) || 340),
-                    height: Math.max(300, Number(height) || 420),
+                    width: Math.max(280, Number.isFinite(w) ? w : 340),
+                    height: Math.max(300, Number.isFinite(h) ? h : 420),
                 });
             }
-        } catch {}
+        } catch {
+            // ignore bad localStorage values
+        }
     }, []);
 
+    // listen for wanted list updates (from parser / server)
     useEffect(() => {
-        const handle = (e: any) => setWantedUsers(e.detail || []);
-        window.addEventListener("wanted_list_update", handle);
-        return () => window.removeEventListener("wanted_list_update", handle);
+        const onUpdate = (e: Event) => {
+            const data = (e as CustomEvent).detail as WantedUser[] | undefined;
+            if (!Array.isArray(data)) return;
+            setWantedUsers(
+                data.map((u) => ({
+                    ...u,
+                    // normalize charges to string[]
+                    charges: Array.isArray(u.charges)
+                        ? u.charges
+                        : typeof u.charges === "string" && u.charges.length
+                        ? u.charges
+                              .split("|")
+                              .map((s) => s.trim())
+                              .filter(Boolean)
+                        : [],
+                }))
+            );
+        };
+        window.addEventListener(
+            "wanted_list_update",
+            onUpdate as EventListener
+        );
+        return () =>
+            window.removeEventListener(
+                "wanted_list_update",
+                onUpdate as EventListener
+            );
     }, []);
 
     const clampToViewport = (x: number, y: number) => {
@@ -88,7 +122,7 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
         };
     };
 
-    // drag mouse/touch
+    // drag (mouse)
     const startDragMouse = (e: React.MouseEvent) => {
         dragging.current = true;
         dragOffset.current = {
@@ -110,9 +144,12 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
         if (!dragging.current) return;
         dragging.current = false;
         document.body.style.userSelect = "";
-        localStorage.setItem(POS_KEY, JSON.stringify(position));
+        try {
+            localStorage.setItem(POS_KEY, JSON.stringify(position));
+        } catch {}
     };
 
+    // drag (touch)
     const startDragTouch = (e: React.TouchEvent) => {
         const t = e.touches[0];
         dragging.current = true;
@@ -136,10 +173,12 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
         if (!dragging.current) return;
         dragging.current = false;
         document.body.style.userSelect = "";
-        localStorage.setItem(POS_KEY, JSON.stringify(position));
+        try {
+            localStorage.setItem(POS_KEY, JSON.stringify(position));
+        } catch {}
     };
 
-    // resize mouse/touch
+    // resize
     const startResizeMouse = (e: React.MouseEvent) => {
         e.stopPropagation();
         resizing.current = true;
@@ -176,10 +215,12 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
         if (!resizing.current) return;
         resizing.current = false;
         document.body.style.userSelect = "";
-        localStorage.setItem(SIZE_KEY, JSON.stringify(size));
+        try {
+            localStorage.setItem(SIZE_KEY, JSON.stringify(size));
+        } catch {}
     };
 
-    // global listeners
+    // global listeners (drag/resize)
     useEffect(() => {
         const mm = (e: MouseEvent) => {
             onMouseMove(e);
@@ -212,6 +253,8 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
         };
     }, [position, size]);
 
+    const handleClose = () => setClosing(true);
+
     const renderStars = (level: number) => (
         <div
             className="wanted-stars"
@@ -230,6 +273,26 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
             ))}
         </div>
     );
+
+    const renderCharges = (charges: ChargesValue) => {
+        const list = Array.isArray(charges)
+            ? charges
+            : (charges || "")
+                  .split("|")
+                  .map((s) => s.trim())
+                  .filter(Boolean);
+
+        if (list.length === 0)
+            return <div className="charges charges--empty">No charges</div>;
+
+        return (
+            <ul className="charges">
+                {list.map((c, i) => (
+                    <li key={i}>{c}</li>
+                ))}
+            </ul>
+        );
+    };
 
     return (
         <div
@@ -252,7 +315,11 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
                 onTouchStart={startDragTouch}
             >
                 <span>Wanted List</span>
-                <button onClick={handleClose} className="close-button">
+                <button
+                    onClick={handleClose}
+                    className="close-button"
+                    aria-label="Close"
+                >
                     ✖
                 </button>
             </div>
@@ -270,7 +337,6 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
                     </div>
                 ) : (
                     wantedUsers.map((u, idx) => {
-                        // rotating accent color (stable per index)
                         const hue = (idx * 47) % 360;
                         const accent = `hsl(${hue} 70% 46%)`;
                         return (
@@ -287,7 +353,7 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
                                 </div>
                                 <div className="wanted-info">
                                     <div className="username">{u.username}</div>
-                                    <div className="charges">{u.charges}</div>
+                                    {renderCharges(u.charges)}
                                     {renderStars(u.wantedLevel)}
                                 </div>
                             </div>

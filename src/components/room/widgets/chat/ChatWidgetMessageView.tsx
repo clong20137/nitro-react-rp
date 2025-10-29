@@ -8,12 +8,14 @@ interface ChatWidgetMessageViewProps {
     bubbleWidth?: number;
 }
 
+const NAME_ICON_BASE = "/assets/nameicons"; // serve your icons here
+
 export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
     props
 ) => {
     const {
-        chat = null,
-        makeRoom = null,
+        chat,
+        makeRoom,
         bubbleWidth = RoomChatSettings.CHAT_BUBBLE_WIDTH_NORMAL,
     } = props;
     const [isVisible, setIsVisible] = useState(false);
@@ -37,22 +39,22 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
         chat.formattedText?.endsWith("*");
 
     useEffect(() => {
-        const element = elementRef.current;
-        if (!element) return;
+        const el = elementRef.current;
+        if (!el) return;
 
-        const width = element.offsetWidth;
-        const height = element.offsetHeight;
+        const width = el.offsetWidth;
+        const height = el.offsetHeight;
 
         chat.width = width;
         chat.height = height;
-        chat.elementRef = element;
+        chat.elementRef = el;
 
         let left = chat.left;
         let top = chat.top;
 
         if (!left && !top) {
             left = chat.location.x - width / 2;
-            top = element.parentElement.offsetHeight - height;
+            top = el.parentElement.offsetHeight - height;
             chat.left = left;
             chat.top = top;
         }
@@ -69,7 +71,13 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
 
     useEffect(() => setIsVisible(chat.visible), [chat.visible]);
 
-    const bubbleStyleId = isRoleplay ? 4 : chat.styleId; // Use blue bubble for RP
+    const bubbleStyleId = isRoleplay ? 4 : chat.styleId;
+
+    // Build name-icon URL if enabled
+    const nameIconUrl =
+        chat.showNameIcon && chat.nameIconKey
+            ? `${NAME_ICON_BASE}/${chat.nameIconKey}.png`
+            : null;
 
     return (
         <div
@@ -91,18 +99,20 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
                     style={{ backgroundColor: chat.color }}
                 />
             )}
+
             <div
                 className={`chat-bubble bubble-${bubbleStyleId} type-${chat.type}`}
                 style={{ maxWidth: getBubbleWidth }}
             >
                 <div className="user-container">
-                    {chat.imageUrl && chat.imageUrl.length > 0 && (
+                    {chat.imageUrl && (
                         <div
                             className="user-image"
                             style={{ backgroundImage: `url(${chat.imageUrl})` }}
                         />
                     )}
                 </div>
+
                 <div className="chat-content">
                     {isRoleplay ? (
                         <span
@@ -115,6 +125,16 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
                         />
                     ) : (
                         <>
+                            {/* NEW: name icon before username */}
+                            {nameIconUrl && (
+                                <img
+                                    className="name-icon"
+                                    src={nameIconUrl}
+                                    alt=""
+                                    aria-hidden="true"
+                                    draggable={false}
+                                />
+                            )}
                             <b
                                 className="username mr-1"
                                 dangerouslySetInnerHTML={{
@@ -130,6 +150,7 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
                         </>
                     )}
                 </div>
+
                 <div className="pointer" />
             </div>
         </div>

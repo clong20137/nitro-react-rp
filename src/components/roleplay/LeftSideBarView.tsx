@@ -1,11 +1,4 @@
-import {
-    FC,
-    useEffect,
-    useRef,
-    useState,
-    MutableRefObject,
-    useLayoutEffect,
-} from "react";
+import { FC, useEffect, useState } from "react";
 import { GetSessionDataManager, SendMessageComposer } from "../../api";
 
 import { CreateGangView } from "../roleplay/CreateGangView";
@@ -23,7 +16,7 @@ import { GetCorporationsComposer } from "@nitrots/nitro-renderer/src/nitro/commu
 
 import "./LeftSideBarView.scss";
 
-/** (optional) onboarding anchors omitted for brevity **/
+type GangMode = "none" | "loading" | "create" | "details";
 
 export const LeftSidebarView: FC = () => {
     const [showInventory, setShowInventory] = useState(false);
@@ -32,9 +25,7 @@ export const LeftSidebarView: FC = () => {
     const [showCorporations, setShowCorporations] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [isGangChatEnabled, setIsGangChatEnabled] = useState(false);
-    const [gangMode, setGangMode] = useState<"none" | "create" | "details">(
-        "none"
-    );
+    const [gangMode, setGangMode] = useState<GangMode>("none");
     const [showMacros, setShowMacros] = useState(false);
 
     const userId = GetSessionDataManager().userId;
@@ -59,9 +50,21 @@ export const LeftSidebarView: FC = () => {
     useEffect(() => {
         const handleCreate = () => setGangMode("create");
         const handleDetail = () => setGangMode("details");
-        const handleGangStatus = (event: CustomEvent) => {
-            const isInGang = (event.detail as any)?.inGang;
-            setGangMode(isInGang ? "details" : "create");
+
+        const decideFromPayload = (detail: any): boolean => {
+            if (!detail) return false;
+            // accept multiple shapes
+            if (typeof detail.inGang === "boolean") return detail.inGang;
+            if (typeof detail.isInGang === "boolean") return detail.isInGang;
+            if (detail.gangId) return true;
+            if (detail.gangName) return true;
+            return false;
+        };
+
+        const handleGangStatus = (event: Event) => {
+            const detail = (event as CustomEvent).detail as any;
+            const inGang = decideFromPayload(detail);
+            setGangMode(inGang ? "details" : "create");
         };
 
         window.addEventListener("open-create-gang", handleCreate);
@@ -69,6 +72,27 @@ export const LeftSidebarView: FC = () => {
         window.addEventListener(
             "gang_status_result",
             handleGangStatus as EventListener
+        );
+        window.addEventListener(
+            "gang_status_received",
+            handleGangStatus as EventListener
+        );
+
+        // after create / edit / delete, some stacks fire these bridge events
+        const refreshOnBridge = () => {
+            // request status again
+            try {
+                SendMessageComposer(new CheckGangStatusComposer());
+            } catch {}
+            window.dispatchEvent(new CustomEvent("request_gang_status"));
+        };
+        window.addEventListener(
+            "request_gang_refresh",
+            refreshOnBridge as EventListener
+        );
+        window.addEventListener(
+            "gang_changed",
+            refreshOnBridge as EventListener
         );
 
         return () => {
@@ -78,10 +102,23 @@ export const LeftSidebarView: FC = () => {
                 "gang_status_result",
                 handleGangStatus as EventListener
             );
+            window.removeEventListener(
+                "gang_status_received",
+                handleGangStatus as EventListener
+            );
+            window.removeEventListener(
+                "request_gang_refresh",
+                refreshOnBridge as EventListener
+            );
+            window.removeEventListener(
+                "gang_changed",
+                refreshOnBridge as EventListener
+            );
         };
     }, []);
 
     const onClickInventory = () => setShowInventory((p) => !p);
+
     const onClickWanted = () => {
         setShowWantedList((prev) => {
             const next = !prev;
@@ -89,6 +126,7 @@ export const LeftSidebarView: FC = () => {
             return next;
         });
     };
+
     const onClickCorporations = () => {
         setShowCorporations((prev) => {
             const next = !prev;
@@ -96,13 +134,24 @@ export const LeftSidebarView: FC = () => {
             return next;
         });
     };
-    const onClickGangs = () => {
-        setGangMode((m) =>
-            m !== "none"
-                ? "none"
-                : (SendMessageComposer(new CheckGangStatusComposer()), m)
-        );
+
+    const askGangStatus = () => {
+        try {
+            SendMessageComposer(new CheckGangStatusComposer());
+        } catch {}
+        // for older bridges
+        window.dispatchEvent(new CustomEvent("request_gang_status"));
     };
+
+    const onClickGangs = () => {
+        setGangMode((m) => {
+            if (m !== "none") return "none"; // close any open gang UI
+            // open flow → show small loading shim then decide
+            askGangStatus();
+            return "loading";
+        });
+    };
+
     const onClickGangChatToggle = () => {
         setIsGangChatEnabled((prev) => {
             const next = !prev;
@@ -113,6 +162,7 @@ export const LeftSidebarView: FC = () => {
             return next;
         });
     };
+
     const onClickMacros = () => setShowMacros((p) => !p);
 
     return (
@@ -124,7 +174,6 @@ export const LeftSidebarView: FC = () => {
                     }`}
                 >
                     <div className="left-sidebar">
-                        {/* Integrated toggle that flips left/right via CSS */}
                         <div
                             className="left-sidebar__toggle"
                             role="button"
@@ -136,7 +185,6 @@ export const LeftSidebarView: FC = () => {
                             onClick={() => setSidebarOpen(!sidebarOpen)}
                         />
 
-                        {/* Stack of pills */}
                         <div
                             className="sidebar-chip chip-inventory"
                             data-tip="Inventory"
@@ -214,12 +262,34 @@ export const LeftSidebarView: FC = () => {
                     currentUserId={userId}
                 />
             )}
+
+            {gangMode === "loading" && (
+                // tiny shim to avoid flicker while we wait for status
+                <div
+                    style={{
+                        position: "fixed",
+                        left: "50%",
+                        top: "50%",
+                        transform: "translate(-50%, -50%)",
+                        zIndex: 2500,
+                        padding: 12,
+                        background: "rgba(0,0,0,.6)",
+                        color: "#fff",
+                        borderRadius: 6,
+                        fontFamily: "var(--font, sans-serif)",
+                    }}
+                >
+                    Checking gang status…
+                </div>
+            )}
+
             {gangMode === "create" && (
                 <CreateGangView onClose={() => setGangMode("none")} />
             )}
             {gangMode === "details" && (
                 <GangsDetailView onClose={() => setGangMode("none")} />
             )}
+
             {showMacros && <MacroView onClose={() => setShowMacros(false)} />}
         </>
     );

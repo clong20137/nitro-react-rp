@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useState, useRef } from "react";
 import { SettingsView } from "../roleplay/SettingsView";
 import {
     SendMessageComposer,
@@ -8,6 +8,10 @@ import {
 import { StartWorkComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/StartWorkComposer";
 import { PassiveModeComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PassiveModeComposer";
 import { CallPoliceComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CallPoliceComposer";
+import { RenameVirtualRoomComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/RenameVirtualRoomComposer";
+
+// ✨ NEW: Diamonds Store modal
+import { DiamondsStoreView } from "../roleplay/DiamondsStoreView";
 
 type VRoomDetail = {
     virtualRoomId: number;
@@ -37,14 +41,25 @@ export const RightSideView: FC<{}> = () => {
     const [virtualName, setVirtualName] = useState("Loading…");
     const [virtualId, setVirtualId] = useState<number>(0);
     const [virtualType, setVirtualType] = useState<string>("default");
+
     const [credits, setCredits] = useState<number>(0);
+    // ✨ Diamonds balance
+    const [diamonds, setDiamonds] = useState<number>(0);
+
     const [showSettings, setShowSettings] = useState(false);
+    // ✨ Diamonds store modal flag
+    const [showDiamonds, setShowDiamonds] = useState(false);
 
     const [working, setWorking] = useState(false);
     const [passive, setPassive] = useState(false);
     const [cooldown, setCooldown] = useState(0);
     const [showCall, setShowCall] = useState(false);
     const [callMsg, setCallMsg] = useState("");
+
+    // ✨ inline edit state
+    const [editingName, setEditingName] = useState(false);
+    const [draftName, setDraftName] = useState("");
+    const nameInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const handleVRoomInfo = (e: any) => {
@@ -77,11 +92,24 @@ export const RightSideView: FC<{}> = () => {
                 setCredits(Number(e.detail.amount) || 0);
         };
 
+        // ✨ diamonds balance updates
+        const handleDiamondUpdate = (e: any) => {
+            if (e?.detail?.amount != null)
+                setDiamonds(Number(e.detail.amount) || 0);
+        };
+
         const onWork = (e: any) => setWorking(!!e?.detail?.isWorking);
+
+        // Optional: initial read if your session manager exposes diamonds
+        try {
+            const sd = GetSessionDataManager() as any;
+            if (sd?.diamonds != null) setDiamonds(Number(sd.diamonds) || 0);
+        } catch (_) {}
 
         window.addEventListener("virtual_room_info_update", handleVRoomInfo);
         window.addEventListener("time_of_day_update", handleTimeOfDay);
         window.addEventListener("credit_balance_update", handleCreditUpdate);
+        window.addEventListener("diamond_balance_update", handleDiamondUpdate);
         window.addEventListener("work_status_update", onWork as EventListener);
 
         return () => {
@@ -93,6 +121,10 @@ export const RightSideView: FC<{}> = () => {
             window.removeEventListener(
                 "credit_balance_update",
                 handleCreditUpdate
+            );
+            window.removeEventListener(
+                "diamond_balance_update",
+                handleDiamondUpdate
             );
             window.removeEventListener(
                 "work_status_update",
@@ -128,6 +160,36 @@ export const RightSideView: FC<{}> = () => {
         setCooldown(30);
     };
 
+    // ✨ start editing on double-click
+    const startEditName = () => {
+        setDraftName(virtualName);
+        setEditingName(true);
+        setTimeout(() => nameInputRef.current?.focus(), 0);
+    };
+
+    // ✨ commit/cancel helpers
+    const commitName = () => {
+        const next = draftName.trim();
+        if (!next || next === virtualName) {
+            setEditingName(false);
+            return;
+        }
+        // optimistic UI
+        setVirtualName(next);
+        setEditingName(false);
+        // send packet
+        SendMessageComposer(new RenameVirtualRoomComposer(virtualId, next));
+        // optional toast
+        window.dispatchEvent(
+            new CustomEvent("nitro_alert", { detail: "Location name updated." })
+        );
+    };
+
+    const cancelEdit = () => {
+        setEditingName(false);
+        setDraftName(virtualName);
+    };
+
     return (
         <div className={`nitro-right-compact phase-${phase.toLowerCase()}`}>
             {/* top mini bar */}
@@ -136,8 +198,22 @@ export const RightSideView: FC<{}> = () => {
                     <i className="ico ico-time" /> {gameTime}
                 </div>
 
-                <div className="chip has-tip" data-tip="Your Credits">
+                <div className="chip has-tip" data-tip="Your Coins">
                     <i className="ico ico-coin" /> {credits}
+                </div>
+
+                {/* ✨ Diamonds chip (between Coins and Settings) — opens store */}
+                <div
+                    className="chip has-tip"
+                    data-tip="Diamonds"
+                    onClick={() => setShowDiamonds(true)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) =>
+                        e.key === "Enter" ? setShowDiamonds(true) : null
+                    }
+                >
+                    <i className="ico ico-diamond" /> {diamonds}
                 </div>
 
                 <div className="chip chip--icon has-tip" data-tip="Settings">
@@ -157,11 +233,42 @@ export const RightSideView: FC<{}> = () => {
                         data-tip="Current Room"
                     >
                         <i className="ico ico-zone" />
-                        <span className="rs-title-text">
-                            {virtualId
-                                ? `[${virtualId}] - ${virtualName}`
-                                : virtualName}
-                        </span>
+                        {/* ✨ editable title */}
+                        {!editingName ? (
+                            <span
+                                className="rs-title-text"
+                                onDoubleClick={startEditName}
+                                style={{ cursor: "text" }}
+                                title="Double-click to rename"
+                            >
+                                {virtualId
+                                    ? `[${virtualId}] - ${virtualName}`
+                                    : virtualName}
+                            </span>
+                        ) : (
+                            <input
+                                ref={nameInputRef}
+                                className="rs-title-input"
+                                value={draftName}
+                                onChange={(e) => setDraftName(e.target.value)}
+                                onBlur={commitName}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") commitName();
+                                    if (e.key === "Escape") cancelEdit();
+                                }}
+                                maxLength={32}
+                                aria-label="Edit location name"
+                                style={{
+                                    font: "inherit",
+                                    color: "inherit",
+                                    background: "transparent",
+                                    border: "1px dashed rgba(0,0,0,.25)",
+                                    padding: "2px 4px",
+                                    borderRadius: 4,
+                                    minWidth: 80,
+                                }}
+                            />
+                        )}
                     </div>
                 </div>
 
@@ -189,6 +296,19 @@ export const RightSideView: FC<{}> = () => {
 
             {showSettings && (
                 <SettingsView onClose={() => setShowSettings(false)} />
+            )}
+
+            {/* ✨ Diamonds Store modal */}
+            {showDiamonds && (
+                <DiamondsStoreView
+                    onClose={() => setShowDiamonds(false)}
+                    initial={{
+                        x: Math.max(20, window.innerWidth - 460),
+                        y: 90,
+                    }}
+                    width={420}
+                    height={560}
+                />
             )}
         </div>
     );

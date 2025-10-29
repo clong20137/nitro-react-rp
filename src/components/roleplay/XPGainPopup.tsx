@@ -14,19 +14,25 @@ type Props = {
     onDone?: () => void;
 };
 
+type Particle = {
+    id: number;
+    style: React.CSSProperties;
+};
+
 export const XPGainPopup: FC<Props> = ({
     amount,
     percent,
     gained,
     needed,
-    durationMs = 5000,
+    durationMs = 6000,
     figure = GetSessionDataManager()?.figure ?? "",
     onDone,
 }) => {
     const [visible, setVisible] = useState(true);
+    const [particles, setParticles] = useState<Particle[]>([]);
     const rootRef = useRef<HTMLDivElement | null>(null);
 
-    // ring math
+    // --- progress math for ring ---
     const size = 58;
     const stroke = 6;
     const r = (size - stroke) / 2;
@@ -39,14 +45,15 @@ export const XPGainPopup: FC<Props> = ({
             typeof gained === "number" &&
             typeof needed === "number" &&
             needed > 0
-        )
+        ) {
             return Math.max(0, Math.min(1, gained / needed));
+        }
         return 0.6;
     }, [percent, gained, needed]);
 
     const [dashOffset, setDashOffset] = useState(c);
 
-    // animate ring
+    // Animate ring on mount / when progress changes
     useEffect(() => {
         const raf = requestAnimationFrame(() =>
             setDashOffset(c * (1 - progress))
@@ -54,20 +61,59 @@ export const XPGainPopup: FC<Props> = ({
         return () => cancelAnimationFrame(raf);
     }, [c, progress]);
 
-    // unmount only after fade animation ends
+    // Spawn a burst of particles on mount
+    useEffect(() => {
+        const COUNT = 10; // tweak for more/less sparks
+        const list: Particle[] = [];
+        for (let i = 0; i < COUNT; i++) {
+            const ang = Math.random() * Math.PI * 2;
+            const dist = 28 + Math.random() * 26; // px
+            const tx = Math.cos(ang) * dist;
+            const ty = -Math.abs(Math.sin(ang) * dist); // bias upward
+            const delay = Math.random() * 180; // ms
+            const scale = 0.7 + Math.random() * 0.8;
+
+            list.push({
+                id: i,
+                style: {
+                    // CSS custom props used by the keyframes
+                    // @ts-ignore
+                    "--tx": `${tx}px`,
+                    "--ty": `${ty}px`,
+                    "--p-delay": `${delay}ms`,
+                    "--p-scale": scale,
+                    left: "50%",
+                    top: "50%",
+                } as React.CSSProperties,
+            });
+        }
+        setParticles(list);
+    }, []);
+
+    // End-of-life: listen for the container animation and also set a fallback timeout
     useEffect(() => {
         const el = rootRef.current;
         if (!el) return;
-        const onEnd = (e: AnimationEvent) => {
-            if (e.animationName === "xp-float") {
-                // our fade/float animation
-                setVisible(false);
-                onDone?.();
-            }
+
+        const done = () => {
+            setVisible(false);
+            onDone?.();
         };
+
+        const onEnd = (e: AnimationEvent) => {
+            if (e.animationName === "xp-float") done();
+        };
+
         el.addEventListener("animationend", onEnd as any);
-        return () => el.removeEventListener("animationend", onEnd as any);
-    }, [onDone]);
+
+        // Fallback in case animationend doesn’t fire (tab hidden, etc.)
+        const t = window.setTimeout(done, durationMs + 150);
+
+        return () => {
+            el.removeEventListener("animationend", onEnd as any);
+            clearTimeout(t);
+        };
+    }, [durationMs, onDone]);
 
     if (!visible) return null;
 
@@ -77,7 +123,7 @@ export const XPGainPopup: FC<Props> = ({
             className="xp-gain-popup"
             role="status"
             aria-live="polite"
-            style={{ ["--xp-duration" as any]: `${durationMs}ms` }} // pass duration to CSS
+            style={{ ["--xp-duration" as any]: `${durationMs}ms` }}
         >
             <div className="xp-ring">
                 <svg
@@ -119,6 +165,11 @@ export const XPGainPopup: FC<Props> = ({
                 <div className="xp-avatar">
                     <LayoutAvatarImageView figure={figure} direction={2} />
                 </div>
+
+                {/* sparkle burst */}
+                {particles.map((p) => (
+                    <span className="particle" key={p.id} style={p.style} />
+                ))}
             </div>
 
             <div className="xp-meta">
@@ -127,3 +178,5 @@ export const XPGainPopup: FC<Props> = ({
         </div>
     );
 };
+
+export default XPGainPopup;

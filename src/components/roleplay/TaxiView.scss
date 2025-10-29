@@ -1,74 +1,358 @@
+.taxi-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .35);
+    z-index: 999;
+}
+
+/* Window */
 .taxi-view {
-    background: #f2f2f2;
-    border: 2px solid #222;
-    padding: 16px;
-    width: 300px;
-    border-radius: 8px;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-    z-index: 100;
+    position: fixed;
+    z-index: 1000;
+    width: 720px;
+    max-height: 78vh;
+    background: rgba(24, 24, 24, .88);
+    border: 2px solid #ffffff;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: taxiPop 180ms cubic-bezier(.2, .8, .2, 1);
 
-    .taxi-header {
+    &.enter {
+        opacity: 1;
+    }
+}
+
+@keyframes taxiPop {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -52%) scale(.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* Header (draggable) */
+.taxi-header {
+    background: linear-gradient(180deg, #426e8f, #426e8f 50%, #5682a2 0, #5682a2);
+    color: #fff;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    cursor: move;
+    /* visual hint */
+    user-select: none;
+
+    .title {
+        font-weight: 800;
+        letter-spacing: .2px;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
+    }
+
+    .header-actions {
+        margin-left: auto;
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        margin-bottom: 12px;
+        gap: 6px;
 
-        h3 {
-            margin: 0;
+        .toggle {
+            appearance: none;
+            border: 2px solid #2b5070;
+            background: #355f83;
+            color: #fff;
+            width: 28px;
+            height: 26px;
+            line-height: 22px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .25);
+            transition: transform .08s ease, filter .08s ease, background .12s ease;
+
+            &.active {
+                background: #2f5677;
+                border-color: #284b67;
+            }
+
+            &:hover {
+                filter: brightness(1.06);
+            }
+
+            &:active {
+                transform: translateY(1px);
+            }
         }
 
-        .close-button {
-            background: none;
-            border: none;
-            font-size: 18px;
+        .close {
+            appearance: none;
+            border: 2px solid #4b0f0f;
+            background: #c43c3c;
+            color: #fff;
+            font-weight: 900;
+            width: 28px;
+            height: 26px;
+            line-height: 20px;
+            border-radius: 6px;
             cursor: pointer;
+            box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .25);
+            transition: transform .08s ease, filter .08s ease;
+
+            &:hover {
+                filter: brightness(1.05);
+            }
+
+            &:active {
+                transform: translateY(1px);
+            }
+        }
+    }
+}
+
+/* Toolbar */
+.taxi-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(24, 24, 24, .95);
+    padding: 10px 12px;
+    border-bottom: 1px solid #585858;
+
+    .search {
+        flex: 1;
+        background: #fff8e1;
+        border: 2px solid #8b5c28;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-weight: 600;
+        outline: none;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6);
+
+        &:focus {
+            border-color: #6f451c;
+            background: #fff3c4;
         }
     }
 
-    .taxi-destinations {
-        max-height: 200px;
-        overflow-y: auto;
+    .count {
+        padding: 4px 8px;
+        background: #d4b373;
+        border: 2px solid #8b5c28;
+        border-radius: 8px;
+        font-weight: 800;
+        color: #fff;
+    }
+}
 
-        .taxi-destination {
-            padding: 10px;
-            border: 1px solid #ccc;
-            margin-bottom: 8px;
-            border-radius: 4px;
-            cursor: pointer;
+/* Body */
+.taxi-body {
+    padding: 12px;
+    overflow: auto;
+    flex: 1;
 
-            &.selected {
-                background: #ffd84c;
-            }
+    .empty {
+        text-align: center;
+        padding: 24px 8px;
+        font-weight: 700;
+        color: #e4d1a6;
+    }
+}
 
-            p {
-                margin: 4px 0 0;
-                font-size: 12px;
-                color: #555;
-            }
+/* Grid view */
+.taxi-grid {
+    --tile-size: 160px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--tile-size), 1fr));
+    gap: 12px;
+}
+
+.tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    border: 1px solid #585858;
+    border-radius: 10px;
+    background: rgba(24, 24, 24, .95);
+    cursor: pointer;
+    overflow: hidden;
+    text-align: left;
+    transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+
+    &:hover,
+    &:focus-visible {
+        transform: translateY(-2px);
+        border-color: #d4b373;
+        box-shadow: 0 2px 0 rgba(0, 0, 0, .25);
+        outline: none;
+    }
+
+    .thumbWrap {
+        position: relative;
+        width: 100%;
+        padding-top: 62%;
+        /* 16:10-ish */
+        background: linear-gradient(135deg, #272727, #1a1a1a);
+        overflow: hidden;
+
+        .thumb {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(100%);
+            transform: scale(1.02);
+            transition: filter .18s ease, transform .18s ease;
+        }
+
+        /* Fallback: initials slate */
+        &.thumb-fallback::after {
+            content: attr(data-initials);
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            font-weight: 900;
+            font-size: 32px;
+            color: #f0e7cf;
+            background:
+                radial-gradient(120px 80px at 20% 10%, #2e2e2e, transparent),
+                radial-gradient(160px 100px at 80% 90%, #3a3a3a, transparent),
+                linear-gradient(180deg, #2a2a2a, #222);
+            letter-spacing: 1px;
         }
     }
 
-    .taxi-actions {
-        margin-top: 12px;
+    &:hover .thumbWrap .thumb,
+    &:focus-visible .thumbWrap .thumb {
+        filter: grayscale(0%);
+        transform: scale(1.04);
+    }
+
+    .label {
         display: flex;
-        justify-content: flex-end;
+        flex-direction: column;
+        gap: 4px;
+        padding: 10px 10px 12px;
+        background: rgba(24, 24, 24, .9);
 
-        button {
-            background-color: #4caf50;
-            color: white;
-            padding: 6px 14px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+        .name {
+            font-weight: 800;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
-            &:disabled {
-                background-color: #aaa;
-                cursor: not-allowed;
+        .meta {
+            font-size: 12px;
+            color: #cfcfcf;
+        }
+    }
+}
+
+/* List view (kept from your version) */
+.taxi-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    .taxi-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 10px;
+        margin-bottom: 8px;
+        background: rgba(24, 24, 24, .95);
+        border: 1px solid #585858;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: transform .08s ease, box-shadow .08s ease, background .12s ease;
+
+        &:hover {
+            background: rgba(24, 24, 24, .80);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, .25);
+            transform: translateY(-1px);
+        }
+
+        &:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        .row-left {
+            min-width: 0;
+
+            .name {
+                font-weight: 800;
+                color: #ffffff;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 320px;
+            }
+
+            .meta {
+                font-size: 12px;
+                color: #cfcfcf;
+                margin-top: 2px;
             }
         }
+
+        .row-right .call-btn {
+            appearance: none;
+            background: #f6c600;
+            border: 2px solid #c39e09;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-weight: 800;
+            color: #fff;
+            cursor: pointer;
+            box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .2);
+            transition: transform .08s ease, filter .08s ease;
+
+            &:hover {
+                filter: brightness(1.04);
+            }
+
+            &:active {
+                transform: translateY(1px);
+            }
+        }
+    }
+}
+
+/* Footer */
+.taxi-footer {
+    padding: 8px 12px 12px;
+    border-top: 1px solid #bda76d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .hint {
+        font-size: 12px;
+        color: #e4d1a6;
+    }
+}
+
+/* Responsive */
+@media (max-width: 780px) {
+    .taxi-view {
+        width: calc(100vw - 24px);
+        max-height: 80vh;
+    }
+
+    .taxi-grid {
+        --tile-size: 140px;
+    }
+
+    .taxi-list .taxi-row .row-left .name {
+        max-width: 220px;
     }
 }

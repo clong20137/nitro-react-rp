@@ -1,7 +1,7 @@
 /* ===== Theme bits ===== */
 $bg: #dedede;
 $border: #222;
-$header-grad: linear-gradient(180deg,#426e8f,#426e8f 50%,#5682a2 0,#5682a2);
+$header-grad: linear-gradient(180deg, #426e8f, #426e8f 50%, #5682a2 0, #5682a2);
 $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 
 /* ===== Container ===== */
@@ -66,26 +66,30 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 
 /* updated close button */
 .close-button {
-    width: 22px;
-    height: 22px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-
-    cursor: pointer;
-    color: #fff;
-    line-height: 1;
-    border-radius: 4px;
-    /* squared */
-    box-shadow: 0 0 0 1.6px #fff;
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
     border: 2px solid #921911;
     background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
-    transition: filter .2s ease, transform .2s ease;
+    border-radius: 4px;
+    box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
+    cursor: pointer;
+    padding: 0;
 
-    &:hover {
-        filter: brightness(1.05);
-        transform: scale(1.05);
+
+    &:before,
+    &:after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 12px;
+        height: 2px;
+        background: #fff;
+        border-radius: 1px;
+        transform-origin: center;
     }
 }
 

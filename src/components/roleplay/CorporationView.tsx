@@ -1,6 +1,5 @@
 import { FC, useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./CorporationsView.scss";
-
 import { SendMessageComposer } from "../../api";
 
 // GET packets
@@ -94,10 +93,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
 
     const rootRef = useRef<HTMLDivElement | null>(null);
     const headerRef = useRef<HTMLDivElement | null>(null);
-
-    // hover popover for icons
-    const [hoverCorpId, setHoverCorpId] = useState<number | null>(null);
-    const [hoverPos, setHoverPos] = useState<Pos | null>(null);
 
     // helpers
     const getCenteredPosition = (s: { w: number; h: number }): Pos => {
@@ -271,9 +266,8 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                 for (const row of arr) {
                     const id = Number(row.id ?? row.corporationId);
                     if (!id) continue;
-                    const val =
-                        typeof row.stock === "number" ? row.stock : undefined;
-                    if (typeof val === "number") patchMap.set(id, val);
+                    if (typeof row.stock === "number")
+                        patchMap.set(id, row.stock);
                 }
                 if (!patchMap.size) return prev;
                 let changed = false;
@@ -547,12 +541,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
     })();
     const canManage = isStaff || userIsManagerInCorp;
 
-    // popover content
-    const hoveredCorp =
-        hoverCorpId != null
-            ? corporations.find((c) => c.id === hoverCorpId)
-            : undefined;
-
     return (
         <>
             <div
@@ -571,12 +559,13 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                 role="dialog"
                 aria-modal="true"
             >
+                {/* HEADER */}
                 <div
                     ref={headerRef}
                     className="corporations-header"
                     aria-grabbed={dragging}
                 >
-                    <span>Corporations</span>
+                    <div className="title">Corporations</div>
                     <button
                         className="close-button"
                         onClick={handleClose}
@@ -586,8 +575,9 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                     </button>
                 </div>
 
+                {/* BODY */}
                 <div className="corporations-body">
-                    {/* LEFT: icon grid */}
+                    {/* LEFT: icon rail */}
                     <div className="corporations-list">
                         <div
                             className="corp-icons"
@@ -620,38 +610,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                                             onClick={() =>
                                                 handleSelectCorp(corp.id)
                                             }
-                                            onMouseEnter={(e) => {
-                                                setHoverCorpId(corp.id);
-                                                setHoverPos({
-                                                    x: e.clientX,
-                                                    y: e.clientY,
-                                                });
-                                            }}
-                                            onMouseMove={(e) => {
-                                                if (hoverCorpId === corp.id)
-                                                    setHoverPos({
-                                                        x: e.clientX,
-                                                        y: e.clientY,
-                                                    });
-                                            }}
-                                            onMouseLeave={() => {
-                                                setHoverCorpId(null);
-                                                setHoverPos(null);
-                                            }}
-                                            onFocus={(e) => {
-                                                setHoverCorpId(corp.id);
-                                                const r = (
-                                                    e.target as HTMLElement
-                                                ).getBoundingClientRect();
-                                                setHoverPos({
-                                                    x: r.right + 6,
-                                                    y: r.top + 6,
-                                                });
-                                            }}
-                                            onBlur={() => {
-                                                setHoverCorpId(null);
-                                                setHoverPos(null);
-                                            }}
                                             aria-pressed={selected}
                                             aria-label={`${corp.name}${
                                                 typeof stock === "number"
@@ -673,12 +631,29 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                                                     🏢
                                                 </span>
                                             )}
+
                                             <span
                                                 className={`badge ${tone}`}
                                                 aria-hidden="true"
                                             >
                                                 {stock}
                                             </span>
+
+                                            {/* anchored tooltip */}
+                                            <div
+                                                className="corp-tooltip"
+                                                role="tooltip"
+                                            >
+                                                <span className="name">
+                                                    {corp.name}
+                                                </span>
+                                                {typeof corp.stock ===
+                                                    "number" && (
+                                                    <span className="mini-badge">
+                                                        {corp.stock} in stock
+                                                    </span>
+                                                )}
+                                            </div>
                                         </button>
                                     );
                                 })}
@@ -743,27 +718,35 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                                     >
                                         {(currentRanks.length > 0
                                             ? currentRanks
-                                            : sortRanksDesc(
-                                                  Array.from(
+                                            : (() => {
+                                                  const by =
                                                       groupMembersByRankId(
                                                           members
-                                                      ).entries()
-                                                  ).map(([rankId, arr]) => ({
-                                                      rankId,
-                                                      rankName:
-                                                          arr[0]?.rankName ??
-                                                          `Rank ${rankId}`,
-                                                      rankOrder:
-                                                          arr[0]?.rankOrder ??
-                                                          0,
-                                                      pay: arr[0]?.pay,
-                                                  }))
-                                              )
+                                                      );
+                                                  return [...by.entries()]
+                                                      .map(([rankId, arr]) => ({
+                                                          rankId,
+                                                          rankName:
+                                                              arr[0]
+                                                                  ?.rankName ??
+                                                              `Rank ${rankId}`,
+                                                          rankOrder:
+                                                              arr[0]
+                                                                  ?.rankOrder ??
+                                                              0,
+                                                          pay: arr[0]?.pay,
+                                                      }))
+                                                      .sort(
+                                                          (a, b) =>
+                                                              b.rankOrder -
+                                                              a.rankOrder
+                                                      );
+                                              })()
                                         ).map((rank, idx) => {
                                             const mlist =
-                                                groupMembersByRankId(
-                                                    members
-                                                ).get(rank.rankId) || [];
+                                                membersByRank.get(
+                                                    rank.rankId
+                                                ) || [];
                                             return (
                                                 <div
                                                     key={rank.rankId}
@@ -925,32 +908,6 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                         )}
                     </div>
                 </div>
-
-                {/* Hover popover (portal-less, positioned with fixed coords) */}
-                {hoverCorpId != null && hoveredCorp && hoverPos && (
-                    <div
-                        className="corp-popover"
-                        style={{
-                            position: "fixed",
-                            left: Math.min(
-                                window.innerWidth - 240,
-                                hoverPos.x + 14
-                            ),
-                            top: Math.max(8, hoverPos.y + 10),
-                            zIndex: 2000,
-                        }}
-                    >
-                        <div className="name">{hoveredCorp.name}</div>
-                        {hoveredCorp.desc && (
-                            <div className="desc">{hoveredCorp.desc}</div>
-                        )}
-                        <div
-                            className={`badge ${badgeTone(hoveredCorp.stock)}`}
-                        >
-                            {hoveredCorp.stock ?? 0} in stock
-                        </div>
-                    </div>
-                )}
             </div>
         </>
     );

@@ -1,496 +1,189 @@
-/* ===========================
-GangsDetailView.scss (revamp)
-=========================== */
-
-/* ===== Theme ===== */
-$bg: #dfdfdf;
-$bg-soft: #e6e6e6;
 $ink: #000;
-$ink-soft: #222;
-$muted: #8e8d8d;
-$card: #e5e5e5;
-$shadow: 0 2px 6px rgba(0, 0, 0, .45);
-$header-grad: linear-gradient(180deg, #bd9426, #bd9426 52%, #cdb267 0, #cdb267);
 
-/* ===== Container ===== */
-.gangs-detail-view {
-    position: absolute;
-    width: 640px;
-    max-width: 95vw;
-    max-height: 95vh;
-    background: $bg;
-    color: #000;
-    border: 1px solid $ink;
-    border-radius: 6px;
-    box-shadow: $shadow;
+/* ------------------- root container (kept) ------------------- */
+.create-gang-view {
+    transform: translateZ(0);
+    z-index: 9999;
+    max-width: 96vw;
+    max-height: 92vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    resize: both;
-    /* resizable */
-    z-index: 2500;
-    user-select: none;
-
-    &.fade-in {
-        animation: fadeIn .25s ease-out;
-    }
-
-    &.fade-out {
-        animation: fadeOut .25s ease-in forwards;
-    }
-}
-
-/* ===== Header ===== */
-.gangs-header {
-    background: $header-grad;
-    color: #fff;
-    font-weight: 700;
-    height: 34px;
-    /* smaller */
-    padding: 0 8px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-radius: 6px 6px 0 0;
-    cursor: grab;
-}
-
-.gang-name-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-
-    .gang-color-split-box {
-        position: relative;
-        width: 20px;
-        /* smaller colors in header */
-        height: 20px;
-        border: 1px solid $ink;
-        border-radius: 4px;
-        overflow: hidden;
-        display: flex;
-
-        .color-half {
-            flex: 1;
-        }
-
-        .left {
-            border-right: 1px solid $ink;
-        }
-
-        .gang-icon {
-            position: absolute;
-            inset: 0;
-            margin: auto;
-            width: 18px;
-            height: 18px;
-            pointer-events: none;
-            image-rendering: pixelated;
-        }
-    }
-
-    .gang-name-text {
-        font-size: 13px;
-        font-weight: 800;
-        color: #fff;
-        text-shadow: 1px 1px 0 #000;
-    }
-}
-
-/* close button (shared theme) */
-.close-button {
-    width: 18px;
-    height: 18px;
-    display: inline-grid;
-    place-items: center;
-    font-size: 12px;
-    cursor: pointer;
-    color: #fff;
-    line-height: 1;
-    border-radius: 3px;
-    box-shadow: 0 0 0 1.6px #fff;
-    border: 2px solid #921911;
-    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
-    transition: filter .2s ease, transform .2s ease;
-
-    &:hover {
-        filter: brightness(1.05);
-        transform: scale(1.05);
-    }
-}
-
-/* ===== Tabs ===== */
-.gangs-tabs {
-    display: flex;
-    background: linear-gradient(#fff, #dcdcdc);
-    overflow: auto hidden;
-
-    button {
-        flex: 1 0 auto;
-        padding: 6px 10px;
-        background: transparent;
-        border: 0;
-        font-weight: 700;
-        cursor: pointer;
-        color: #000;
-        white-space: nowrap;
-        transition: .2s ease;
-
-        &.active {
-            background: linear-gradient(#fff 0%, #dcdcdc 100%);
-            border: 1px solid #999;
-            border-bottom: none;
-            border-radius: 6px 6px 0 0;
-            font-size: 13px;
-        }
-    }
-}
-
-/* ===== Content ===== */
-.gangs-content {
-    flex: 1;
-    overflow: auto;
-    padding: 10px;
-}
-
-/* =========================================================
-INFO TAB
-========================================================= */
-.info-tab {
-    color: #000;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-
-    .info-section {
-        background: $card;
-        border: 1px solid #c4c4c4;
-        border-radius: 6px;
-        padding: 12px;
-    }
-
-    /* banner */
-    .gang-banner {
-        width: 100%;
-        height: 56px;
-        display: flex;
-        align-items: center;
-        padding: 0 12px;
-        border: 1px solid $ink;
-        background: linear-gradient(90deg, var(--gang-primary, #3498db) 0%, var(--gang-secondary, #e74c3c) 100%);
-
-        .gang-banner-left {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .gang-banner-icon {
-            width: 36px;
-            height: 36px;
-            border: 2px solid $ink;
-            background: #d9c7a0;
-            padding: 2px;
-            image-rendering: pixelated;
-        }
-
-        .gang-banner-text {
-            display: flex;
-            flex-direction: column;
-            line-height: 1.1;
-
-            .gang-banner-name {
-                font-weight: 800;
-                font-size: 16px;
-                color: #fff;
-                text-shadow: 1px 1px 0 #000;
-            }
-
-            .gang-banner-rank {
-                font-size: 12px;
-                color: #f0f0f0;
-                opacity: .9;
-            }
-        }
-    }
-
-    .gang-colors-large {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-
-        .primary-color,
-        .secondary-color {
-            width: 24px;
-            height: 24px;
-            border: 1px solid $ink;
-        }
-
-        .gang-icon-small {
-            width: 20px;
-            height: 20px;
-            image-rendering: pixelated;
-        }
-    }
-
-    .gang-details {
-        .gang-name {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 800;
-        }
-
-        .xp-bar-container {
-            background: #dfdfdf;
-            height: 18px;
-            width: 100%;
-            border: 1px solid #c4c4c4;
-            border-radius: 3px;
-            overflow: hidden;
-            margin-top: 4px;
-
-            .xp-bar-fill {
-                background: linear-gradient(180deg, #2e3546, #2e3546 50%, #1e2433 0, #1e2433);
-                height: 100%;
-                transition: width .3s ease;
-            }
-        }
-
-        .xp-text {
-            font-size: 12px;
-            margin-top: 4px;
-        }
-    }
-
-    .perk-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 60px);
-        gap: 10px;
-
-        .perk-box {
-            width: 60px;
-            height: 60px;
-            background: #dfdfdf;
-            border: 1px solid #888;
-            border-radius: 4px;
-        }
-    }
-
-    .gang-stat {
-        font-size: 14px;
-        margin-bottom: 4px;
-
-        span {
-            font-weight: 800;
-        }
-    }
-}
-
-/* =========================================================
-MANAGE TAB
-========================================================= */
-.gangs-subheader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #cfcfcf;
-    padding: 8px 10px;
-    border: 1px solid $muted;
-    border-radius: 6px;
-
-    .gangs-subheader-title {
-        font-weight: 800;
-        font-size: 16px;
-        color: #000;
-    }
-
-    .gangs-subheader-right {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-}
-
-.gangs-invite-input {
-    padding: 6px 8px;
-    border: 1px solid #999;
-    border-radius: 5px;
-    font-size: 14px;
     background: #fff;
     color: #000;
-}
+    border: 1px solid $ink;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .35), 0 2px 0 rgba(0, 0, 0, .45);
+    overflow: hidden;
 
-/* role badges */
-.role-badges {
-    display: inline-flex;
-    gap: 4px;
+    /* open/close */
+    opacity: 0;
+    transform: scale(.96);
+    transition: opacity .18s ease, transform .18s ease;
 
-    .badge {
-        background: #333;
-        color: #fff;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 800;
-        text-transform: uppercase;
-    }
-
-    .admin {
-        background: #d9534f;
-    }
-
-    .bank {
-        background: #5bc0de;
-    }
-
-    .kick {
-        background: #f0ad4e;
-    }
-
-    .invite {
-        background: #5cb85c;
-    }
-
-    .promote {
-        background: #337ab7;
-    }
-
-    .alert {
-        background: #a94442;
+    &.show {
+        opacity: 1;
+        transform: scale(1);
     }
 }
 
-.rank-toggle-arrow {
-    display: inline-block;
-    transition: transform .2s ease;
+/* drag & resize cursors (kept) */
+.is-dragging {
+    cursor: grabbing !important;
 }
 
-.rank-toggle-arrow.collapsed {
-    transform: rotate(-90deg);
+.is-resizing {
+    cursor: nwse-resize !important;
 }
 
-/* members grid */
-.gang-member-card {
-    width: 90px;
-    /* responsive tile */
-    min-width: 90px;
-    text-align: center;
+/* ------------------- header (kept) ------------------- */
+.create-gang-header {
     display: flex;
-    flex-direction: column;
     align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    font-weight: 700;
+    font-size: 18px;
+    background: linear-gradient(180deg, #426e8f, #426e8f 50%, #5682a2 0, #5682a2);
+    color: #fff;
+    cursor: grab;
 
-    img {
-        width: 48px;
-        height: 48px;
-        margin-bottom: 4px;
-        background: #c3c3c3;
-        border-radius: 4px;
-    }
-
-    span {
-        font-size: 11px;
-        color: #fff;
-    }
-}
-
-/* no-members info */
-.members-info {
-    color: #444;
-    background: #d9d9d9;
-    border: 1px solid #bdbdbd;
-    border-radius: 5px;
-    padding: 10px;
-    width: 100%;
-}
-
-/* =========================================================
-SETTINGS TAB
-========================================================= */
-.settings-tab {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-
-    .settings-row {
+    .header-left {
         display: flex;
-        justify-content: center;
-        gap: 40px;
+        align-items: center;
+        gap: 10px;
+
+        .top-badge {
+            width: 22px;
+            height: 22px;
+            border: 1px solid #000;
+            background: #d9c7a0;
+            image-rendering: pixelated;
+            border-radius: 3px;
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+        }
+
+        .top-badge-icon {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            image-rendering: pixelated;
+            pointer-events: none;
+            filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .15));
+        }
+    }
+}
+
+.c-button.close-button {
+    appearance: none;
+    border: 0;
+    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
+    color: #fff;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 5px;
+    box-shadow: 0 0 0 1.2px #fff, inset 0 1px 0 rgba(255, 255, 255, .35);
+    border: 2px solid #921911;
+    cursor: pointer;
+    transition: transform .08s ease, filter .12s ease;
+
+    &:hover {
+        filter: brightness(1.06);
+    }
+
+    &:active {
+        transform: translateY(1px);
+    }
+}
+
+/* ------------------- body layout ------------------- */
+.create-gang-body-horizontal {
+    display: grid;
+    grid-template-columns: 216px 10px minmax(420px, 1fr) 10px 180px;
+    gap: 0;
+    align-items: stretch;
+    padding: 12px;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+
+    >* {
+        min-width: 0;
+    }
+}
+
+.gang-divider {
+    width: 10px;
+}
+
+.gang-column {
+    min-width: 0;
+}
+
+/* ------------------- LEFT: Name + Icons ------------------- */
+.gang-name-icon {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+
+    label {
+        display: block;
+        font-weight: 700;
+        margin: 6px 0 4px;
+    }
+
+    input[type="text"] {
         width: 100%;
-        flex-wrap: wrap;
-
-        .settings-col {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .settings-col.full {
-            flex: 100%;
-        }
+        padding: 7px 9px;
+        border: 1px solid #c9c9c9;
+        border-radius: 6px;
+        font-size: 14px;
     }
 
-    /* palette */
-    .swatch-grid {
+    .icon-page {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
         display: grid;
-        grid-template-columns: repeat(8, 24px);
-        gap: 6px;
-        max-height: 200px;
-    }
-
-    .swatch {
-        width: 24px;
-        height: 24px;
-        border: 1px solid $ink;
-        cursor: pointer;
-        transition: transform .08s ease, box-shadow .08s ease;
-
-        &.selected {
-            outline: 2px solid #2ecc71;
-        }
-
-        &:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 1px 0 $ink;
-        }
-    }
-
-    .swatch-loading {
-        color: #777;
-        font-size: 12px;
-    }
-
-    /* icon selector */
-    .icon-selector {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(40px, 40px));
-        /* fixed 40px tracks */
-        gap: 8px;
-        justify-content: center;
-        /* center leftover space */
-        margin-top: 6px;
+        grid-template-columns: repeat(3, 56px);
+        grid-auto-rows: 56px;
+        justify-content: space-between;
+        gap: 10px;
+        padding-right: 0;
+        animation: fadeSwap .18s ease;
     }
 
     .icon-option {
         position: relative;
-        width: 40px;
-        height: 40px;
+        width: 56px;
+        height: 56px;
+        margin: 0 auto;
         border: 1px solid $ink;
-        background: #d9c7a0;
+        border-radius: 6px;
+        background: linear-gradient(180deg, hsla(0, 0%, 100%, .18), rgba(0, 0, 0, .08)), #b57f2a;
         display: grid;
         place-items: center;
         cursor: pointer;
-        padding: 2px;
-        transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+        padding: 3px;
+        transition: transform .12s ease, box-shadow .12s ease, filter .12s ease, outline-color .12s ease;
 
         img {
-            width: 32px;
-            height: 32px;
-            image-rendering: pixelated;
+            width: 48px;
+            height: 48px;
+            display: block;
         }
 
         &:hover {
             transform: translateY(-2px);
             box-shadow: 0 2px 0 $ink, 0 6px 10px rgba(0, 0, 0, .25);
+
+            img {
+                animation: wiggle .35s ease-in-out;
+            }
         }
 
         &:active {
@@ -499,89 +192,237 @@ SETTINGS TAB
         }
 
         &.selected {
-            outline: 2px solid #2ecc71;
+            outline: 2px solid rgba(0, 0, 0, .75);
             animation: popIn .14s ease;
         }
+    }
 
-        &.locked {
-            filter: grayscale(90%) brightness(.85);
-            cursor: not-allowed;
-            opacity: .8;
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 8px;
+
+        .habbo-action-button {
+            padding: 4px 10px;
+            border-radius: 6px;
+            transition: transform .08s ease, filter .12s ease, box-shadow .12s ease;
 
             &:hover {
-                transform: none;
+                filter: brightness(1.1);
+                box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
+            }
+
+            &:active {
+                transform: translateY(1px);
                 box-shadow: none;
             }
-
-            &::after {
-                content: "🔒";
-                position: absolute;
-                right: 2px;
-                bottom: 2px;
-                font-size: 12px;
-            }
         }
-
-        .vip-tag {
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            background: linear-gradient(#f7d64a, #e1a90d);
-            color: #222;
-            border: 1px solid $ink;
-            font-size: 9px;
-            padding: 0 3px;
-            border-radius: 3px;
-            font-weight: 700;
-            line-height: 12px;
-        }
-    }
-
-    /* preview */
-    .gang-preview.settings {
-        display: inline-flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-
-        .preview-colors {
-            width: 180px;
-            height: 60px;
-            border: 1px solid $ink;
-            position: relative;
-            overflow: hidden;
-
-            .icon-overlay {
-                position: absolute;
-                inset: 0;
-                margin: auto;
-                width: 44px;
-                height: 44px;
-            }
-        }
-
-        .gang-preview-name {
-            font-weight: 800;
-            margin-top: 4px;
-        }
-    }
-
-    .settings-actions {
-        margin-top: 12px;
-        text-align: center;
-        width: 100%;
     }
 }
 
-/* ===== Buttons (Habbo theme) ===== */
+/* ------------------- MIDDLE: Palettes ------------------- */
+.gang-color-chooser {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    align-items: center;
+}
+
+.palette-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+}
+
+.palette-block {
+    width: min(640px, 100%);
+    background: #f8f8f8;
+    border: 1px solid #e4e4e4;
+    border-radius: 10px;
+    padding: 12px 36px;
+    position: relative;
+}
+
+/* Header text + page count centered */
+.palette-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-weight: 700;
+
+    .page-indicator {
+        font-weight: 700;
+        min-width: 44px;
+        text-align: center;
+    }
+}
+
+/* edge arrows vertically centered */
+.palette-block .pager-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border: 1px solid #000;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    line-height: 1;
+    font-weight: 900;
+    transition: transform .08s ease, filter .12s ease, box-shadow .12s ease;
+
+    &.left {
+        left: 6px;
+    }
+
+    &.right {
+        right: 6px;
+    }
+
+    &:hover {
+        filter: brightness(1.06);
+        box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
+    }
+
+    &:active {
+        transform: translateY(-50%) translateY(1px);
+        box-shadow: none;
+    }
+
+    &:disabled {
+        opacity: .45;
+        cursor: not-allowed;
+        filter: none;
+        box-shadow: none;
+    }
+}
+
+/* 3 rows × 10 columns page, with fade */
+.swatch-page {
+    display: grid;
+    grid-template-columns: repeat(10, 24px);
+    grid-auto-rows: 24px;
+    gap: 8px;
+    justify-content: center;
+    animation: fadeSwap .18s ease;
+}
+
+.swatch {
+    width: 24px;
+    height: 24px;
+    border: 1px solid rgba(0, 0, 0, .25);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: transform .06s ease, box-shadow .06s ease, outline-color .12s ease, filter .12s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 1px 0 $ink;
+        filter: brightness(1.05);
+    }
+
+    &.selected {
+        outline: 2px solid #2ecc71;
+        outline-offset: 1px;
+    }
+}
+
+.swatch-loading {
+    text-align: center;
+    padding: 6px 0;
+    color: #777;
+    font-size: 12px;
+}
+
+/* ------------------- RIGHT: Preview (no shield) ------------------- */
+.gang-preview {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.preview-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #cfcfcf;
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.shield-wrap {
+    flex: 1;
+    min-height: 132px;
+    position: relative;
+    display: grid;
+    place-items: center;
+    transition: background .2s ease;
+
+    .shield-icon {
+        position: relative;
+        width: 48px;
+        height: 48px;
+        image-rendering: pixelated;
+        filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .15));
+        transition: transform .12s ease;
+        object-fit: contain;
+    }
+}
+
+.gang-preview-name {
+    padding: 8px;
+    font-weight: 700;
+    background: #f5f5f5;
+    border-top: 1px solid #e3e3e3;
+    color: #000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ------------------- footer (kept) ------------------- */
+.create-gang-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px 12px 12px;
+    border-top: 1px solid #e7e7e7;
+
+    .habbo-action-button.green {
+        padding: 8px 12px;
+        font-weight: 700;
+        transition: transform .08s ease, filter .12s ease, box-shadow .12s ease;
+
+        &:hover {
+            filter: brightness(1.08);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
+        }
+
+        &:active {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+    }
+}
+
+/* common buttons (kept) */
 .habbo-action-button {
     background-color: #1a1a1a;
     border: 2px solid #000;
     color: #fff;
     font-size: 12px;
     font-weight: 700;
-    padding: 8px 10px;
-    margin: 2px;
+    padding: 6px 10px;
     border-radius: 5px;
     text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
@@ -609,123 +450,687 @@ SETTINGS TAB
             background-color: #003d0b;
         }
     }
+}
 
-    &.red {
-        background-color: #aa1c1c;
-        border-color: #5a0000;
+/* resize grip (kept) */
+.resize-handle {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 8px, rgba(0, 0, 0, .25) 8px) no-repeat 0 0 / 100% 100%;
+}
 
-        &:hover {
-            background-color: #c52b2b;
+/* ------------------- animations ------------------- */
+@keyframes popIn {
+    from {
+        transform: scale(.92);
+    }
+
+    to {
+        transform: scale(1);
+    }
+}
+
+@keyframes wiggle {
+
+    0%,
+    100% {
+        transform: rotate(0)
+    }
+
+    25% {
+        transform: rotate(2deg)
+    }
+
+    75% {
+        transform: rotate(-2deg)
+    }
+}
+
+@keyframes fadeSwap {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ------------------- responsive tweaks ------------------- */
+@media (max-width: 900px) {
+    .create-gang-body-horizontal {
+        grid-template-columns: 216px 8px minmax(320px, 1fr) 8px 160px;
+    }
+}
+
+@media (max-width: 720px) {
+    .create-gang-body-horizontal {
+        grid-template-columns: 1fr;
+        row-gap: 12px;
+    }
+
+    .gang-divider {
+        display: none;
+    }
+}
+
+@media (max-width: 450px) {
+    .swatch-page {
+        grid-template-columns: repeat(8, 22px);
+        grid-auto-rows: 22px;
+        gap: 6px;
+    }
+
+    .swatch {
+        width: 22px;
+        height: 22px;
+    }
+
+    .gang-name-icon .icon-page {
+        grid-auto-rows: 52px;
+    }
+}
+
+/* ===========================
+GangsDetailView.scss
+OlympusRP styled version
+=========================== */
+
+/* ===== Theme ===== */
+$bg: #f6f3ee;
+$panel: #ffffff;
+$panel-line: #e4d9c7;
+$ink: #2e2a26;
+$muted: #8b8176;
+$gold: #d7a400;
+$gold-ink: #3d2b00;
+$btn-green: #2aa86a;
+$btn-green-dk: #1e7b4c;
+$btn-red: #c6463a;
+$btn-red-dk: #912f27;
+$shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+$radius: 10px;
+$radius-outer: 14px;
+$radius-pill: 999px;
+$font-ui: var(--font, "Inter", system-ui, sans-serif);
+
+/* ===== Container ===== */
+.gangs-detail-view {
+    position: absolute;
+    width: 680px;
+    max-width: 95vw;
+    max-height: 95vh;
+    background: #dedede;
+    color: $ink;
+    border: 2px solid #22425d;
+    border-radius: $radius-outer;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22), inset 0 -4px rgba(0, 0, 0, 0.12);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 2500;
+    user-select: none;
+
+    &.fade-in {
+        animation: fadeIn 0.22s ease-out;
+    }
+
+    &.fade-out {
+        animation: fadeOut 0.22s ease-in forwards;
+    }
+}
+
+/* ===== Header ===== */
+.gangs-header {
+    background: linear-gradient(180deg, #426e8f, #5682a2);
+    color: #fff;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #22425d;
+}
+
+.gang-name-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gang-color-split-box {
+    position: relative;
+    width: 42px;
+    height: 42px;
+    border: 2px solid #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    background: #eee;
+
+    .color-half {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 50%;
+    }
+
+    .left {
+        left: 0;
+    }
+
+    .right {
+        right: 0;
+    }
+
+    .gang-icon {
+        width: 28px;
+        height: 28px;
+        image-rendering: pixelated;
+    }
+}
+
+.gang-name-text {
+    font-size: 20px;
+    color: $ink;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.close-button {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #921911;
+    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
+    border-radius: 4px;
+    box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
+    cursor: pointer;
+    padding: 0;
+
+    &:before,
+    &:after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 12px;
+        height: 2px;
+        background: #fff;
+        border-radius: 1px;
+        transform-origin: center;
+    }
+}
+
+/* ===== Tabs ===== */
+.gangs-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #f5f7f7;
+    border-bottom: 1px solid #bdbdbd;
+    box-shadow: inset 0 -4px rgba(0, 0, 0, 0.12);
+
+    button {
+        border: 2px solid #22425d;
+        background: #426e8f;
+        box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+        color: #fff;
+        padding: 7px 14px;
+        border-radius: 6px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: filter .15s ease;
+
+        &.active {
+            background: #5682a2;
         }
 
-        &:active {
-            background-color: #5a0000;
+        &:hover {
+            filter: brightness(1.1);
         }
     }
 }
 
-/* ===== Modals / Popups ===== */
+/* ===== Tab Content Wrapper ===== */
+.gangs-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    background: $bg;
+
+    .tab-panel {
+        animation: fadeAndScaleIn 0.22s ease-out;
+    }
+}
+
+/* =========================================================
+INFO TAB
+========================================================= */
+.info-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    color: $ink;
+
+    .info-section {
+        background: $panel;
+        border: 1px solid $panel-line;
+        border-radius: $radius;
+        padding: 12px;
+        transition: all .15s ease;
+    }
+
+    .gang-banner {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid $panel-line;
+        border-radius: $radius;
+        background: $panel;
+    }
+
+    .gang-banner-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        border: 1px solid $panel-line;
+        background: #d9c7a0;
+        padding: 2px;
+        image-rendering: pixelated;
+    }
+
+    .gang-banner-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.1;
+
+        .gang-banner-name {
+            font-weight: 900;
+            font-size: 18px;
+        }
+
+        .gang-banner-rank {
+            font-size: 12px;
+            color: $muted;
+        }
+    }
+
+    .xp-bar-container {
+        height: 12px;
+        border: 1px solid $panel-line;
+        border-radius: 6px;
+        background: #efeae3;
+        overflow: hidden;
+
+        .xp-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e0b86a, #d99e2b);
+        }
+    }
+
+    .xp-text {
+        margin-top: 6px;
+        font-size: 12px;
+        color: $muted;
+    }
+
+    .gang-stat {
+        display: inline-block;
+        min-width: 120px;
+        background: $panel;
+        border: 1px solid $panel-line;
+        border-radius: 8px;
+        padding: 10px 12px;
+        text-align: center;
+        margin-right: 8px;
+        margin-bottom: 8px;
+        color: $muted;
+        font-weight: 700;
+
+        span {
+            display: block;
+            font-size: 18px;
+            color: $ink;
+        }
+    }
+}
+
+/* =========================================================
+MANAGE TAB
+========================================================= */
+.gangs-subheader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: $panel;
+    border: 1px solid #bdbdbd;
+    border-radius: 6px;
+    padding: 10px 12px;
+
+    .gangs-subheader-title {
+        font-weight: 900;
+        font-size: 16px;
+    }
+
+    .gangs-subheader-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+}
+
+.gangs-invite-input {
+    padding: 10px 12px;
+    border: 1px solid #bdbdbd;
+    border-radius: 8px;
+    background: #fff;
+    color: $ink;
+    font-size: 14px;
+    min-width: 220px;
+}
+
+.gang-member-card {
+    width: 112px;
+    min-width: 112px;
+    background: #faf8f4;
+    border: 1px solid $panel-line;
+    border-radius: 10px;
+    padding: 8px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: all .15s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .15);
+    }
+
+    img {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 4px;
+    }
+
+    span {
+        font-size: 12px;
+        color: $ink;
+    }
+}
+
+/* =========================================================
+SETTINGS TAB
+========================================================= */
+.settings-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+
+    .settings-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .settings-col {
+        background: $panel;
+        border: 1px solid $panel-line;
+        border-radius: $radius;
+        padding: 12px;
+        flex: 1;
+        transition: all .15s ease;
+
+        h3 {
+            margin: 0 0 8px;
+            font-size: 13px;
+            color: $muted;
+            font-weight: 900;
+        }
+    }
+
+    .settings-col.full {
+        flex: 100%;
+    }
+
+    /* Legacy grid (kept for other views) */
+    .swatch-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, 28px);
+        gap: 8px;
+    }
+
+    .swatch {
+        width: 28px;
+        height: 28px;
+        border: 1px solid $panel-line;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: transform .08s ease, box-shadow .08s ease;
+
+        &.selected {
+            outline: 2px solid #2ecc71;
+        }
+
+        &:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 1px 0 $panel-line;
+        }
+    }
+
+    .swatch-loading {
+        color: $muted;
+        font-size: 12px;
+    }
+
+    .icon-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, 40px);
+        gap: 8px;
+        justify-content: flex-start;
+    }
+
+    .icon-option {
+        position: relative;
+        width: 40px;
+        height: 40px;
+        padding: 2px;
+        border: 1px solid $panel-line;
+        background: #d9c7a0;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        transition: transform .12s ease, box-shadow .12s ease;
+
+        img {
+            width: 32px;
+            height: 32px;
+            image-rendering: pixelated;
+        }
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 0 $panel-line, 0 8px 16px rgba(0, 0, 0, .12);
+        }
+
+        &:active {
+            transform: translateY(0) scale(.98);
+        }
+
+        &.selected {
+            outline: 2px solid #2ecc71;
+        }
+
+        &.locked {
+            filter: grayscale(.9) brightness(.9);
+            cursor: not-allowed;
+        }
+
+        .vip-tag {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            font-size: 9px;
+            background: linear-gradient(#f7d64a, #e1a90d);
+            color: #222;
+            border: 1px solid $panel-line;
+            border-radius: 3px;
+            padding: 0 3px;
+            font-weight: 800;
+        }
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 10px;
+        gap: 10px;
+
+        span {
+            font-size: 13px;
+            color: $muted;
+        }
+    }
+
+    .gang-preview.settings {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+
+        .preview-colors {
+            width: 180px;
+            height: 76px;
+            border: 1px solid $panel-line;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #eee;
+            position: relative;
+
+            .icon-overlay {
+                position: absolute;
+                inset: 0;
+                margin: auto;
+                width: 44px;
+                height: 44px;
+            }
+        }
+
+        .gang-preview-name {
+            font-weight: 900;
+        }
+    }
+
+    .settings-actions {
+        text-align: center;
+        margin-top: 10px;
+    }
+}
+
+/* ===== Buttons ===== */
+.habbo-btn {
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-weight: 600;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, .25);
+    transition: filter .15s ease, transform .02s ease;
+
+    &.default {
+        border: 2px solid #22425d;
+        background: #426e8f;
+        color: #fff;
+    }
+
+    &.danger {
+        border: 2px solid #cc1818;
+        background: #e72121;
+        color: #fff;
+    }
+
+    &:hover {
+        filter: brightness(1.05);
+    }
+
+    &:disabled {
+        opacity: .6;
+        cursor: not-allowed;
+    }
+}
+
+/* ===== Modals ===== */
 .gangs-modal-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, .5);
+    background: rgba(0, 0, 0, .45);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 998;
 }
 
-.gangs-modal-popup {
-    width: 300px;
-    background: $bg;
-    border: 2px solid #444;
-    border-radius: 10px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, .7);
+.gangs-modal-popup,
+.new-role-popup {
+    width: 340px;
+    background: #dedede;
+    border: 1px solid $panel-line;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .18);
     overflow: hidden;
     z-index: 999;
-    animation: fadeAndScaleIn .25s ease-out;
+    animation: fadeAndScaleIn .22s ease-out;
 
     .popup-header {
-        background: #2c2c2c;
+        background: linear-gradient(180deg, #426e8f, #426e8f 50%, #5682a2 0, #5682a2);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
         color: #fff;
-        padding: 8px 10px;
+        padding: 10px 12px;
+        font-weight: 900;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        font-weight: 800;
-        font-size: 14px;
     }
 
     .popup-body {
         padding: 12px;
-        font-size: 13px;
-        color: #222;
+        color: $ink;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
     }
 
-    .popup-actions {
+    .popup-actions,
+    .popup-footer {
         display: flex;
         justify-content: flex-end;
         gap: 10px;
-        padding: 10px;
+        padding: 10px 12px;
     }
-}
 
-/* New Role (inline modal variant) */
-.new-role-popup {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: $bg;
-    border: 1px solid $ink;
-    border-radius: 10px;
-    width: 300px;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, .24);
-    z-index: 999;
+    input[type="text"] {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid $panel-line;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
 
-    .popup-header {
-        background: linear-gradient(180deg, #2E3546 0, #2E3546 50%, #1e2433 0, #1e2433);
-        color: #fff;
-        padding: 6px 10px;
-        font-weight: 800;
-        font-size: 16px;
+    .permission-checkboxes {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-
-        .close-button {
-            background: #bc1a1a;
-            border: 1px solid #fff;
-            color: #fff;
-            padding: 0 6px;
-            border-radius: 4px;
-            font-weight: 800;
-            font-size: 14px;
-        }
-    }
-
-    .popup-body {
-        padding: 10px;
-
-        input[type="text"] {
-            width: 100%;
-            margin-bottom: 10px;
-            padding: 6px;
-            border: 1px solid #888;
-            font-size: 14px;
-        }
-
-        .permission-checkboxes {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-bottom: 10px;
-        }
-
-        .popup-actions {
-            display: flex;
-            justify-content: space-between;
-        }
+        flex-direction: column;
+        gap: 6px;
     }
 }
 
@@ -733,31 +1138,31 @@ SETTINGS TAB
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: scale(.96);
+        transform: translateY(4px);
     }
 
     to {
         opacity: 1;
-        transform: scale(1);
+        transform: none;
     }
 }
 
 @keyframes fadeOut {
     from {
         opacity: 1;
-        transform: scale(1);
+        transform: none;
     }
 
     to {
         opacity: 0;
-        transform: scale(.96);
+        transform: translateY(4px);
     }
 }
 
 @keyframes fadeAndScaleIn {
     from {
         opacity: 0;
-        transform: scale(.88);
+        transform: scale(.96);
     }
 
     to {
@@ -766,55 +1171,121 @@ SETTINGS TAB
     }
 }
 
-@keyframes popIn {
-    from {
-        transform: scale(.9);
-    }
-
-    to {
-        transform: scale(1);
-    }
-}
-
-/* ===== Resize handle cue (visual only) ===== */
-.gangs-detail-view::after {
-    content: "";
-    position: absolute;
-    right: 2px;
-    bottom: 2px;
-    width: 14px;
-    height: 14px;
-    pointer-events: none;
-    background:
-        linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, .3) 50%) no-repeat,
-        linear-gradient(135deg, transparent 60%, rgba(0, 0, 0, .5) 60%) no-repeat;
-    background-size: 100% 100%, 9px 9px;
-    background-position: 0 0, right bottom;
-}
-
-/* ===== Responsive tweaks ===== */
+/* ===== Responsive ===== */
 @media (max-width: 860px) {
-    .icon-selector {
-        grid-template-columns: repeat(6, 1fr);
+    .gangs-detail-view {
+        width: 94vw;
     }
 }
 
-@media (max-width: 600px) {
-    .gangs-detail-view {
-        width: 95vw;
-    }
-
-    .icon-selector {
-        grid-template-columns: repeat(4, 1fr);
-    }
-
-    .gang-member-card {
-        min-width: 80px;
-        width: 80px;
+@media (max-width: 620px) {
+    .gangs-tabs {
+        gap: 6px;
+        padding: 8px;
     }
 
     .gangs-tabs button {
+        padding: 6px 10px;
         font-size: 12px;
-        padding: 5px 8px;
+    }
+
+    .gang-member-card {
+        width: 96px;
+        min-width: 96px;
+    }
+}
+
+@media (max-width: 480px) {
+    .gangs-detail-view {
+        width: 96vw;
+    }
+
+    .gangs-invite-input {
+        width: 100%;
+    }
+}
+
+/* =========================================================
+COMPACT PAGINATED COLOR SWATCHES FOR SETTINGS TAB
+========================================================= */
+.gang-swatch-pager {
+    position: relative;
+    background: #f8f8f8;
+    border: 1px solid #d8d2c8;
+    border-radius: 10px;
+    padding: 16px 40px 12px;
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    .swatch-page {
+        display: grid;
+        grid-template-columns: repeat(10, 22px);
+        grid-auto-rows: 22px;
+        gap: 6px;
+        justify-content: center;
+        margin-bottom: 6px;
+        animation: fadeSwap .18s ease;
+    }
+
+    .swatch {
+        width: 22px;
+        height: 22px;
+        border: 1px solid rgba(0, 0, 0, .25);
+        border-radius: 3px;
+        cursor: pointer;
+        transition: transform .06s ease, box-shadow .06s ease, outline-color .12s ease, filter .12s ease;
+
+        &:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, .3);
+            filter: brightness(1.08);
+        }
+
+        &.selected {
+            outline: 2px solid #2ecc71;
+        }
+    }
+
+    .pager-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 26px;
+        height: 26px;
+        border: 1px solid #000;
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        font-weight: bold;
+        transition: transform .08s ease, filter .12s ease, box-shadow .12s ease;
+
+        &.left {
+            left: 8px;
+        }
+
+        &.right {
+            right: 8px;
+        }
+
+        &:hover {
+            filter: brightness(1.06);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, .3);
+        }
+
+        &:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+    }
+
+    .page-indicator {
+        margin-top: 6px;
+        font-size: 12px;
+        color: #777;
     }
 }

@@ -24,6 +24,7 @@
         color: blue;
     }
 }
+
 .roleplay-bubble {
     background: rgba(255, 215, 0, 0.1);
     border: 1px solid #f0c400;
@@ -41,18 +42,24 @@
 }
 
 @keyframes pulse {
-    0% { transform: scale(0.95); opacity: 0.6; }
-    100% { transform: scale(1); opacity: 1; }
+    0% {
+        transform: scale(0.95);
+        opacity: 0.6;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
+
 .bubble-container {
     position: absolute;
     width: fit-content;
     transition: top 0.2s ease 0s;
     user-select: none;
     pointer-events: all;
-    animation: bubblePopIn 180ms ease-out both;
-    will-change: transform, opacity;
-    backface-visibility: hidden;
+
     // -webkit-animation-duration: 0.2s;
     // animation-duration: 0.2s;
     // -webkit-animation-fill-mode: both;
@@ -95,6 +102,7 @@
         }
 
         &.type-0 {
+
             // normal
             .message {
                 font-weight: 400;
@@ -102,6 +110,7 @@
         }
 
         &.type-1 {
+
             // whisper
             .message {
                 font-weight: 400;
@@ -111,6 +120,7 @@
         }
 
         &.type-2 {
+
             // shout
             .message {
                 font-weight: 700;
@@ -736,7 +746,7 @@
             line-height: 1;
             color: $black;
             min-height: 25px;
-            font-size:16px;
+            font-size: 16px;
         }
     }
 }
@@ -939,21 +949,3 @@
         }
     }
 }
-
-    @keyframes bubblePopIn {
-        0% {
-            transform: scale(0.8);
-            opacity: 0;
-        }
-
-        60% {
-
-            transform: scale(1.1);
-            opacity: 1;
-        }
-
-        100% {
-            transform: scale(1);
-            opacity: 1;
-        }
-    }

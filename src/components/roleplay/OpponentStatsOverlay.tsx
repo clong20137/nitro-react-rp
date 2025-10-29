@@ -14,8 +14,8 @@ type OpponentStatsPayload = {
     maxEnergy: number;
     hunger: number;
     maxHunger: number;
-    aggression?: number;
-    xpPercent?: number;
+    aggression?: number; // ms (0..30000)
+    xpPercent?: number; // 0..100
     level?: number;
 };
 
@@ -24,18 +24,39 @@ const pct = (v: number, m: number) =>
 const clamp01 = (p: number) => Math.max(0, Math.min(100, p));
 
 const OpponentStatsOverlay: React.FC = () => {
-    const [op, setOp] = useState<OpponentStatsPayload | null>(null);
+    /** The user the panel is following because you CLICKED them (not locked). */
+    const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+
+    /** The user you locked onto (keyboard / button). Lock implies open. */
     const [lockedUserId, setLockedUserId] = useState<number | null>(null);
 
+    /** Latest stats snapshot we’re rendering for the active target. */
+    const [op, setOp] = useState<OpponentStatsPayload | null>(null);
+
+    /** rAF coalescing for bursty stat events */
     const nextFrameRef = useRef<number | null>(null);
     const stagedRef = useRef<OpponentStatsPayload | null>(null);
 
+    /** Which user should we show? Prefer lock; else selected; else none. */
+    const activeUserId = lockedUserId ?? selectedUserId;
+
+    /* --------- OPEN/CLOSE SOURCES ---------
+We ignore hover entirely.
+To open on click, dispatch:
+window.dispatchEvent(new CustomEvent('rp_avatar_clicked', { detail: { userId } }));
+To open via lock, dispatch (already done elsewhere in your code):
+window.dispatchEvent(new CustomEvent('target_lock_changed', { detail: { userId } }));
+-------------------------------------- */
+
     useEffect(() => {
+        // Stats stream (fires often). We only accept if it matches the active target.
         const onStats = (e: Event) => {
             const ce = e as CustomEvent<OpponentStatsPayload | null>;
             const payload = ce.detail ?? null;
-            if (lockedUserId && payload && payload.userId !== lockedUserId)
-                return;
+
+            if (!payload) return;
+            if (activeUserId == null) return; // panel not open -> ignore
+            if (payload.userId !== activeUserId) return; // not our target
 
             stagedRef.current = payload;
             if (nextFrameRef.current == null) {
@@ -46,13 +67,34 @@ const OpponentStatsOverlay: React.FC = () => {
             }
         };
 
+        // Some legacy code may try to "clear on hover out" — ignore unless nothing is selected/locked.
         const onClear = () => {
-            if (lockedUserId) return;
+            if (lockedUserId != null || selectedUserId != null) return; // keep open
             setOp(null);
+        };
+
+        // Click on an avatar -> open for that user (no lock)
+        const onAvatarClicked = (e: Event) => {
+            const { detail } = e as CustomEvent<{ userId?: number }>;
+            const id = detail?.userId ?? null;
+            if (id == null) return;
+            setSelectedUserId(id);
+            // if we were locked on someone else, keep the lock (lock wins). Otherwise open for this id.
+        };
+
+        // External lock/unlock event (e.g., hotkey, server ack, or our own button)
+        const onLockChange = (e: Event) => {
+            const { detail } = e as CustomEvent<{ userId: number | null }>;
+            const id = detail?.userId ?? null;
+            setLockedUserId(id);
+            if (id != null) setSelectedUserId(id); // show same target
+            if (id == null && selectedUserId == null) setOp(null); // fully close if nothing selected
         };
 
         window.addEventListener("user_inspect_stats", onStats as EventListener);
         window.addEventListener("user_inspect_clear", onClear);
+        window.addEventListener("rp_avatar_clicked", onAvatarClicked);
+        window.addEventListener("target_lock_changed", onLockChange);
 
         return () => {
             window.removeEventListener(
@@ -60,17 +102,20 @@ const OpponentStatsOverlay: React.FC = () => {
                 onStats as EventListener
             );
             window.removeEventListener("user_inspect_clear", onClear);
+            window.removeEventListener("rp_avatar_clicked", onAvatarClicked);
+            window.removeEventListener("target_lock_changed", onLockChange);
             if (nextFrameRef.current)
                 cancelAnimationFrame(nextFrameRef.current);
         };
-    }, [lockedUserId]);
+    }, [activeUserId, lockedUserId, selectedUserId]);
 
     const anchorEl = useMemo<HTMLElement | null>(
         () => document.querySelector(".stats-bar-container"),
-        [op]
+        [op, activeUserId]
     );
 
-    if (!op || !anchorEl) return null;
+    // If not following anybody (no lock & no click), don’t render.
+    if (activeUserId == null || !anchorEl || !op) return null;
 
     const healthPct = pct(op.health, op.maxHealth);
     const energyPct = pct(op.energy, op.maxEnergy);
@@ -78,11 +123,12 @@ const OpponentStatsOverlay: React.FC = () => {
     const aggroPct = clamp01(((op.aggression ?? 0) / 30000) * 100);
     const xpPct = clamp01(op.xpPercent ?? 0);
 
-    const onTarget = () => {
+    const toggleLock = () => {
         const next = lockedUserId === op.userId ? null : op.userId;
         setLockedUserId(next);
+        if (next == null && selectedUserId == null) setOp(null);
         try {
-            SendMessageComposer(new SetTargetComposer(next ?? 0, true));
+            SendMessageComposer(new SetTargetComposer(next ?? 0, !!next));
         } catch {}
         window.dispatchEvent(
             new CustomEvent("target_lock_changed", { detail: { userId: next } })
@@ -90,6 +136,7 @@ const OpponentStatsOverlay: React.FC = () => {
     };
 
     const onClose = () => {
+        setSelectedUserId(null);
         setLockedUserId(null);
         setOp(null);
         window.dispatchEvent(new CustomEvent("user_inspect_clear"));
@@ -101,14 +148,16 @@ const OpponentStatsOverlay: React.FC = () => {
     return createPortal(
         <div className="opponent-anchor" aria-label="opponent-stats">
             <div className="stats-bar-container opponent">
-                {/* Close button */}
-                <button onClick={onClose} className="close-button_right" title="Close">
-                    x
-                </button>
-
-                {/* Lock/Unlock icon button */}
+                {/* Close */}
                 <button
-                    onClick={onTarget}
+                    onClick={onClose}
+                    className="close-button_right"
+                    title="Close"
+                />
+
+                {/* Lock / Unlock */}
+                <button
+                    onClick={toggleLock}
                     className={`target-btn ${
                         lockedUserId === op.userId ? "locked" : ""
                     }`}
