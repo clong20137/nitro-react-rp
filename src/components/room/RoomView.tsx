@@ -16,11 +16,14 @@ import { GangInviteContainer } from "../roleplay/GangInviteContainer";
 import { GangClaimView } from "../roleplay/GangClaimView";
 import { TaxiView } from "../roleplay/TaxiView";
 
+
+
 import { Nitro } from "@nitrots/nitro-renderer";
 import { RoomObjectMouseEvent } from "@nitrots/nitro-renderer";
 import { RoomObjectCategory } from "@nitrots/nitro-renderer/src/nitro/room/object/RoomObjectCategory";
 
 import AvatarGlowOverlay from "../roleplay/AvatarGlowOverlay";
+import JukeboxView from "../roleplay/JukeboxView";
 
 export const RoomView: FC = () => {
     const { roomSession = null } = useRoom();
@@ -119,6 +122,7 @@ export const RoomView: FC = () => {
                     <GatheringProgressBar />
                     <GangClaimView />
                     <TaxiView />
+                    <JukeboxView />
                     {roomSession.isSpectator && <RoomSpectatorView />}
                 </>
             )}

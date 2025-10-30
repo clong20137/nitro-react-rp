@@ -6,29 +6,58 @@ import React, {
     useState,
 } from "react";
 import "./TaxiView.scss";
-
-import { SendMessageComposer } from "../../api"; // adjust if needed
+import { SendMessageComposer } from "../../api";
 import { TaxiRequestComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/TaxiRequestComposer";
 
 type TaxiDestination = {
     roomId: number;
     virtualRoomId: number;
+    /** virtual room display name */
     name: string;
-    /** optional; if not provided we derive a URL */
+    /** optional thumbnail URL */
     thumbnailUrl?: string;
+    /** optional physical room name (meta only) */
+    roomName?: string;
+    /** number of users at destination */
+    occupants?: number;
 };
 
-type TaxiOpenListDetail = {
+type TaxiOpenListDetailNew = {
+    // NEW parser shape
+    currentRoomId: number;
+    currentVrid: number;
     destinations: {
         roomId: number;
         virtualRoomId: number;
-        displayName: string;
+        virtualName: string;
+        userCount?: number;
         thumbnailUrl?: string;
+        roomName?: string;
     }[];
 };
 
+type TaxiOpenListDetailOld = {
+    // OLD shape (back-compat)
+    destinations: {
+        roomId: number;
+        virtualRoomId: number;
+        roomName?: string;
+        virtualName?: string; // preferred
+        displayName?: string; // fallback
+        thumbnailUrl?: string;
+        occupants?: number;
+    }[];
+    current?: {
+        roomId: number;
+        virtualRoomId: number;
+        virtualName?: string;
+    };
+};
+
+type TaxiOpenListDetail = TaxiOpenListDetailNew | TaxiOpenListDetailOld;
+
 const THUMB_RESOLVER = (d: TaxiDestination) =>
-    d.thumbnailUrl || `/public/icons/taxi/${d.virtualRoomId}.png`; // customize path
+    d.thumbnailUrl || `/icons/taxi/${d.virtualRoomId}.png`;
 
 /** Small, no-deps draggable hook (keeps window within viewport) */
 function useDraggable<T extends HTMLElement>() {
@@ -69,7 +98,7 @@ function useDraggable<T extends HTMLElement>() {
 
             el.style.left = `${newLeft}px`;
             el.style.top = `${newTop}px`;
-            el.style.transform = `translate(0,0)`; // disable center transform after first drag
+            el.style.transform = `translate(0,0)`;
         };
 
         const onUp = () => {
@@ -89,27 +118,79 @@ export const TaxiView: React.FC = () => {
     const [open, setOpen] = useState(false);
     const [destinations, setDestinations] = useState<TaxiDestination[]>([]);
     const [query, setQuery] = useState("");
-    const [grid, setGrid] = useState(true); // tile mode (can add a toggle later)
+    const [grid, setGrid] = useState(true);
+    const [current, setCurrent] = useState<{
+        roomId: number;
+        virtualRoomId: number;
+        virtualName?: string;
+    } | null>(null);
     const { ref: dragRef, onMouseDown: startDrag } =
         useDraggable<HTMLDivElement>();
 
     useEffect(() => {
         const onOpen = (e: Event) => {
             const ev = e as CustomEvent<TaxiOpenListDetail>;
-            const list = (ev.detail?.destinations || []).map((d) => ({
-                roomId: d.roomId,
-                virtualRoomId: d.virtualRoomId,
-                name: d.displayName,
-                thumbnailUrl: d.thumbnailUrl,
-            }));
+            const d = ev.detail;
+
+            // Normalize NEW vs OLD payloads
+            const isNew = (x: any): x is TaxiOpenListDetailNew =>
+                typeof (x as TaxiOpenListDetailNew)?.currentRoomId ===
+                    "number" &&
+                typeof (x as TaxiOpenListDetailNew)?.currentVrid === "number";
+
+            let list: TaxiDestination[] = [];
+            let cur: {
+                roomId: number;
+                virtualRoomId: number;
+                virtualName?: string;
+            } | null = null;
+
+            if (isNew(d)) {
+                // NEW FORMAT
+                cur = { roomId: d.currentRoomId, virtualRoomId: d.currentVrid };
+                list = (d.destinations || []).map((it) => ({
+                    roomId: it.roomId,
+                    virtualRoomId: it.virtualRoomId,
+                    name: (it.virtualName || "").trim(),
+                    thumbnailUrl: it.thumbnailUrl,
+                    roomName: it.roomName?.trim(),
+                    occupants:
+                        typeof it.userCount === "number"
+                            ? it.userCount
+                            : undefined,
+                }));
+            } else {
+                // OLD FORMAT
+                const old = d as TaxiOpenListDetailOld;
+                if (old.current) {
+                    cur = {
+                        roomId: old.current.roomId,
+                        virtualRoomId: old.current.virtualRoomId,
+                        virtualName: old.current.virtualName,
+                    };
+                }
+                list = (old.destinations || []).map((it) => {
+                    const name =
+                        it.virtualName?.trim() || it.displayName?.trim() || "";
+                    return {
+                        roomId: it.roomId,
+                        virtualRoomId: it.virtualRoomId,
+                        name,
+                        thumbnailUrl: it.thumbnailUrl,
+                        roomName: it.roomName?.trim(),
+                        occupants: it.occupants,
+                    };
+                });
+            }
+
             setDestinations(list);
+            setCurrent(cur);
             setQuery("");
             setOpen(true);
         };
 
         const onKey = (e: KeyboardEvent) => {
-            if (!open) return;
-            if (e.key === "Escape") setOpen(false);
+            if (open && e.key === "Escape") setOpen(false);
         };
 
         window.addEventListener("taxi_open_list", onOpen as EventListener);
@@ -129,17 +210,25 @@ export const TaxiView: React.FC = () => {
         return destinations.filter(
             (d) =>
                 d.name.toLowerCase().includes(q) ||
+                d.roomName?.toLowerCase().includes(q) ||
                 String(d.roomId).includes(q) ||
                 String(d.virtualRoomId).includes(q)
         );
     }, [query, destinations]);
+
+    const isHere = useCallback(
+        (d: TaxiDestination) =>
+            !!current &&
+            d.roomId === current.roomId &&
+            d.virtualRoomId === current.virtualRoomId,
+        [current]
+    );
 
     const onPick = (d: TaxiDestination) => {
         SendMessageComposer(new TaxiRequestComposer(d.roomId, d.virtualRoomId));
         setOpen(false);
     };
 
-    // derive initials for fallback tile
     const initials = (name: string) =>
         name
             .split(/\s+/)
@@ -185,7 +274,6 @@ export const TaxiView: React.FC = () => {
                         >
                             ☰
                         </button>
-
                         <button
                             className="close"
                             onClick={() => setOpen(false)}
@@ -199,11 +287,24 @@ export const TaxiView: React.FC = () => {
                 <div className="taxi-toolbar">
                     <input
                         className="search"
-                        placeholder="Search rooms or vRoom IDs…"
+                        placeholder="Search virtual rooms, room names, or IDs…"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         autoFocus
                     />
+                    {/* Current location chip */}
+                    {current && (
+                        <div
+                            className="you-are-here"
+                            title="Your current location"
+                        >
+                            You are here:{" "}
+                            <b>
+                                {current.virtualName ||
+                                    `v${current.virtualRoomId}`}
+                            </b>
+                        </div>
+                    )}
                     <div className="count">
                         {filtered.length}/{destinations.length}
                     </div>
@@ -218,14 +319,26 @@ export const TaxiView: React.FC = () => {
                         <div className="taxi-grid" role="list">
                             {filtered.map((d, idx) => {
                                 const src = THUMB_RESOLVER(d);
+                                const here = isHere(d);
                                 return (
                                     <button
                                         role="listitem"
                                         key={`${d.roomId}:${d.virtualRoomId}:${idx}`}
-                                        className="tile"
-                                        title={`${d.name} — Room ${d.roomId} • v${d.virtualRoomId}`}
+                                        className={`tile${here ? " here" : ""}`}
+                                        title={`${d.name} — Room ${d.roomId}`}
                                         onClick={() => onPick(d)}
                                     >
+                                        {here && (
+                                            <div className="badge">
+                                                You are here
+                                            </div>
+                                        )}
+                                        {typeof d.occupants === "number" && (
+                                            <div className="count-badge">
+                                                {d.occupants}
+                                            </div>
+                                        )}
+
                                         <div className="thumbWrap">
                                             <img
                                                 className="thumb"
@@ -233,7 +346,6 @@ export const TaxiView: React.FC = () => {
                                                 loading="lazy"
                                                 alt=""
                                                 onError={(e) => {
-                                                    // fallback: remove src → CSS gradient will show
                                                     (
                                                         e.target as HTMLImageElement
                                                     ).style.display = "none";
@@ -243,11 +355,10 @@ export const TaxiView: React.FC = () => {
                                                     host?.classList.add(
                                                         "thumb-fallback"
                                                     );
-                                                    if (host)
-                                                        host.setAttribute(
-                                                            "data-initials",
-                                                            initials(d.name)
-                                                        );
+                                                    host?.setAttribute(
+                                                        "data-initials",
+                                                        initials(d.name)
+                                                    );
                                                 }}
                                             />
                                         </div>
@@ -256,8 +367,10 @@ export const TaxiView: React.FC = () => {
                                                 {d.name}
                                             </span>
                                             <span className="meta">
-                                                Room {d.roomId} • v
-                                                {d.virtualRoomId}
+                                                {d.roomName
+                                                    ? d.roomName
+                                                    : "Room"}{" "}
+                                                {d.roomId}
                                             </span>
                                         </div>
                                     </button>
@@ -266,32 +379,51 @@ export const TaxiView: React.FC = () => {
                         </div>
                     ) : (
                         <ul className="taxi-list">
-                            {filtered.map((d, idx) => (
-                                <li
-                                    key={`${d.roomId}:${d.virtualRoomId}:${idx}`}
-                                    className="taxi-row"
-                                    onClick={() => onPick(d)}
-                                    title={`Room ${d.roomId} • v${d.virtualRoomId}`}
-                                >
-                                    <div className="row-left">
-                                        <div className="name">{d.name}</div>
-                                        <div className="meta">
-                                            Room {d.roomId} • v{d.virtualRoomId}
+                            {filtered.map((d, idx) => {
+                                const here = isHere(d);
+                                return (
+                                    <li
+                                        key={`${d.roomId}:${d.virtualRoomId}:${idx}`}
+                                        className={`taxi-row${
+                                            here ? " here" : ""
+                                        }`}
+                                        onClick={() => onPick(d)}
+                                        title={`${d.name} — Room ${d.roomId}`}
+                                    >
+                                        <div className="row-left">
+                                            <div className="name">
+                                                {d.name}
+                                                {here && (
+                                                    <span className="here-pill">
+                                                        You are here
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="meta">
+                                                {d.roomName
+                                                    ? d.roomName
+                                                    : "Room"}{" "}
+                                                {d.roomId}
+                                                {typeof d.occupants ===
+                                                    "number" && (
+                                                    <> • {d.occupants} online</>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="row-right">
-                                        <button
-                                            className="call-btn"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onPick(d);
-                                            }}
-                                        >
-                                            Take me
-                                        </button>
-                                    </div>
-                                </li>
-                            ))}
+                                        <div className="row-right">
+                                            <button
+                                                className="call-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onPick(d);
+                                                }}
+                                            >
+                                                Take me
+                                            </button>
+                                        </div>
+                                    </li>
+                                );
+                            })}
                         </ul>
                     )}
                 </div>
