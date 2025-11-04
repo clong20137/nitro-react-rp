@@ -8,7 +8,7 @@ const EVT_STORE_RAW = "chat_bubble_shop";
 const EVT_PURCHASE_OK_RAW = "chat_bubble_purchase_ok_raw";
 const EVT_PURCHASE_FAIL_RAW = "chat_bubble_purchase_fail_raw";
 
-const BUBBLE_ASSET_BASE = "/nitro-react/src/assets/images/chat/chatbubbles";
+const BUBBLE_ASSET_BASE = "/nitro/icons/chatbubbles/";
 const bubbleGif = (id: number) => `${BUBBLE_ASSET_BASE}/bubble_${id}.gif`;
 const bubblePng = (id: number) => `${BUBBLE_ASSET_BASE}/bubble_${id}.png`;
 
