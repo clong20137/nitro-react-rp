@@ -890,7 +890,7 @@
 
         &.bubble-53 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_53.png");
-             border-image-width: 24px 6px 14px 38px;
+            border-image-width: 24px 6px 14px 38px;
 
             .user-container {
                 display: none;
@@ -917,8 +917,8 @@
 
         &.bubble-55 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_55.png");
-             border-image-slice: 18 6 6 29 fill;
-             border-image-width: 24px 6px 6px 39px;
+            border-image-slice: 18 6 6 29 fill;
+            border-image-width: 24px 6px 6px 39px;
             border-image-outset: 3px 0px 0px 0px;
 
             .user-container {
@@ -973,6 +973,7 @@
         &.bubble-59 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_59.png");
             border-image-width: 24px 6px 6px 39px;
+
             .user-container {
                 display: none;
             }
@@ -1028,10 +1029,10 @@
             &::before {
                 content: " ";
                 position: absolute;
-                width: 19px;
-                height: 19px;
-                left: 11px;
-                top: 10px;
+                width: 24px;
+                height: 24px;
+                left: -8px;
+                top: -14px;
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_62_extra.png");
             }
 
@@ -1045,7 +1046,7 @@
             }
         }
 
-         &.bubble-63 {
+        &.bubble-63 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_63.png");
 
             &::before {
@@ -1067,7 +1068,8 @@
                 height: 7px;
             }
         }
-         &.bubble-64 {
+
+        &.bubble-64 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_64.png");
 
             &::before {
@@ -1089,7 +1091,8 @@
                 height: 7px;
             }
         }
-          &.bubble-65 {
+
+        &.bubble-65 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_65.png");
 
             &::before {
@@ -1110,7 +1113,85 @@
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_65_pointer.png");
                 height: 7px;
             }
+
         }
+
+        &.bubble-66 {
+            border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_66.png");
+
+            &::before {
+                content: " ";
+                position: absolute;
+                width: 19px;
+                height: 19px;
+                left: 11px;
+                top: 10px;
+                background: url("../../../../assets/images/chat/chatbubbles/bubble_66_extra.png");
+            }
+
+            .user-container {
+                display: none;
+            }
+
+            .pointer {
+                background: url("../../../../assets/images/chat/chatbubbles/bubble_66_pointer.png");
+                height: 7px;
+            }
+
+        }
+
+        &.bubble-67 {
+            border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_67.png");
+
+            &::before {
+                content: " ";
+                position: absolute;
+                width: 24px;
+                height: 24px;
+                left: -10px;
+                top: -5px;
+
+                background: url("../../../../assets/images/chat/chatbubbles/bubble_67_extra.png");
+            }
+
+            .user-container {
+                display: none;
+            }
+
+            .pointer {
+                background: url("../../../../assets/images/chat/chatbubbles/bubble_67_pointer.png");
+                height: 7px;
+            }
+
+        }
+          &.bubble-68 {
+            border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_68.png");
+
+            &::before {
+                content: " ";
+                position: absolute;
+                width: 26px;
+                height: 24px;
+                left: -2px;
+                top: 0px;
+
+                background: url("../../../../assets/images/chat/chatbubbles/bubble_68_extra.png");
+            }
+             .chat-content {
+                color: #fff;
+            }
+
+            .user-container {
+                display: none;
+            }
+
+            .pointer {
+                background: url("../../../../assets/images/chat/chatbubbles/bubble_68_pointer.png");
+                height: 7px;
+            }
+
+        }
+
         .user-container {
             z-index: 3;
             display: flex;
@@ -1393,22 +1474,69 @@
         &::before {
             content: " ";
             position: absolute;
-            width: 19px;
-            height: 19px;
-            left: 11px;
-            top: 10px;
+            width: 24px;
+            height: 24px;
+            left: -8px;
+            top: -14px;
             background: url("../../../../assets/images/chat/chatbubbles/bubble_62_extra.png");
         }
     }
-     &.bubble-63 {
+
+    &.bubble-63 {
         background-image: url("../../../../assets/images/chat/chatbubbles/bubble_63.png");
     }
-     &.bubble-64 {
+
+    &.bubble-64 {
         background-image: url("../../../../assets/images/chat/chatbubbles/bubble_64.png");
     }
-     &.bubble-65 {
+
+    &.bubble-65 {
         background-image: url("../../../../assets/images/chat/chatbubbles/bubble_65.png");
     }
+
+    &.bubble-66 {
+        background-image: url("../../../../assets/images/chat/chatbubbles/bubble_66.png");
+
+        &::before {
+            content: " ";
+            position: absolute;
+            width: 19px;
+            height: 19px;
+            left: -8px;
+            top: -10px;
+            background: url("../../../../assets/images/chat/chatbubbles/bubble_66_extra.png");
+        }
+    }
+
+    &.bubble-67 {
+        background-image: url("../../../../assets/images/chat/chatbubbles/bubble_67.png");
+
+        &::before {
+            content: " ";
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            left: -10px;
+            top: -5px;
+
+            background: url("../../../../assets/images/chat/chatbubbles/bubble_67_extra.png");
+        }
+    }
+    &.bubble-68 {
+        background-image: url("../../../../assets/images/chat/chatbubbles/bubble_68.png");
+
+        &::before {
+            content: " ";
+              position: absolute;
+                width: 26px;
+                height: 24px;
+                left: -2px;
+                top: 0px;
+
+            background: url("../../../../assets/images/chat/chatbubbles/bubble_68_extra.png");
+        }
+    }
+
 
 
     &.bubble-34 {

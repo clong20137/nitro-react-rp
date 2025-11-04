@@ -82,7 +82,8 @@ const EVT_STORE_SHOP_RAW = "chat_bubble_shop"; // legacy: from ChatBubbleShopCom
 /* Internal normalized event */
 const EVT_STORE = "settings:chat_bubbles_owned";
 
-const BUBBLE_ASSET_BASE = "/nitro-react/src/assets/images/chat/chatbubbles";
+//const BUBBLE_ASSET_BASE = "/nitro-react/src/assets/images/chat/chatbubbles";
+const BUBBLE_ASSET_BASE = "/nitro/icons/chatbubbles/";
 const clamp = (v: number, min: number, max: number) =>
     Math.min(Math.max(v, min), max);
 
