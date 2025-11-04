@@ -1,161 +1,464 @@
-import { FC, useEffect, useMemo, useRef, useState } from "react";
+import { FC, useMemo, useRef, useState, useEffect, useCallback } from "react";
+import { SendMessageComposer, GetSessionDataManager } from "../../api";
+import { RequestChatBubbleStoreComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/RequestChatBubbleStoreComposer";
+import { PurchaseChatBubbleComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PurchaseChatBubbleComposer";
 import "./DiamondStoreView.scss";
 
-type Package = {
+const EVT_STORE_RAW = "chat_bubble_shop";
+const EVT_PURCHASE_OK_RAW = "chat_bubble_purchase_ok_raw";
+const EVT_PURCHASE_FAIL_RAW = "chat_bubble_purchase_fail_raw";
+
+const BUBBLE_ASSET_BASE = "/nitro-react/src/assets/images/chat/chatbubbles";
+const bubbleGif = (id: number) => `${BUBBLE_ASSET_BASE}/bubble_${id}.gif`;
+const bubblePng = (id: number) => `${BUBBLE_ASSET_BASE}/bubble_${id}.png`;
+
+/* --------------------------------------------------------
+BubbleImg: prefer PNG, pre-load GIF in parallel as backup
+--------------------------------------------------------- */
+const BubbleImg: FC<{
     id: number;
-    diamonds: number;
-    bonus?: number;
-    priceUSD: number;
-    best?: boolean;
-};
-
-const DIAMOND_PACKS: Package[] = [
-    { id: 1, diamonds: 100, priceUSD: 4.99 },
-    { id: 2, diamonds: 250, priceUSD: 9.99, bonus: 25 },
-    { id: 3, diamonds: 600, priceUSD: 19.99, bonus: 100 },
-    { id: 4, diamonds: 1500, priceUSD: 44.99, bonus: 400, best: true },
-];
-
-interface DiamondsStoreViewProps {
-    onClose: () => void;
-    initial?: { x: number; y: number };
-    width?: number;
-    height?: number | "auto";
-}
-
-export const DiamondsStoreView: FC<DiamondsStoreViewProps> = ({
-    onClose,
-    initial,
-    width = 520,
-    height = 560,
-}) => {
-    const packs = useMemo(() => DIAMOND_PACKS, []);
-    const [pos, setPos] = useState<{ x: number; y: number }>(() => ({
-        x: initial?.x ?? 12,
-        y: initial?.y ?? 80,
-    }));
-
-    // --- drag (header is handle)
-    const drag = useRef({ on: false, dx: 0, dy: 0 });
-    const onHeaderDown = (e: React.MouseEvent) => {
-        drag.current.on = true;
-        drag.current.dx = e.clientX - pos.x;
-        drag.current.dy = e.clientY - pos.y;
-        document.addEventListener("mousemove", onMove);
-        document.addEventListener("mouseup", onUp);
-        e.preventDefault();
-    };
-    const onMove = (e: MouseEvent) => {
-        if (!drag.current.on) return;
-        const nx = e.clientX - drag.current.dx;
-        const ny = e.clientY - drag.current.dy;
-        setPos({
-            x: Math.min(Math.max(0, nx), window.innerWidth - (width as number)),
-            y: Math.min(Math.max(0, ny), window.innerHeight - 40),
-        });
-    };
-    const onUp = () => {
-        drag.current.on = false;
-        document.removeEventListener("mousemove", onMove);
-        document.removeEventListener("mouseup", onUp);
-    };
+    className?: string;
+    alt?: string;
+    "aria-hidden"?: boolean;
+}> = ({ id, className, alt = "", ...rest }) => {
+    const [src, setSrc] = useState<string>(bubblePng(id));
+    const stateRef = useRef({
+        pngLoaded: false,
+        pngErrored: false,
+        gifLoaded: false,
+    });
 
     useEffect(() => {
-        const onResize = () =>
-            setPos((p) => ({
-                x: Math.min(
-                    p.x,
-                    Math.max(0, window.innerWidth - (width as number))
-                ),
-                y: Math.min(p.y, Math.max(0, window.innerHeight - 40)),
-            }));
-        window.addEventListener("resize", onResize);
-        return () => window.removeEventListener("resize", onResize);
-    }, [width]);
+        let alive = true;
 
-    const buy = (p: Package) => {
-        window.dispatchEvent(
-            new CustomEvent("diamonds_purchase_request", { detail: p })
-        );
-        // Or use your purchase composer here.
+        const png = new Image();
+        const gif = new Image();
+        const pngUrl = bubblePng(id);
+        const gifUrl = bubbleGif(id);
+
+        // Start PNG first (preferred)
+        png.onload = () => {
+            if (!alive) return;
+            stateRef.current.pngLoaded = true;
+            // Prefer PNG even if GIF already finished
+            setSrc(pngUrl);
+        };
+        png.onerror = () => {
+            if (!alive) return;
+            stateRef.current.pngErrored = true;
+            // If GIF already loaded by now, use it
+            if (stateRef.current.gifLoaded) setSrc(gifUrl);
+        };
+        png.src = pngUrl;
+
+        // Start GIF in parallel (so it's cached if needed)
+        gif.onload = () => {
+            if (!alive) return;
+            stateRef.current.gifLoaded = true;
+            // Only use GIF if PNG has failed (we prefer PNG)
+            if (stateRef.current.pngErrored) setSrc(gifUrl);
+        };
+        gif.onerror = () => {
+            /* ignore — PNG is preferred anyway */
+        };
+        gif.src = gifUrl;
+
+        return () => {
+            alive = false;
+        };
+    }, [id]);
+
+    return <img src={src} className={className} alt={alt} {...rest} />;
+};
+
+/* ---------- Draggable shell ---------- */
+const Shell: FC<{
+    title: string;
+    onClose: () => void;
+    children: React.ReactNode;
+}> = ({ title, onClose, children }) => {
+    const ref = useRef<HTMLDivElement | null>(null);
+    const drag = useRef<{ dx: number; dy: number; on: boolean }>({
+        dx: 0,
+        dy: 0,
+        on: false,
+    });
+
+    useEffect(() => {
+        const el = ref.current!;
+        if (!el) return;
+        const w = 420,
+            h = 560;
+        el.style.left = Math.max(12, window.innerWidth - w - 16) + "px";
+        el.style.top = "100px";
+        el.style.width = w + "px";
+        el.style.height = h + "px";
+        el.style.position = "fixed";
+    }, []);
+
+    const onDown = (e: React.MouseEvent) => {
+        const el = ref.current!;
+        const rect = el.getBoundingClientRect();
+        drag.current.on = true;
+        drag.current.dx = e.clientX - rect.left;
+        drag.current.dy = e.clientY - rect.top;
+
+        const onMove = (ev: MouseEvent) => {
+            if (!drag.current.on) return;
+            const x = Math.min(
+                Math.max(0, ev.clientX - drag.current.dx),
+                window.innerWidth - rect.width
+            );
+            const y = Math.min(
+                Math.max(0, ev.clientY - drag.current.dy),
+                window.innerHeight - 40
+            );
+            el.style.left = x + "px";
+            el.style.top = y + "px";
+        };
+        const onUp = () => {
+            drag.current.on = false;
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", onUp);
+        };
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
     };
+
+    const [enter, setEnter] = useState(true);
+    useEffect(() => {
+        const t = setTimeout(() => setEnter(false), 320);
+        return () => clearTimeout(t);
+    }, []);
 
     return (
         <div
-            className="ds-window"
-            style={{ left: pos.x, top: pos.y, width, height }}
+            ref={ref}
+            className={`ds-root ${enter ? "is-entering" : ""}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
         >
-            {/* Title bar (drag handle) */}
-            <div className="ds-window__header" onMouseDown={onHeaderDown}>
-                <div className="ds-window__title">
+            <div className="ds-header" onMouseDown={onDown}>
+                <div className="ds-title">
                     <i className="ico ico-diamond" />
-                    <span>Diamond Store</span>
+                    <span>{title}</span>
                 </div>
                 <button
-                    className="ds-window__close"
+                    className="ds-close"
                     aria-label="Close"
-                    title="Close"
                     onClick={onClose}
+                    onMouseDown={(e) => e.stopPropagation()}
                 />
             </div>
+            <div className="ds-body">{children}</div>
+        </div>
+    );
+};
 
-            {/* Body (sidebar + content) */}
-            <div className="ds-window__body">
-                <aside className="ds-window__sidebar">
-                    <button className="ds-tab ds-tab--active">
-                        <i className="ico ico-diamond" />
-                        <span>Diamond Store</span>
-                    </button>
-                </aside>
+/* ---------- Types ---------- */
+type StoreItem = { id: number; price: number; owned: boolean };
+type RawItem = {
+    bubbleId: number;
+    price: number;
+    owned: boolean;
+    equipped?: boolean;
+};
+type RawPayload = { items: RawItem[]; diamonds?: number; equippedId?: number };
 
-                <section className="ds-window__content">
-                    <div className="ds-packs">
-                        {packs.map((p) => (
-                            <div
-                                key={p.id}
-                                className={`ds-pack${p.best ? " is-best" : ""}`}
+/* ---------- Component ---------- */
+export const DiamondsStoreView: FC<{ onClose: () => void }> = ({ onClose }) => {
+    const [diamonds, setDiamonds] = useState<number>(() => {
+        try {
+            return Number((GetSessionDataManager() as any)?.diamonds ?? 0);
+        } catch {
+            return 0;
+        }
+    });
+    const [store, setStore] = useState<Map<number, StoreItem>>(new Map());
+    const [equippedId, setEquippedId] = useState<number>(0);
+    const [confirmId, setConfirmId] = useState<number | null>(null);
+    const [purchaseBusy, setPurchaseBusy] = useState<boolean>(false);
+
+    // live wallet sync
+    useEffect(() => {
+        const onDiamondUpdate = (e: Event) => {
+            const { detail } = e as CustomEvent<{ amount: number }>;
+            if (detail && typeof detail.amount === "number")
+                setDiamonds(Number(detail.amount) || 0);
+        };
+        window.addEventListener(
+            "diamond_balance_update",
+            onDiamondUpdate as EventListener
+        );
+        return () =>
+            window.removeEventListener(
+                "diamond_balance_update",
+                onDiamondUpdate as EventListener
+            );
+    }, []);
+
+    const items = useMemo(
+        () => Array.from(store.values()).sort((a, b) => a.id - b.id),
+        [store]
+    );
+
+    const requestStore = useCallback(() => {
+        try {
+            SendMessageComposer(new RequestChatBubbleStoreComposer());
+        } catch (e) {
+            console.error(
+                "[DiamondStore] RequestChatBubbleStoreComposer failed",
+                e
+            );
+        }
+    }, []);
+    useEffect(() => {
+        requestStore();
+    }, [requestStore]);
+
+    // RAW → state (shop + purchase_ok + purchase_fail)
+    useEffect(() => {
+        const onRawShop = (e: Event) => {
+            const { detail } = e as CustomEvent<RawPayload>;
+            if (!detail) return;
+
+            const m = new Map<number, StoreItem>();
+            for (const x of detail.items || [])
+                m.set(x.bubbleId, {
+                    id: x.bubbleId,
+                    price: Number(x.price),
+                    owned: !!x.owned,
+                });
+            setStore(m);
+
+            if (typeof detail.diamonds === "number")
+                setDiamonds(Number(detail.diamonds) || 0);
+
+            const eq =
+                typeof detail.equippedId === "number"
+                    ? detail.equippedId
+                    : (detail.items || []).find((x) => x.equipped)?.bubbleId ||
+                      0;
+            setEquippedId(Number(eq) || 0);
+        };
+
+        const onRawOk = (e: Event) => {
+            const { detail } = e as CustomEvent<{
+                bubbleId: number;
+                diamonds?: number;
+            }>;
+            if (!detail) return;
+            const id = Number(detail.bubbleId);
+
+            setPurchaseBusy(false);
+            setConfirmId(null);
+
+            setStore((prev) => {
+                const next = new Map(prev);
+                const cur = next.get(id) || { id, price: 0, owned: false };
+                next.set(id, { ...cur, owned: true });
+                return next;
+            });
+
+            if (typeof detail.diamonds === "number")
+                setDiamonds(Number(detail.diamonds) || 0);
+
+            window.dispatchEvent(
+                new CustomEvent("settings:chat_bubbles_owned", {
+                    detail: {
+                        items: [{ id, owned: true }],
+                        equippedId: undefined,
+                    },
+                })
+            );
+        };
+
+        const onRawFail = (e: Event) => {
+            const { detail } = e as CustomEvent<{
+                bubbleId: number;
+                reason?: string;
+            }>;
+            console.warn(
+                "[DiamondStore] purchase FAIL",
+                detail?.bubbleId,
+                detail?.reason
+            );
+            setPurchaseBusy(false);
+        };
+
+        window.addEventListener(EVT_STORE_RAW, onRawShop as EventListener);
+        window.addEventListener(EVT_PURCHASE_OK_RAW, onRawOk as EventListener);
+        window.addEventListener(
+            EVT_PURCHASE_FAIL_RAW,
+            onRawFail as EventListener
+        );
+        return () => {
+            window.removeEventListener(
+                EVT_STORE_RAW,
+                onRawShop as EventListener
+            );
+            window.removeEventListener(
+                EVT_PURCHASE_OK_RAW,
+                onRawOk as EventListener
+            );
+            window.removeEventListener(
+                EVT_PURCHASE_FAIL_RAW,
+                onRawFail as EventListener
+            );
+        };
+    }, []);
+
+    const openConfirm = (id: number) => {
+        const meta = store.get(id);
+        if (!meta || meta.owned) return;
+        setConfirmId(id);
+    };
+
+    const doPurchase = (id: number) => {
+        const meta = store.get(id);
+        if (!meta) return;
+        if (meta.owned) return setConfirmId(null);
+        if (diamonds < meta.price) return;
+        try {
+            setPurchaseBusy(true);
+            SendMessageComposer(new PurchaseChatBubbleComposer(id));
+        } catch (e) {
+            setPurchaseBusy(false);
+            console.error(
+                "[DiamondStore] PurchaseChatBubbleComposer failed",
+                e
+            );
+        }
+    };
+
+    return (
+        <Shell title="Diamond Store" onClose={onClose}>
+            <div className="appearance-preview" aria-label="Wallet">
+                <div className="wallet">
+                    <span className="pill">💎 {diamonds}</span>
+                    <span className="pill">
+                        {items.filter((i) => i.owned).length} owned
+                    </span>
+                </div>
+                <div style={{ marginTop: 6, opacity: 0.9 }}>
+                    Unlock bubbles with diamonds. Equip in{" "}
+                    <b>Settings → Chat Bubbles</b>.
+                </div>
+            </div>
+
+            <div className="appearance-group">
+                <div className="group-title with-sub">
+                    <span>Chat Bubble Store</span>
+                    <small>Click a locked bubble to unlock</small>
+                </div>
+
+                <div className="bubble-grid">
+                    {items.map((it) => {
+                        const locked = !it.owned;
+                        return (
+                            <button
+                                type="button"
+                                key={it.id}
+                                className={`bubble-card ${
+                                    locked ? "locked" : ""
+                                }`}
+                                onClick={() =>
+                                    locked ? openConfirm(it.id) : undefined
+                                }
+                                title={
+                                    locked
+                                        ? `Unlock for ${it.price}💎`
+                                        : "Owned"
+                                }
+                                aria-label={
+                                    locked
+                                        ? `Unlock bubble ${it.id}`
+                                        : `Bubble ${it.id} owned`
+                                }
                             >
-                                {p.best && (
-                                    <div className="ds-pack__badge">
-                                        Best Value
-                                    </div>
+                                {locked && (
+                                    <span className="ribbon">LOCKED</span>
                                 )}
 
-                                <div className="ds-pack__top">
-                                    <i className="ico ico-diamond" />
-                                    <div className="ds-pack__title">
-                                        {p.diamonds.toLocaleString()} Diamonds{" "}
-                                        {p.bonus ? (
-                                            <span className="ds-pack__bonus">
-                                                +{p.bonus.toLocaleString()}{" "}
-                                                bonus
-                                            </span>
-                                        ) : null}
-                                    </div>
+                                <div className={`bubble-thumb bubble-${it.id}`}>
+                                    <BubbleImg id={it.id} alt="" aria-hidden />
+                                    <span className="bubble-id">#{it.id}</span>
                                 </div>
 
-                                <div className="ds-pack__bottom">
-                                    <div className="ds-pack__price">
-                                        ${p.priceUSD.toFixed(2)}
-                                    </div>
-                                    <button
-                                        className="ds-pack__buy"
-                                        onClick={() => buy(p)}
-                                    >
-                                        Buy
-                                    </button>
+                                <div className="price-row">
+                                    {locked ? (
+                                        <span className="price">
+                                            💎 {it.price}
+                                        </span>
+                                    ) : (
+                                        <span className="owned">Owned</span>
+                                    )}
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="ds-fineprint">
-                        Purchases are delivered instantly after payment is
-                        confirmed. Prices shown in USD. Taxes may apply.
-                    </div>
-                </section>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
-        </div>
+
+            {confirmId != null && (
+                <div
+                    className="overlay"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Confirm purchase"
+                >
+                    <div className="confirm-modal">
+                        <div className="cm-header">
+                            Unlock Chat Bubble #{confirmId}
+                        </div>
+                        <div className="cm-body">
+                            <div className="cm-thumb bubble-thumb bubble-preview">
+                                <BubbleImg id={confirmId} alt="" aria-hidden />
+                            </div>
+                            <div className="cm-copy">
+                                <div className="line">
+                                    <b>Price:</b>{" "}
+                                    <span>
+                                        💎 {store.get(confirmId)?.price ?? 0}
+                                    </span>
+                                </div>
+                                <div className="line">
+                                    <b>Your balance:</b>{" "}
+                                    <span>💎 {diamonds}</span>
+                                </div>
+                                {diamonds <
+                                    (store.get(confirmId)?.price ?? 0) && (
+                                    <div className="warn">
+                                        Not enough diamonds.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="cm-actions">
+                            <button
+                                className="btn"
+                                onClick={() => setConfirmId(null)}
+                                disabled={purchaseBusy}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn--confirm"
+                                onClick={() => doPurchase(confirmId)}
+                                disabled={
+                                    purchaseBusy ||
+                                    diamonds <
+                                        (store.get(confirmId)?.price ?? 0)
+                                }
+                            >
+                                {purchaseBusy ? "Unlocking…" : "Unlock"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </Shell>
     );
 };
 

@@ -1,47 +1,87 @@
-.ds-window {
+/* =========================================================
+OlympusRP • Diamond Store (matches SettingsView look)
+========================================================= */
+
+/* ===== Theme ===== */
+$olrp-bg: rgba(24, 24, 24, .88);
+$olrp-border: #ffffff;
+$olrp-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
+$olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232323);
+
+/* ===== Root ===== */
+.ds-root {
     position: fixed;
-    z-index: 2000;
+    z-index: 2100;
+    width: 420px;
+    height: 560px;
+    background: $olrp-bg;
+    border: 2px solid $olrp-border;
     border-radius: 10px;
+    box-shadow: $olrp-shadow;
     overflow: hidden;
-    background: rgba(24, 24, 24, .88);
-    box-shadow:
-        0 14px 28px rgba(0, 0, 0, .28),
-        0 3px 0 rgba(0, 0, 0, .25),
-        inset 0 -4px rgba(0, 0, 0, .12);
-    pointer-events: auto;
-    animation: fadeIn .2s ease;
-    /* edge color peeking around content */
+    transform-origin: top right;
+    will-change: transform, opacity, left, top;
+
+    &.is-entering {
+        animation: olrpSlideInTR 300ms cubic-bezier(.2, .9, .2, 1) both;
+    }
+
+    &.is-exiting {
+        animation: olrpSlideOutTR 220ms cubic-bezier(.2, .9, .2, 1) both;
+    }
 }
 
-/* Title bar */
-.ds-window__header {
+@keyframes olrpSlideInTR {
+    from {
+        transform: translate(18px, -8px) scale(.98);
+        opacity: 0;
+    }
+
+    to {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes olrpSlideOutTR {
+    from {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+
+    to {
+        transform: translate(18px, -8px) scale(.98);
+        opacity: 0;
+    }
+}
+
+/* ===== Header (drag handle) ===== */
+.ds-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    cursor: move;
-    user-select: none;
+    background: $olrp-header-grad;
+    color: #fff;
     padding: 8px 10px;
-    background: linear-gradient(180deg,#426e8f,#426e8f 50%,#5682a2 0,#5682a2);
-    border-bottom: 1px solid #2b4559;
+    font-size: 18px;
+    font-weight: 800;
+    cursor: grab;
+    user-select: none;
+    position: relative;
 }
 
-.ds-window__title {
+.ds-title {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-weight: 800;
-    color: #133a52;
 
     .ico {
         width: 18px;
         height: 18px;
-        background-size: contain;
-        background-repeat: no-repeat;
     }
 }
 
-/* Red round close like wanted-list */
-.ds-window__close {
+.ds-close {
     position: absolute;
     top: 6px;
     right: 8px;
@@ -74,163 +114,254 @@
     &:after {
         transform: translate(-50%, -50%) rotate(-45deg);
     }
-
-    &:hover {
-        filter: brightness(1.07);
-    }
 }
 
-/* Body split: sidebar + content */
-.ds-window__body {
-    display: grid;
-    grid-template-columns: 170px 1fr;
-    min-height: 0;
-    height: calc(100% - 40px);
-    background: rgba(24, 24, 24, .95);
-}
-
-.ds-window__sidebar {
-    background: #416985;
-    border-right: 1px solid #2b4559;
-    padding: 10px 8px;
-}
-
-/* Sidebar tab styled like left tab from screenshot */
-.ds-tab {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+/* ===== Body ===== */
+.ds-body {
     padding: 10px;
-    border-radius: 8px;
-    font-weight: 800;
-    color: #d9ecf6;
-    background: #355a73;
-    border: 1px solid #29485d;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
-    cursor: default;
-
-    &.ds-tab--active {
-        background: #2e4f66;
-        outline: 2px solid rgba(0, 0, 0, .12);
-    }
-
-    .ico {
-        width: 18px;
-        height: 18px;
-    }
+    height: calc(100% - 40px);
+    overflow: auto;
 }
 
-.ds-window__content {
-    padding: 14px;
-    background: rgba(24, 24, 24, .88);
-    /* main body */
-    display: flex;
-    flex-direction: column;
-}
+/* ===== Reuse Settings styles for grids & modals ===== */
+@import "../roleplay/SettingsView"; // if you prefer not to import, copy the blocks below
 
-/* Packs list */
-.ds-packs {
-    display: grid;
-    gap: 12px;
-}
-
-.ds-pack {
-    background: rgba(24, 24, 24, .95);
+/* Minimal copies needed (same as SettingsView) */
+.appearance-preview {
     border: 1px solid #585858;
-    border-radius: 10px;
-    padding: 12px;
-    color: #eaf2f7;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
-
-    &.is-best {
-        background: #446a86;
-        box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, .12),
-            0 3px 10px rgba(0, 0, 0, .25);
-    }
-}
-
-.ds-pack__badge {
-    position: absolute;
-    transform: translateY(-10px);
-    right: 14px;
-    background: #ffcf4d;
-    color: #2a2a2a;
-    font-weight: 800;
-    font-size: 12px;
-    padding: 2px 8px;
-    border-radius: 8px;
-    box-shadow: 0 2px 0 rgba(0, 0, 0, .25);
-}
-
-.ds-pack__top {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    .ico {
-        width: 20px;
-        height: 20px;
-    }
-}
-
-.ds-pack__title {
-    font-weight: 800;
-
-    .ds-pack__bonus {
-        margin-left: 6px;
-        font-weight: 800;
-        color: #c8f5ff;
-        text-shadow: 0 1px 0 rgba(0, 0, 0, .35);
-        font-size: 12px;
-    }
-}
-
-.ds-pack__bottom {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 10px;
-}
-
-.ds-pack__price {
-    font-weight: 900;
-    font-size: 16px;
-    letter-spacing: .2px;
-    text-shadow: 0 1px 0 rgba(0, 0, 0, .35);
-}
-
-.ds-pack__buy {
-    background: #426e8f;
-    border: 0;
-    color: #ffffff;
-    font-weight: 900;
-    padding: 8px 12px;
     border-radius: 6px;
-    box-shadow: 0 10px 24px rgba(0,0,0,.22),0 2px 0 rgba(0,0,0,.25),inset 0 -4px rgba(0,0,0,.12);
-    cursor: pointer;
-    transition: transform .08s ease, box-shadow .12s ease;
+    background: rgba(24,24,24,.88);
+    padding: 10px;
+    margin-bottom: 10px;
+}
 
-    &:active {
-        transform: translateY(0);
+.appearance-preview .wallet {
+    margin-top: 8px;
+    display: flex;
+    gap: 6px;
+
+    .pill {
+        background: #fff;
+        border: 1px solid #cfcfcf;
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-weight: 800;
     }
+}
+
+.appearance-group {
+    margin-top: 10px;
+
+    .group-title {
+        font-weight: 900;
+        color: #fff;
+        margin-bottom: 6px;
+
+        &.with-sub {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+
+            small {
+                color: #c2c2c2;
+                font-weight: 600;
+            }
+        }
+    }
+}
+
+/* Grid & cards (dark look like you posted) */
+.bubble-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+    gap: 6px;
+}
+
+.bubble-card {
+    position: relative;
+    padding: 4px;
+    border: 1px solid #585858;
+    border-radius: 8px;
+    background: rgba(24, 24, 24, .88);
+    cursor: pointer;
+    transition: transform .1s ease, box-shadow .12s ease;
+    user-select: none;
 
     &:hover {
         transform: translateY(-1px);
+        box-shadow: 0 1px 0 rgba(0, 0, 0, .15);
+    }
+
+    &.selected {
+        outline: 2px solid #2ecc71;
+        outline-offset: 0;
+    }
+
+    &.selected::after {
+        content: "✓";
+        position: absolute;
+        top: 2px;
+        right: 6px;
+        font-weight: 900;
+        font-size: 14px;
+        color: #2ecc71;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, .35);
+        pointer-events: none;
     }
 }
 
-/* Fineprint */
-.ds-fineprint {
-    margin-top: 12px;
-    font-size: 12px;
-    opacity: .85;
-    line-height: 1.25;
-    color: #e9eef5;
+.bubble-thumb {
+    position: relative;
+    height: 36px;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    isolation: isolate;
+
+    img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        transform: scale(.92);
+        opacity: .9;
+        pointer-events: none;
+    }
+
+    .bubble-id {
+        position: relative;
+        z-index: 2;
+        font-weight: 900;
+        font-size: 11px;
+        padding: 1px 5px;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, .35);
+        color: #fff;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, .4);
+    }
 }
 
-/* icons (reuse your existing sprites) */
+.bubble-card.locked {
+    filter: grayscale(.12) opacity(.9);
+}
+
+.bubble-card.locked:hover {
+    transform: none;
+}
+
+.price-row {
+    margin-top: 6px;
+    display: flex;
+    justify-content: center;
+
+    .price {
+        font-weight: 900;
+        font-size: 12px;
+        background: #f1f7ff;
+        border: 1px solid #adc6e6;
+        border-radius: 6px;
+        padding: 2px 6px;
+    }
+
+    .owned {
+        font-weight: 900;
+        font-size: 12px;
+        color: #2e7d32;
+    }
+}
+
+.ribbon {
+    position: absolute;
+    top: 6px;
+    left: -6px;
+    background: linear-gradient(180deg, #b83c34, #cf4c44);
+    color: #fff;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 900;
+    transform: rotate(-12deg);
+    border: 2px solid #6d1410;
+    border-radius: 4px;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .4);
+    pointer-events: none;
+    z-index:999;
+}
+
+/* Confirm modal (reused) */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2200;
+}
+
+.confirm-modal {
+    width: 360px;
+    background: #dedede;
+    border: 2px solid #22425d;
+    border-radius: 10px;
+    box-shadow: $olrp-shadow;
+    overflow: hidden;
+}
+
+.cm-header {
+    background: linear-gradient(180deg, #426e8f, #426e8f 50%, #5682a2 0, #5682a2);
+    color: #fff;
+    font-weight: 800;
+    padding: 8px 10px;
+}
+
+.cm-body {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+
+    .cm-thumb {
+        width: 64px;
+        height: 48px;
+        border: 1px solid #cfcfcf;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+    }
+
+    .cm-thumb img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    .cm-copy .line {
+        margin: 2px 0;
+    }
+
+    .cm-copy .warn {
+        margin-top: 4px;
+        color: #b83c34;
+        font-weight: 800;
+    }
+}
+
+.cm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px;
+}
+
+/* Utility icon hook */
 .ico-diamond {
     background-image: url("../../icons/diamonds.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+    display: inline-block;
 }

@@ -302,12 +302,6 @@ export const RightSideView: FC<{}> = () => {
             {showDiamonds && (
                 <DiamondsStoreView
                     onClose={() => setShowDiamonds(false)}
-                    initial={{
-                        x: Math.max(20, window.innerWidth - 460),
-                        y: 90,
-                    }}
-                    width={420}
-                    height={560}
                 />
             )}
         </div>
