@@ -8,7 +8,8 @@ interface ChatWidgetMessageViewProps {
     bubbleWidth?: number;
 }
 
-const NAME_ICON_BASE = "/assets/nameicons"; // serve your icons here
+/** Use the same folder you used in the store */
+const NAME_ICON_BASE = "/nitro-react/src/assets/images/chat/nameicons";
 
 export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
     props
@@ -54,7 +55,7 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
 
         if (!left && !top) {
             left = chat.location.x - width / 2;
-            top = el.parentElement.offsetHeight - height;
+            top = el.parentElement!.offsetHeight - height;
             chat.left = left;
             chat.top = top;
         }
@@ -73,11 +74,22 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
 
     const bubbleStyleId = isRoleplay ? 4 : chat.styleId;
 
-    // Build name-icon URL if enabled
+    // If server attached these (recommended):
+    // chat.showNameIcon: boolean
+    // chat.nameIconKey: string (e.g., "1", "2", ... or file key)
     const nameIconUrl =
         chat.showNameIcon && chat.nameIconKey
             ? `${NAME_ICON_BASE}/${chat.nameIconKey}.png`
             : null;
+
+    // 👇 Build the exact username HTML the client expects,
+    // but prefix our icon <img> BEFORE the "[ADM]" (which is inside username HTML)
+    // We simply prepend it to the whole username HTML string.
+    const usernameHtmlCore = `${chat.username}: `; // this is what you had before
+    const usernameMarkup =
+        (nameIconUrl
+            ? `<img class="name-icon" src="${nameIconUrl}" alt="" aria-hidden="true" draggable="false" /> `
+            : "") + usernameHtmlCore;
 
     return (
         <div
@@ -125,20 +137,11 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
                         />
                     ) : (
                         <>
-                            {/* NEW: name icon before username */}
-                            {nameIconUrl && (
-                                <img
-                                    className="name-icon"
-                                    src={nameIconUrl}
-                                    alt=""
-                                    aria-hidden="true"
-                                    draggable={false}
-                                />
-                            )}
                             <b
                                 className="username mr-1"
+                                // NOTE: we inject the icon markup directly here so it appears before [ADM]
                                 dangerouslySetInnerHTML={{
-                                    __html: `${chat.username}: `,
+                                    __html: usernameMarkup,
                                 }}
                             />
                             <span

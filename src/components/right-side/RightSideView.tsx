@@ -9,8 +9,6 @@ import { StartWorkComposer } from "@nitrots/nitro-renderer/src/nitro/communicati
 import { PassiveModeComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PassiveModeComposer";
 import { CallPoliceComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CallPoliceComposer";
 import { RenameVirtualRoomComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/RenameVirtualRoomComposer";
-
-// ✨ NEW: Diamonds Store modal
 import { DiamondsStoreView } from "../roleplay/DiamondsStoreView";
 
 type VRoomDetail = {
@@ -41,25 +39,37 @@ export const RightSideView: FC<{}> = () => {
     const [virtualName, setVirtualName] = useState("Loading…");
     const [virtualId, setVirtualId] = useState<number>(0);
     const [virtualType, setVirtualType] = useState<string>("default");
-
     const [credits, setCredits] = useState<number>(0);
-    // ✨ Diamonds balance
     const [diamonds, setDiamonds] = useState<number>(0);
-
     const [showSettings, setShowSettings] = useState(false);
-    // ✨ Diamonds store modal flag
     const [showDiamonds, setShowDiamonds] = useState(false);
-
     const [working, setWorking] = useState(false);
     const [passive, setPassive] = useState(false);
     const [cooldown, setCooldown] = useState(0);
     const [showCall, setShowCall] = useState(false);
     const [callMsg, setCallMsg] = useState("");
-
-    // ✨ inline edit state
     const [editingName, setEditingName] = useState(false);
     const [draftName, setDraftName] = useState("");
     const nameInputRef = useRef<HTMLInputElement>(null);
+
+    /** --- Poll /api/online-count every 10s --- */
+    useEffect(() => {
+        const fetchOnline = async () => {
+            try {
+                const res = await fetch("http://localhost/api/online-count");
+                if (!res.ok) return;
+                const data = await res.json();
+                if (typeof data.count === "number") setOnlineUsers(data.count);
+                else if (typeof data === "number") setOnlineUsers(data);
+            } catch (e) {
+                console.warn("⚠️ Failed to fetch online count:", e);
+            }
+        };
+
+        fetchOnline();
+        const interval = setInterval(fetchOnline, 10000);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         const handleVRoomInfo = (e: any) => {
@@ -72,7 +82,6 @@ export const RightSideView: FC<{}> = () => {
             if (typeof detail.credits === "number") setCredits(detail.credits);
             if (typeof detail.userCount === "number")
                 setOnlineUsers(detail.userCount);
-
             if (detail.inGameTime) setGameTime(fmt12h(detail.inGameTime));
             if (detail.phase) setPhase(detail.phase);
         };
@@ -92,7 +101,6 @@ export const RightSideView: FC<{}> = () => {
                 setCredits(Number(e.detail.amount) || 0);
         };
 
-        // ✨ diamonds balance updates
         const handleDiamondUpdate = (e: any) => {
             if (e?.detail?.amount != null)
                 setDiamonds(Number(e.detail.amount) || 0);
@@ -100,7 +108,6 @@ export const RightSideView: FC<{}> = () => {
 
         const onWork = (e: any) => setWorking(!!e?.detail?.isWorking);
 
-        // Optional: initial read if your session manager exposes diamonds
         try {
             const sd = GetSessionDataManager() as any;
             if (sd?.diamonds != null) setDiamonds(Number(sd.diamonds) || 0);
@@ -160,26 +167,21 @@ export const RightSideView: FC<{}> = () => {
         setCooldown(30);
     };
 
-    // ✨ start editing on double-click
     const startEditName = () => {
         setDraftName(virtualName);
         setEditingName(true);
         setTimeout(() => nameInputRef.current?.focus(), 0);
     };
 
-    // ✨ commit/cancel helpers
     const commitName = () => {
         const next = draftName.trim();
         if (!next || next === virtualName) {
             setEditingName(false);
             return;
         }
-        // optimistic UI
         setVirtualName(next);
         setEditingName(false);
-        // send packet
         SendMessageComposer(new RenameVirtualRoomComposer(virtualId, next));
-        // optional toast
         window.dispatchEvent(
             new CustomEvent("nitro_alert", { detail: "Location name updated." })
         );
@@ -192,7 +194,6 @@ export const RightSideView: FC<{}> = () => {
 
     return (
         <div className={`nitro-right-compact phase-${phase.toLowerCase()}`}>
-            {/* top mini bar */}
             <div className="rs-mini">
                 <div className="chip has-tip" data-tip="In-game Time">
                     <i className="ico ico-time" /> {gameTime}
@@ -202,7 +203,6 @@ export const RightSideView: FC<{}> = () => {
                     <i className="ico ico-coin" /> {credits}
                 </div>
 
-                {/* ✨ Diamonds chip (between Coins and Settings) — opens store */}
                 <div
                     className="chip has-tip"
                     data-tip="Diamonds"
@@ -225,7 +225,6 @@ export const RightSideView: FC<{}> = () => {
                 </div>
             </div>
 
-            {/* virtual room info card */}
             <div className="rs-card">
                 <div className="rs-title" title={virtualName}>
                     <div
@@ -233,7 +232,6 @@ export const RightSideView: FC<{}> = () => {
                         data-tip="Current Room"
                     >
                         <i className="ico ico-zone" />
-                        {/* ✨ editable title */}
                         {!editingName ? (
                             <span
                                 className="rs-title-text"
@@ -272,7 +270,6 @@ export const RightSideView: FC<{}> = () => {
                     </div>
                 </div>
 
-                {/* online user count + chat log */}
                 <div className="rs-counter">
                     <div className="chip has-tip" data-tip="Users Online">
                         <span>{onlineUsers}</span>
@@ -298,11 +295,8 @@ export const RightSideView: FC<{}> = () => {
                 <SettingsView onClose={() => setShowSettings(false)} />
             )}
 
-            {/* ✨ Diamonds Store modal */}
             {showDiamonds && (
-                <DiamondsStoreView
-                    onClose={() => setShowDiamonds(false)}
-                />
+                <DiamondsStoreView onClose={() => setShowDiamonds(false)} />
             )}
         </div>
     );

@@ -10,9 +10,11 @@ import React, {
 import "./SettingsView.scss";
 import { SendMessageComposer } from "../../api";
 
-/* Hard imports */
+/* ==== Chat & Icons packets ==== */
 import { ChangeChatBubbleComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ChangeChatBubbleComposer";
 import { RequestChatBubbleStoreComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/RequestChatBubbleStoreComposer";
+import { ChangeNameIconComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ChangeNameIconComposer";
+import { RequestNameIconStoreComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/RequestNameIconStoreComposer";
 
 /* ---- Small, no-deps draggable ---- */
 function useDraggable<T extends HTMLElement>() {
@@ -69,117 +71,72 @@ function useDraggable<T extends HTMLElement>() {
 
 /* ---- Keys / constants ---- */
 const POS_KEY = "olrp.settings.pos";
-const LIVE_KEY = "liveFeedEnabled";
-const INVITE_KEY = "gangInvitesEnabled";
-const CTX_KEY = "contextMenuDisabled";
 const ACTIVE_TAB_KEY = "settings.activeTab";
 const BUBBLE_ID_KEY = "chat.bubble.id";
+const ICON_ID_KEY = "name.icon.id";
 
-/* Raw events (support both) */
-const EVT_STORE_OWNED_RAW = "chat_bubbles_owned_raw"; // if you emit owned-only
-const EVT_STORE_SHOP_RAW = "chat_bubble_shop"; // legacy: from ChatBubbleShopComposer
+/* Raw events */
+const EVT_STORE_SHOP_RAW = "chat_bubble_shop";
+const EVT_ICON_STORE_RAW = "name_icon_shop";
 
-/* Internal normalized event */
+/* Internal normalized events */
 const EVT_STORE = "settings:chat_bubbles_owned";
+const EVT_ICON_STORE = "settings:name_icons_owned";
 
-//const BUBBLE_ASSET_BASE = "/nitro-react/src/assets/images/chat/chatbubbles";
-const BUBBLE_ASSET_BASE = "/nitro/icons/chatbubbles/";
+/* Assets */
+const BUBBLE_ASSET_BASE = "/nitro-react/src/assets/images/chat/chatbubbles";
+const NAMEICON_ASSET_BASE = "/nitro-react/src/assets/images/chat/nameicons";
+
 const clamp = (v: number, min: number, max: number) =>
     Math.min(Math.max(v, min), max);
 
 /* ---- Types ---- */
 type Props = { onClose: () => void };
-
-/** Normalized, owned-only */
 type OwnedItem = { id: number; owned: true };
-
-type RawOwnedOnlyItem = { bubbleId: number };
-type RawOwnedOnlyPayload = { items: RawOwnedOnlyItem[]; equippedId?: number };
-
-type RawShopItem = {
-    bubbleId: number;
-    price: number;
-    owned: boolean;
-    equipped?: boolean;
-};
-type RawShopPayload = {
-    items: RawShopItem[];
-    diamonds?: number;
-    equippedId?: number;
-};
-
-/* ---- Tiny UI ---- */
-const Toggle: FC<{
-    checked: boolean;
-    onChange: (v: boolean) => void;
-    ariaLabel?: string;
-}> = ({ checked, onChange, ariaLabel }) => (
-    <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={ariaLabel}
-        className={`toggle ${checked ? "on" : "off"}`}
-        onClick={() => onChange(!checked)}
-    >
-        <span className="track" />
-        <span className="thumb" />
-    </button>
-);
-
-const Button: FC<{
-    kind?: "primary" | "confirm" | "danger";
-    onClick?: () => void;
-    children: any;
-    disabled?: boolean;
-}> = ({ kind = "primary", onClick, children, disabled }) => (
-    <button
-        type="button"
-        className={`btn btn--${kind}`}
-        onClick={onClick}
-        disabled={disabled}
-    >
-        {children}
-    </button>
-);
 
 /* ---- Component ---- */
 export const SettingsView: FC<Props> = ({ onClose }) => {
-    /* General settings (unchanged) */
-    const [liveFeed, setLiveFeed] = useState<boolean>(() =>
-        JSON.parse(localStorage.getItem(LIVE_KEY) ?? "true")
-    );
-    const [gangInvites, setGangInvites] = useState<boolean>(() =>
-        JSON.parse(localStorage.getItem(INVITE_KEY) ?? "true")
-    );
-    const [contextMenuDisabled, setContextMenuDisabled] = useState<boolean>(
-        () => JSON.parse(localStorage.getItem(CTX_KEY) ?? "false")
-    );
-
-    /* UI + tabs */
     const [entering, setEntering] = useState(true);
     type TabKey = "general" | "chat" | "icons" | "namecolor";
     const [activeTab, setActiveTab] = useState<TabKey>(
         () => (localStorage.getItem(ACTIVE_TAB_KEY) as TabKey) || "general"
     );
 
-    /* Drag */
     const { ref: rootRef, onMouseDown: startDrag } =
         useDraggable<HTMLDivElement>();
 
-    /* Owned bubbles only */
-    const [owned, setOwned] = useState<Map<number, OwnedItem>>(new Map());
+    /* Chat bubbles */
+    const [ownedBubbles, setOwnedBubbles] = useState<Map<number, OwnedItem>>(
+        new Map()
+    );
     const [selectedBubbleId, setSelectedBubbleId] = useState<number>(() => {
         const saved = Number(localStorage.getItem(BUBBLE_ID_KEY));
         return Number.isFinite(saved) ? saved : 0;
     });
 
-    const items = useMemo(
+    /* Name icons */
+    const [ownedIcons, setOwnedIcons] = useState<Map<number, OwnedItem>>(
+        new Map()
+    );
+    const [selectedIconId, setSelectedIconId] = useState<number>(() => {
+        const saved = Number(localStorage.getItem(ICON_ID_KEY));
+        return Number.isFinite(saved) ? saved : 0;
+    });
+
+    const bubbleItems = useMemo(
         () =>
-            Array.from(owned.values())
+            Array.from(ownedBubbles.values())
                 .map((v) => v.id)
                 .sort((a, b) => a - b),
-        [owned]
+        [ownedBubbles]
+    );
+
+    const iconItems = useMemo(
+        () =>
+            Array.from(ownedIcons.values())
+                .map((v) => v.id)
+                .sort((a, b) => a - b),
+        [ownedIcons]
     );
 
     /* Position restore */
@@ -196,7 +153,6 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
                 clamp(left, 8, vw - rect.width - 8) + "px";
             rootRef.current.style.top =
                 clamp(top, 8, vh - rect.height - 8) + "px";
-            rootRef.current.style.transform = "translate(0,0)";
         } else {
             rootRef.current.style.left = `calc(100vw - ${rect.width + 16}px)`;
             rootRef.current.style.top = `90px`;
@@ -205,9 +161,7 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
 
     /* ESC to close */
     useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") handleClose();
-        };
+        const onKey = (e: KeyboardEvent) => e.key === "Escape" && handleClose();
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
     }, []);
@@ -217,161 +171,124 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
         localStorage.setItem(ACTIVE_TAB_KEY, activeTab);
     }, [activeTab]);
 
-    /* ---- Request data when Chat tab opens ---- */
-    const requestOwnedViaShop = useCallback(() => {
+    /* ==== Request owned data ==== */
+    const requestBubbleShop = useCallback(() => {
         try {
-            // server returns ChatBubbleShopComposer (shop list), we will filter owned=true
             SendMessageComposer(new RequestChatBubbleStoreComposer());
-            console.log(
-                "[SettingsView] → RequestChatBubbleStoreComposer (send)"
-            );
-        } catch (e) {
-            console.error(
-                "[SettingsView] send RequestChatBubbleStoreComposer failed",
-                e
-            );
-        }
+        } catch {}
+    }, []);
+    const requestIconShop = useCallback(() => {
+        try {
+            SendMessageComposer(new RequestNameIconStoreComposer());
+        } catch {}
     }, []);
 
     useEffect(() => {
-        if (activeTab === "chat") requestOwnedViaShop();
-    }, [activeTab, requestOwnedViaShop]);
+        if (activeTab === "chat") requestBubbleShop();
+        if (activeTab === "icons") requestIconShop();
+    }, [activeTab, requestBubbleShop, requestIconShop]);
 
-    /* ---- Bridge: normalize raw -> owned-only ---- */
+    /* ==== Bridge → owned bubbles ==== */
     useEffect(() => {
-        // Owned-only raw payload (if you emit EVT_STORE_OWNED_RAW)
-        const onOwnedRaw = (e: Event) => {
-            const { detail } = e as CustomEvent<RawOwnedOnlyPayload>;
-            if (!detail) return;
-
-            const m = new Map<number, OwnedItem>();
-            for (const r of detail.items || [])
-                m.set(r.bubbleId, { id: r.bubbleId, owned: true });
-
-            window.dispatchEvent(
-                new CustomEvent(EVT_STORE, {
-                    detail: {
-                        items: Array.from(m.values()),
-                        equippedId:
-                            typeof detail.equippedId === "number"
-                                ? detail.equippedId
-                                : undefined,
-                    },
-                })
-            );
-        };
-
-        // Legacy shop payload: filter to owned===true
         const onShopRaw = (e: Event) => {
-            const { detail } = e as CustomEvent<RawShopPayload>;
+            const { detail } = e as CustomEvent<{
+                items: any[];
+                equippedId?: number;
+            }>;
             if (!detail) return;
-
             const m = new Map<number, OwnedItem>();
-            let equippedIdFromFlag: number | undefined;
-
+            let eq: number | undefined;
             for (const it of detail.items || []) {
                 if (it.owned)
                     m.set(it.bubbleId, { id: it.bubbleId, owned: true });
-                if (it.equipped) equippedIdFromFlag = it.bubbleId;
+                if (it.equipped) eq = it.bubbleId;
             }
-
-            window.dispatchEvent(
-                new CustomEvent(EVT_STORE, {
-                    detail: {
-                        items: Array.from(m.values()),
-                        equippedId:
-                            typeof detail.equippedId === "number"
-                                ? detail.equippedId
-                                : equippedIdFromFlag,
-                    },
-                })
-            );
+            setOwnedBubbles(m);
+            if (typeof detail.equippedId === "number")
+                setSelectedBubbleId(detail.equippedId);
+            else if (eq) setSelectedBubbleId(eq);
         };
-
-        window.addEventListener(
-            EVT_STORE_OWNED_RAW,
-            onOwnedRaw as EventListener
-        );
         window.addEventListener(EVT_STORE_SHOP_RAW, onShopRaw as EventListener);
-
-        return () => {
-            window.removeEventListener(
-                EVT_STORE_OWNED_RAW,
-                onOwnedRaw as EventListener
-            );
+        return () =>
             window.removeEventListener(
                 EVT_STORE_SHOP_RAW,
                 onShopRaw as EventListener
             );
-        };
     }, []);
 
-    /* ---- Internal normalized event -> state ---- */
+    /* ==== Bridge → owned icons ==== */
     useEffect(() => {
-        const onOwned = (e: Event) => {
+        const onIconRaw = (e: Event) => {
             const { detail } = e as CustomEvent<{
-                items: OwnedItem[];
+                items: any[];
                 equippedId?: number;
             }>;
+            if (!detail) return;
             const m = new Map<number, OwnedItem>();
-            for (const it of detail.items || []) m.set(it.id, it);
-            setOwned(m);
-
-            if (typeof detail.equippedId === "number") {
-                setSelectedBubbleId(detail.equippedId);
-                localStorage.setItem(BUBBLE_ID_KEY, String(detail.equippedId));
+            let eq: number | undefined;
+            for (const it of detail.items || []) {
+                if (it.owned) m.set(it.iconId, { id: it.iconId, owned: true });
+                if (it.equipped) eq = it.iconId;
             }
+            setOwnedIcons(m);
+            if (typeof detail.equippedId === "number")
+                setSelectedIconId(detail.equippedId);
+            else if (eq) setSelectedIconId(eq);
         };
-
-        window.addEventListener(EVT_STORE, onOwned as EventListener);
+        window.addEventListener(EVT_ICON_STORE_RAW, onIconRaw as EventListener);
         return () =>
-            window.removeEventListener(EVT_STORE, onOwned as EventListener);
+            window.removeEventListener(
+                EVT_ICON_STORE_RAW,
+                onIconRaw as EventListener
+            );
     }, []);
+
+    /* ==== React to external owned updates ==== */
+    useEffect(() => {
+        const onIconsOwned = (e: Event) => {
+            const { detail } = e as CustomEvent<{
+                items: any[];
+                equippedId?: number;
+            }>;
+            if (!detail) return;
+            const m = new Map<number, OwnedItem>();
+            for (const it of detail.items || [])
+                m.set(it.id, { id: it.id, owned: true });
+            setOwnedIcons(m);
+            if (typeof detail.equippedId === "number")
+                setSelectedIconId(detail.equippedId);
+        };
+        window.addEventListener(EVT_ICON_STORE, onIconsOwned as EventListener);
+        return () =>
+            window.removeEventListener(
+                EVT_ICON_STORE,
+                onIconsOwned as EventListener
+            );
+    }, []);
+
+    /* ==== Selection handlers ==== */
+    const selectBubble = (bubbleId: number) => {
+        if (!ownedBubbles.has(bubbleId)) return;
+        setSelectedBubbleId(bubbleId);
+        localStorage.setItem(BUBBLE_ID_KEY, String(bubbleId));
+        SendMessageComposer(new ChangeChatBubbleComposer(bubbleId));
+    };
+
+    const selectIcon = (iconId: number) => {
+        if (!ownedIcons.has(iconId)) return;
+        setSelectedIconId(iconId);
+        localStorage.setItem(ICON_ID_KEY, String(iconId));
+        SendMessageComposer(new ChangeNameIconComposer(iconId));
+    };
+
+    const bubbleImageUrl = (id: number) =>
+        `${BUBBLE_ASSET_BASE}/bubble_${id}.png`;
+    const iconImageUrl = (id: number) => `${NAMEICON_ASSET_BASE}/${id}.png`;
 
     const handleClose = () => {
         setEntering(false);
         setTimeout(onClose, 220);
     };
-
-    const handleSave = () => {
-        localStorage.setItem(LIVE_KEY, JSON.stringify(liveFeed));
-        localStorage.setItem(INVITE_KEY, JSON.stringify(gangInvites));
-        localStorage.setItem(CTX_KEY, JSON.stringify(contextMenuDisabled));
-        window.dispatchEvent(
-            new CustomEvent("toggleLiveFeed", { detail: { enabled: liveFeed } })
-        );
-        window.dispatchEvent(
-            new CustomEvent("toggleGangInvites", {
-                detail: { enabled: gangInvites },
-            })
-        );
-        window.dispatchEvent(
-            new CustomEvent("toggleContextMenu", {
-                detail: { disabled: contextMenuDisabled },
-            })
-        );
-        handleClose();
-    };
-
-    const selectBubble = (bubbleId: number) => {
-        if (!owned.has(bubbleId)) return; // safety: owned only here
-        setSelectedBubbleId(bubbleId);
-        localStorage.setItem(BUBBLE_ID_KEY, String(bubbleId));
-        try {
-            SendMessageComposer(new ChangeChatBubbleComposer(bubbleId));
-        } catch (e) {
-            console.error(
-                "[SettingsView] send ChangeChatBubbleComposer failed",
-                e
-            );
-        }
-        window.dispatchEvent(
-            new CustomEvent("olrp:chatBubbleChanged", { detail: { bubbleId } })
-        );
-    };
-
-    const bubbleImageUrl = (id: number) =>
-        `${BUBBLE_ASSET_BASE}/bubble_${id}.png`;
 
     return (
         <div
@@ -393,136 +310,52 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
                 />
             </div>
 
-            {/* tabs */}
+            {/* Tabs */}
             <div
                 className="settings-tabs"
                 role="tablist"
                 aria-label="Settings tabs"
             >
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab === "general"}
-                    className={`settings-tab ${
-                        activeTab === "general" ? "active" : ""
-                    }`}
-                    onClick={() => setActiveTab("general")}
-                >
-                    General
-                </button>
-
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab === "chat"}
-                    className={`settings-tab ${
-                        activeTab === "chat" ? "active" : ""
-                    }`}
-                    onClick={() => setActiveTab("chat")}
-                >
-                    Chat Bubbles
-                </button>
-
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab === "icons"}
-                    className={`settings-tab ${
-                        activeTab === "icons" ? "active" : ""
-                    }`}
-                    onClick={() => setActiveTab("icons")}
-                >
-                    Name Icons
-                </button>
-
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab === "namecolor"}
-                    className={`settings-tab ${
-                        activeTab === "namecolor" ? "active" : ""
-                    }`}
-                    onClick={() => setActiveTab("namecolor")}
-                >
-                    Name Color
-                </button>
+                {["general", "chat", "icons", "namecolor"].map((tab) => (
+                    <button
+                        key={tab}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === tab}
+                        className={`settings-tab ${
+                            activeTab === tab ? "active" : ""
+                        }`}
+                        onClick={() => setActiveTab(tab as TabKey)}
+                    >
+                        {tab === "general"
+                            ? "General"
+                            : tab === "chat"
+                            ? "Chat Bubbles"
+                            : tab === "icons"
+                            ? "Name Icons"
+                            : "Name Color"}
+                    </button>
+                ))}
             </div>
 
             <div className="settings-body">
-                {activeTab === "general" && (
-                    <>
-                        <section className="settings-row">
-                            <div className="settings-row__copy">
-                                <div className="title">Live Feed</div>
-                                <div className="sub">
-                                    Show live events and alerts in the feed.
-                                </div>
-                            </div>
-                            <Toggle
-                                checked={liveFeed}
-                                onChange={setLiveFeed}
-                                ariaLabel="Toggle live feed"
-                            />
-                        </section>
-
-                        <section className="settings-row">
-                            <div className="settings-row__copy">
-                                <div className="title">Gang Invites</div>
-                                <div className="sub">
-                                    Allow other players to invite you to gangs.
-                                </div>
-                            </div>
-                            <Toggle
-                                checked={gangInvites}
-                                onChange={setGangInvites}
-                                ariaLabel="Toggle gang invites"
-                            />
-                        </section>
-
-                        <section className="settings-row">
-                            <div className="settings-row__copy">
-                                <div className="title">
-                                    Disable Context Menu
-                                </div>
-                                <div className="sub">
-                                    Turn off right-click menus for a cleaner UI.
-                                </div>
-                            </div>
-                            <Toggle
-                                checked={contextMenuDisabled}
-                                onChange={setContextMenuDisabled}
-                                ariaLabel="Disable context menus"
-                            />
-                        </section>
-
-                        <div className="settings-actions">
-                            <Button kind="confirm" onClick={handleSave}>
-                                Save
-                            </Button>
-                        </div>
-                    </>
-                )}
-
                 {activeTab === "chat" && (
                     <div className="appearance-group">
                         <div className="group-title with-sub">
                             <span>Owned Chat Bubbles</span>
                             <small>Choose from bubbles you own</small>
                         </div>
-
                         <div className="bubble-grid">
-                            {items.map((id) => {
+                            {bubbleItems.map((id) => {
                                 const selected = selectedBubbleId === id;
                                 return (
                                     <button
-                                        type="button"
                                         key={id}
                                         className={`bubble-card ${
                                             selected ? "selected" : ""
                                         }`}
                                         onClick={() => selectBubble(id)}
                                         title={`Equip bubble #${id}`}
-                                        aria-label={`Equip bubble ${id}`}
                                     >
                                         <div
                                             className={`bubble-thumb bubble-${id}`}
@@ -530,7 +363,6 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
                                             <img
                                                 src={bubbleImageUrl(id)}
                                                 alt=""
-                                                aria-hidden
                                             />
                                             <span className="bubble-id">
                                                 #{id}
@@ -549,13 +381,36 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
                 {activeTab === "icons" && (
                     <div className="appearance-group">
                         <div className="group-title with-sub">
-                            <span>Name Icons</span>
-                            <small>
-                                Coming soon — choose a nameplate icon.
-                            </small>
+                            <span>Owned Name Icons</span>
+                            <small>Choose your nameplate icon</small>
                         </div>
-                        <div className="empty">
-                            Name Icons store is not available yet.
+                        <div className="bubble-grid">
+                            {iconItems.map((id) => {
+                                const selected = selectedIconId === id;
+                                return (
+                                    <button
+                                        key={id}
+                                        className={`bubble-card ${
+                                            selected ? "selected" : ""
+                                        }`}
+                                        onClick={() => selectIcon(id)}
+                                        title={`Equip name icon #${id}`}
+                                    >
+                                        <div className="bubble-thumb">
+                                            <img
+                                                src={iconImageUrl(id)}
+                                                alt=""
+                                            />
+                                            <span className="bubble-id">
+                                                #{id}
+                                            </span>
+                                        </div>
+                                        <div className="price-row">
+                                            <span className="owned">Owned</span>
+                                        </div>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -565,11 +420,11 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
                         <div className="group-title with-sub">
                             <span>Name Color</span>
                             <small>
-                                Coming soon — customize your chat name color.
+                                Coming soon — customize your chat name color
                             </small>
                         </div>
                         <div className="empty">
-                            Name Color picker is not available yet.
+                            Name Color picker not available yet.
                         </div>
                     </div>
                 )}

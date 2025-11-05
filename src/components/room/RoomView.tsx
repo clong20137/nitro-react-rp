@@ -16,14 +16,13 @@ import { GangInviteContainer } from "../roleplay/GangInviteContainer";
 import { GangClaimView } from "../roleplay/GangClaimView";
 import { TaxiView } from "../roleplay/TaxiView";
 
-
-
 import { Nitro } from "@nitrots/nitro-renderer";
 import { RoomObjectMouseEvent } from "@nitrots/nitro-renderer";
 import { RoomObjectCategory } from "@nitrots/nitro-renderer/src/nitro/room/object/RoomObjectCategory";
 
 import AvatarGlowOverlay from "../roleplay/AvatarGlowOverlay";
 import JukeboxView from "../roleplay/JukeboxView";
+import { getRPStats } from "../roleplay/rpStatsCache";
 
 export const RoomView: FC = () => {
     const { roomSession = null } = useRoom();
@@ -31,6 +30,7 @@ export const RoomView: FC = () => {
 
     // the selected UNIT index; -1 means none
     const [glowForUnit, setGlowForUnit] = useState<number>(-1);
+    const { gathering, level } = getRPStats();
 
     // mount Nitro canvas
     useEffect(() => {
@@ -38,7 +38,7 @@ export const RoomView: FC = () => {
         instance.renderer.clearBeforeRender = false;
         const canvas = instance.renderer.view;
         if (!canvas) return;
-
+        
         canvas.onclick = (event) => DispatchMouseEvent(event);
         canvas.onmousemove = (event) => DispatchMouseEvent(event);
         canvas.onmousedown = (event) => DispatchMouseEvent(event);
@@ -53,6 +53,8 @@ export const RoomView: FC = () => {
         if (!el || el.contains(canvas)) return;
         el.appendChild(canvas);
     }, []);
+
+ 
 
     // listen for clicks on room objects
     useEffect(() => {
@@ -113,6 +115,7 @@ export const RoomView: FC = () => {
                             onHide={() => setGlowForUnit(-1)}
                         />
                     )}
+                   
 
                     <LeftSidebarView />
                     <GangInviteContainer />
@@ -123,6 +126,7 @@ export const RoomView: FC = () => {
                     <GangClaimView />
                     <TaxiView />
                     <JukeboxView />
+
                     {roomSession.isSpectator && <RoomSpectatorView />}
                 </>
             )}

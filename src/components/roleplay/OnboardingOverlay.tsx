@@ -278,29 +278,25 @@ export const OnboardingOverlay: FC = () => {
             );
     }, []);
 
-    // Steps in your requested order; each has multiple fallback selectors.
     const steps: Step[] = useMemo(
         () => [
-            // 1) Stats (use registry if provided by StatsBar)
+            /* 1) Stats — card should sit LEFT of the stats so the arrow points RIGHT */
             {
                 id: "stats",
-                targets: [
-                    "reg:stats",
-                    ".stats-bar-container",
-                    ".greek-circle", // inner left cluster
-                ],
+                targets: ["reg:stats", ".stats-bar-container", ".greek-circle"],
                 title: "Stats",
                 body: "Track your health, energy and hunger bars, your XP ring and level. Click your avatar to open your profile and spend points.",
                 padding: 10,
-                placement: "right",
-                arrow: "left",
+                placement: "left",
+                arrow: "right",
             },
-            // 2) Inventory
+
+            /* 2) Inventory — new sidebar class; arrow should point LEFT toward the sidebar */
             {
                 id: "inv",
                 targets: [
-                    ".left-sidebar .sidebar-icon.inventory",
-                    ".left-sidebar-container .sidebar-icon.inventory",
+                    ".left-sidebar .chip-inventory",
+                    ".left-sidebar-container .chip-inventory",
                 ],
                 title: "Inventory",
                 body: "Open your backpack to use weapons, defensive gear like Kevlar, consumables, and items you’ve gathered in-game. Click this icon or the X inside the module to open or close it.",
@@ -308,91 +304,130 @@ export const OnboardingOverlay: FC = () => {
                 placement: "right",
                 arrow: "left",
             },
-            // 3) Wanted
+
+            /* 3) Wanted */
             {
                 id: "wanted",
-                targets: [".left-sidebar .sidebar-icon.wanted"],
+                targets: [
+                    ".left-sidebar .chip-wanted",
+                    ".left-sidebar-container .chip-wanted",
+                ],
                 title: "Wanted List",
                 body: "See who’s flagged in the city and why. Use it to avoid trouble — or to hunt bounties.",
                 padding: 8,
                 placement: "right",
+                arrow: "left",
             },
-            // 4) Corporations
+
+            /* 4) Corporations */
             {
                 id: "corps",
-                targets: [".left-sidebar .sidebar-icon.corps"],
+                targets: [
+                    ".left-sidebar .chip-corps",
+                    ".left-sidebar-container .chip-corps",
+                ],
                 title: "Corporations",
                 body: "Browse corporations, their ranks and perks. Join up, climb the ladder and unlock role-specific duties.",
                 padding: 8,
                 placement: "right",
+                arrow: "left",
             },
-            // 5) Gangs
+
+            /* 5) Gangs */
             {
                 id: "gangs",
-                targets: [".left-sidebar .sidebar-icon.skull"],
+                targets: [
+                    ".left-sidebar .chip-gangs",
+                    ".left-sidebar-container .chip-gangs",
+                ],
                 title: "Gangs",
                 body: "Create or manage your gang, view membership and identity, and coordinate territory or activities.",
                 padding: 8,
                 placement: "right",
+                arrow: "left",
             },
-            // 6) Gang Chat
+
+            /* 6) Gang Chat toggle */
             {
                 id: "gangchat",
                 targets: [
-                    ".left-sidebar .sidebar-icon.message",
-                    ".left-sidebar .sidebar-icon.message.active",
+                    ".left-sidebar .chip-chat",
+                    ".left-sidebar-container .chip-chat",
                 ],
                 title: "Gang Chat",
                 body: "Toggle private gang chat on or off. When enabled, your messages go only to your gang.",
                 padding: 8,
                 placement: "right",
+                arrow: "left",
             },
-            // 7) Macros
+
+            /* 7) Macros */
             {
                 id: "macros",
-                targets: [".left-sidebar .sidebar-icon.macros"],
+                targets: [
+                    ".left-sidebar .chip-macros",
+                    ".left-sidebar-container .chip-macros",
+                ],
                 title: "Macros",
                 body: "Save your most-used commands as quick actions. Trigger them instantly to speed up roleplay.",
                 padding: 8,
                 placement: "right",
+                arrow: "left",
             },
-            // 8) Server Time
+
+            /* 8) Time (use the CHIP itself, not the icon; put card BELOW, arrow UP) */
             {
                 id: "time",
                 targets: [
-                    ".nitro-right-compact .rs-mini .chip:first-child",
-                    ".nitro-right-compact .rs-mini .ico.ico-time",
+                    '.nitro-right-compact .rs-mini .chip[data-tip="In-game Time"]',
                 ],
                 title: "Time & Day",
-                body: "This is where the in-game time is displayed. There are a variety of things that In-game time and phase (Day, Dusk, Night, Dawn). Some activities feel different depending on the hour.",
+                body: "In-game time and phase (Day, Dusk, Night, Dawn). Some activities feel different depending on the hour.",
                 padding: 10,
                 placement: "bottom",
+                arrow: "top",
             },
-            // 9) Credits
+
+            /* 9) Credits (chip, not icon) */
             {
                 id: "credits",
                 targets: [
-                    ".nitro-right-compact .rs-mini .chip:nth-child(2)",
-                    ".nitro-right-compact .rs-mini .ico.ico-coin",
+                    '.nitro-right-compact .rs-mini .chip[data-tip="Your Coins"]',
                 ],
                 title: "Credits",
                 body: "Your current balance. Use credits to buy items, trade with others and fund your roleplay.",
                 padding: 10,
                 placement: "bottom",
+                arrow: "top",
             },
-            // 10) Settings
+
+            /* 10) Diamonds — was missing before */
+            {
+                id: "diamonds",
+                targets: [
+                    '.nitro-right-compact .rs-mini .chip[data-tip="Diamonds"]',
+                ],
+                title: "Diamonds",
+                body: "Premium currency for cosmetics and extras.",
+                padding: 10,
+                placement: "bottom",
+                arrow: "top",
+            },
+
+            /* 11) Settings — anchor the CHIP (data-tip) so the rect is correct */
             {
                 id: "settings",
                 targets: [
-                    ".nitro-right-compact .rs-mini .chip:nth-child(3) .ico-gear",
-                    ".nitro-right-compact .rs-mini .ico-gear",
+                    '.nitro-right-compact .rs-mini .chip[data-tip="Settings"]',
                 ],
                 title: "Settings",
                 body: "Open your settings to adjust preferences and UI modules.",
                 padding: 10,
                 placement: "bottom",
+                arrow: "top",
             },
-            // 11) Location
+
+            /* 12) Location — card BELOW, arrow UP */
             {
                 id: "zone",
                 targets: [
@@ -405,32 +440,22 @@ export const OnboardingOverlay: FC = () => {
                 placement: "bottom",
                 arrow: "top",
             },
-            // 12) Online / Chat Logs
+
+            /* 13) Online & Chat Logs — cover BOTH by anchoring the container first */
             {
                 id: "counter_chat",
                 targets: [
-                    ".nitro-right-compact .rs-card .rs-counter .chip:first-child",
                     ".nitro-right-compact .rs-card .rs-counter",
+                    ".nitro-right-compact .rs-card .rs-counter .chip:first-child",
                 ],
                 title: "Online & Chat Logs",
-                body: "See how many players are around you. The chat-log button lets you review recent conversations.",
+                body: "See how many players are around you, and open the chat log to review recent conversations.",
                 padding: 10,
-                placement: "left",
+                placement: "left" /* card on the left side of the block */,
+                arrow: "right",
             },
-            // 13) Quick Actions
-            {
-                id: "quick",
-                targets: [
-                    ".nitro-right-compact .rs-quick",
-                    ".nitro-right-compact .rs-quick .chip",
-                ],
-                title: "Quick Actions",
-                body: "Call the police in an emergency, clock in/out for work, and toggle Passive or Aggressive mode.",
-                padding: 12,
-                placement: "bottom", // card below the row
-                arrow: "top", // arrow points up at the buttons
-            },
-            // 14) Chat bar
+
+            /* 14) Chat bar — unchanged */
             {
                 id: "chat",
                 targets: [

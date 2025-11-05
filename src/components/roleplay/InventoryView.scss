@@ -5,8 +5,8 @@
     top: 100px;
     left: 10%;
     width: max-content;
-    background: #dfdfdf;
-    border: solid 2px #000;
+    background: rgba(24,24,24,.88);
+    border: solid 2px #ffffff;
     border-radius: 10px;
     box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
     font-size: 12px;
@@ -64,7 +64,7 @@
 .inventory-header {
     position: relative;
     color: #fff;
-    background: linear-gradient(180deg,#426e8f,#426e8f 50%,#5682a2 0,#5682a2);
+    background: linear-gradient(180deg,#000,#000 50%,#232323 0,#232323);
     font-weight: bold;
     text-align: center;
     font-size: 20px;
@@ -185,7 +185,7 @@
 .inventory-slot.active-weapon,
 .inventory-slot.active-shield,
 .inventory-slot.active-potion {
-    background-color: #c3c3c3;
+    background-color: rgba(24,24,24,.65);
 }
 
 /* DnD feedback: ONLY shadow/outline, no transform-scale */
@@ -216,7 +216,7 @@
 
 /* Rarities */
 .rarity-common {
-    background-color: #cbb490;
+    background-color: #bbbbbb;
 }
 
 .rarity-uncommon {

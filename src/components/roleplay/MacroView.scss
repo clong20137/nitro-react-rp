@@ -1,15 +1,15 @@
 /* ===== Theme bits ===== */
 $border: #000;
 $bg: #dfdfdf;
-$head: linear-gradient(180deg,#426e8f,#426e8f 50%,#5682a2 0,#5682a2);
+$head: linear-gradient(180deg, #000, #000 50%, #232323 0, #232323);
 $shadow: 0 2px 0 rgba(0, 0, 0, .45);
 
 /* ===== Window ===== */
 .macros-view {
     position: fixed;
     width: 420px;
-    background: $bg;
-    border: 1px solid $border;
+    background: rgba(24,24,24,.88);
+    border: 2px solid #FFF;
     border-radius: 10px;
     box-shadow: $shadow;
     color: #000;
@@ -49,20 +49,18 @@ $shadow: 0 2px 0 rgba(0, 0, 0, .45);
 }
 
 .close-button {
-    width: 22px;
-    height: 22px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    color: #fff;
-    line-height: 1;
-    border-radius: 4px;
-    box-shadow: 0 0 0 1.6px #fff;
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
     border: 2px solid #921911;
     background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
-    transition: filter .2s ease, transform .2s ease;
+    border-radius: 4px;
+    box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
     cursor: pointer;
+    padding: 0;
+
 
     &:hover {
         filter: brightness(1.05);

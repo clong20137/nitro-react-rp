@@ -1,9 +1,9 @@
-import { FC, useEffect, useMemo, useRef, useState } from "react";
+import { FC, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import "./GangsDetailView.scss";
 import { Nitro } from "@nitrots/nitro-renderer";
 import { SendMessageComposer } from "../../api";
 
-// Actions
+/* ===== Packets (guarded imports where useful) ===== */
 import { GangInviteComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GangInviteComposer";
 import { CreateGangRoleComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CreateGangRoleComposer";
 import { DeleteGangMessageComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/DeleteGangMessageComposer";
@@ -14,7 +14,6 @@ import { ChangeGangRankComposer } from "@nitrots/nitro-renderer/src/nitro/commun
 import { EditGangComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/EditGangComposer";
 import { GetPartPaletteHexesComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetPartPaletteHExesComposer";
 
-// Optional guarded imports (so it doesn't break during build)
 let GetGangStatusComposer: any;
 let GetGangMembersComposer: any;
 let GetGangRanksComposer: any;
@@ -31,6 +30,7 @@ try {
         require("@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetGangRanksComposer").GetGangRanksComposer;
 } catch {}
 
+/* ===== Types ===== */
 interface GangsDetailViewProps {
     onClose: () => void;
 }
@@ -64,8 +64,93 @@ interface GangRank {
     canAccessBank: boolean;
 }
 
+type TurfMask = number; // optional helper alias
+
+const applyTurfDataFactory = (setters: {
+    setOwnsNorth: (v: boolean) => void;
+    setOwnsSouth: (v: boolean) => void;
+    setOwnsEast: (v: boolean) => void;
+    setOwnsWest: (v: boolean) => void;
+}) => {
+    return (data: any): number => {
+        // server may send any of:
+        // 1) explicit booleans: ownsNorth/ownsSouth/ownsEast/ownsWest
+        // 2) string array: turfsOwned = ["north","east"]
+        // 3) bitmask: turfsMask (N=1, S=2, E=4, W=8)
+        const arr = Array.isArray(data?.turfsOwned) ? data.turfsOwned : [];
+        const set = new Set(arr.map((s: any) => String(s).toLowerCase()));
+
+        const mask: TurfMask = Number.isFinite(data?.turfsMask)
+            ? Number(data.turfsMask)
+            : 0;
+
+        const north =
+            (typeof data?.ownsNorth === "boolean" && data.ownsNorth) ||
+            set.has("north") ||
+            !!(mask & 1);
+
+        const south =
+            (typeof data?.ownsSouth === "boolean" && data.ownsSouth) ||
+            set.has("south") ||
+            !!(mask & 2);
+
+        const east =
+            (typeof data?.ownsEast === "boolean" && data.ownsEast) ||
+            set.has("east") ||
+            !!(mask & 4);
+
+        const west =
+            (typeof data?.ownsWest === "boolean" && data.ownsWest) ||
+            set.has("west") ||
+            !!(mask & 8);
+
+        setters.setOwnsNorth(!!north);
+        setters.setOwnsSouth(!!south);
+        setters.setOwnsEast(!!east);
+        setters.setOwnsWest(!!west);
+
+        return [north, south, east, west].filter(Boolean).length;
+    };
+};
+
+// --- add near top (below ICON_OPTIONS etc.)
+type TurfDef = {
+    key: "north" | "south" | "east" | "west";
+    name: string;
+    bonus: string;
+    img: string; // 64–96px tile image (transparent PNG recommended)
+};
+
+const TURFS: TurfDef[] = [
+    {
+        key: "north",
+        name: "North Turf",
+        bonus: "10% crit chance (+10 dmg)",
+        img: "/icons/North.png",
+    },
+    {
+        key: "south",
+        name: "South Turf",
+        bonus: "+10 Health per member",
+        img: "/icons/South.png",
+    },
+    {
+        key: "east",
+        name: "East Turf",
+        bonus: "½ Energy per hit",
+        img: "/assets/turfs/east.png",
+    },
+    {
+        key: "west",
+        name: "West Turf",
+        bonus: "Passive healing everywhere",
+        img: "/assets/turfs/west.png",
+    },
+];
+
 type IconOpt = { name: string; src: string; vip?: boolean };
 
+/* ===== Badges (same folder as you used before) ===== */
 const ICON_OPTIONS: IconOpt[] = [
     { name: "Swords", src: "/icons/badges/ALW09.gif" },
     { name: "Skull", src: "/icons/badges/DE10K.gif" },
@@ -102,6 +187,7 @@ const ICON_OPTIONS: IconOpt[] = [
     { name: "Pink Heart", src: "/icons/badges/DE21H.gif", vip: true },
 ];
 
+/* ===== helpers ===== */
 const iconKeyFromSrc = (src: string): string => {
     const m = src.match(/\/([^\/]+)\.(gif|png)$/i);
     return m ? m[1] : "";
@@ -124,97 +210,104 @@ declare global {
     }
 }
 
-/** Paginated color swatch grid (keeps UI compact) */
+/* ===== 6×5 Paginated swatches ===== */
 const PaginatedSwatchGrid: FC<{
     swatches: string[];
     value: string;
     onChange: (hex: string) => void;
-    pageSize?: number;
-}> = ({ swatches, value, onChange, pageSize = 48 }) => {
+}> = ({ swatches, value, onChange }) => {
+    const COLS = 6;
+    const ROWS = 5;
+    const PAGE_SIZE = COLS * ROWS; // 30
     const [page, setPage] = useState(0);
-    const totalPages = Math.max(1, Math.ceil(swatches.length / pageSize));
-    const start = page * pageSize;
-    const current = swatches.slice(start, start + pageSize);
+    const totalPages = Math.max(1, Math.ceil(swatches.length / PAGE_SIZE));
+    const start = page * PAGE_SIZE;
+    const current = swatches.slice(start, start + PAGE_SIZE);
 
     useEffect(() => {
         if (page >= totalPages) setPage(Math.max(0, totalPages - 1));
     }, [swatches.length, page, totalPages]);
 
     return (
-        <>
-            <div className="swatch-grid">
-                {current.map((hex) => (
-                    <button
-                        key={`${hex}-${start}`}
-                        className={
-                            "swatch" + (hex === value ? " selected" : "")
-                        }
-                        style={{ backgroundColor: hex }}
-                        onClick={() => onChange(hex)}
-                        title={hex}
-                    />
-                ))}
-                {!swatches.length && (
-                    <div className="swatch-loading">Loading colors…</div>
-                )}
+        <div className="gang-swatch-pager">
+            <button
+                className="pager-btn left"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                aria-label="Previous colors"
+            >
+                ◀
+            </button>
+
+            {/* 👇 key={page} forces React to remount on page change → triggers fade */}
+            <div key={page} className="page-fade">
+                <div className="swatch-page swatch-6x5">
+                    {current.map((hex) => (
+                        <button
+                            key={`${hex}-${start}`}
+                            className={
+                                "swatch" + (hex === value ? " selected" : "")
+                            }
+                            style={{ backgroundColor: hex }}
+                            onClick={() => onChange(hex)}
+                            title={hex}
+                        />
+                    ))}
+                    {!swatches.length && (
+                        <div className="swatch-loading">Loading colors…</div>
+                    )}
+                </div>
             </div>
 
-            {swatches.length > pageSize && (
-                <div className="pagination-controls" style={{ marginTop: 8 }}>
-                    <button
-                        className="habbo-btn default"
-                        onClick={() => setPage((p) => Math.max(0, p - 1))}
-                        disabled={page === 0}
-                    >
-                        ◀
-                    </button>
-                    <span>
-                        {page + 1} / {totalPages}
-                    </span>
-                    <button
-                        className="habbo-btn default"
-                        onClick={() =>
-                            setPage((p) => Math.min(totalPages - 1, p + 1))
-                        }
-                        disabled={page >= totalPages - 1}
-                    >
-                        ▶
-                    </button>
-                </div>
-            )}
-        </>
+            <button
+                className="pager-btn right"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                aria-label="Next colors"
+            >
+                ▶
+            </button>
+
+            <div className="page-indicator">
+                {page + 1} / {totalPages}
+            </div>
+        </div>
     );
 };
 
+/* =========================================================
+Component
+========================================================= */
+type TabKey = "general" | "members" | "settings";
+
 export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
+    /* ---- core gang state ---- */
     const [gangName, setGangName] = useState("");
     const [gangRank, setGangRank] = useState(0);
     const [primaryColor, setPrimaryColor] = useState("#000000");
     const [secondaryColor, setSecondaryColor] = useState("#000000");
     const [gangIcon, setGangIcon] = useState<string>("");
 
-    const [activeTab, setActiveTab] = useState<"info" | "manage" | "settings">(
-        "info"
-    );
-    const [inviteUsername, setInviteUsername] = useState("");
+    const [activeTab, setActiveTab] = useState<TabKey>("general");
+
+    /* ---- members & ranks ---- */
     const [membersRaw, setMembersRaw] = useState<GangMemberRaw[]>([]);
     const [membersNorm, setMembersNorm] = useState<GangMemberNorm[]>([]);
     const [gangRanks, setGangRanks] = useState<GangRank[]>([]);
     const [collapsedRanks, setCollapsedRanks] = useState<number[]>([]);
 
+    /* ---- permissions / modals ---- */
     const [showEditRoleModal, setShowEditRoleModal] = useState(false);
     const [editRoleId, setEditRoleId] = useState<number | null>(null);
     const [roleName, setRoleName] = useState("");
     const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
     const [showNewRoleModal, setShowNewRoleModal] = useState(false);
     const [newRoleName, setNewRoleName] = useState("");
-    const [visible, setVisible] = useState(true);
     const [showConfirmRoleDeleteModal, setShowConfirmRoleDeleteModal] =
         useState(false);
     const [confirmDeleteRoleId, setConfirmDeleteRoleId] = useState<
         number | null
     >(null);
-
     const [rolePermissions, setRolePermissions] = useState({
         bankAccess: false,
         kickMembers: false,
@@ -222,20 +315,24 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         administrator: false,
     });
 
-    // turf ownership
+    /* ---- turf ownership -> perks ---- */
     const [ownsNorth, setOwnsNorth] = useState(false);
     const [ownsSouth, setOwnsSouth] = useState(false);
     const [ownsEast, setOwnsEast] = useState(false);
     const [ownsWest, setOwnsWest] = useState(false);
 
-    const currentUsername = Nitro.instance.sessionDataManager.userName;
-    const viewer = useMemo(
-        () => membersNorm.find((m) => m.username === currentUsername),
-        [membersNorm, currentUsername]
+    const applyTurfData = useMemo(
+        () =>
+            applyTurfDataFactory({
+                setOwnsNorth,
+                setOwnsSouth,
+                setOwnsEast,
+                setOwnsWest,
+            }),
+        [setOwnsNorth, setOwnsSouth, setOwnsEast, setOwnsWest]
     );
-    const [isGangAdmin, setIsGangAdmin] = useState(false);
-    const [isGangOwner, setIsGangOwner] = useState(false);
 
+    /* ---- stats ---- */
     const [gangXP, setGangXP] = useState(0);
     const [gangXPMax, setGangXPMax] = useState(100);
     const [gangKills, setGangKills] = useState(0);
@@ -245,6 +342,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
     const [gangDamage, setGangDamage] = useState(0);
     const [gangTurfCount, setGangTurfCount] = useState(0);
 
+    /* ---- palettes / icons ---- */
     const [ccSwatches, setCcSwatches] = useState<string[]>([]);
     const ICONS_PER_PAGE = 16;
     const [iconsPage, setIconsPage] = useState(0);
@@ -254,7 +352,19 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         (iconsPage + 1) * ICONS_PER_PAGE
     );
 
+    /* ---- viewer context ---- */
+    const currentUsername = Nitro.instance.sessionDataManager.userName;
+    const viewer = useMemo(
+        () => membersNorm.find((m) => m.username === currentUsername),
+        [membersNorm, currentUsername]
+    );
+    const [isGangAdmin, setIsGangAdmin] = useState(false);
+    const [isGangOwner, setIsGangOwner] = useState(false);
+    const ownerOrAdmin = isGangOwner || isGangAdmin;
+
+    /* ---- draggable position ---- */
     const rootRef = useRef<HTMLDivElement>(null);
+    const [visible, setVisible] = useState(true);
     const [positionReady, setPositionReady] = useState(false);
     const [position, setPosition] = useState<{ x: number; y: number }>(() => {
         try {
@@ -286,7 +396,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         return { x: clamp(x, pad, maxX), y: clamp(y, pad, maxY) };
     };
 
-    const refreshAll = () => {
+    const refreshAll = useCallback(() => {
         try {
             if (GetGangStatusComposer)
                 SendMessageComposer(new GetGangStatusComposer());
@@ -299,36 +409,44 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             if (GetGangRanksComposer)
                 SendMessageComposer(new GetGangRanksComposer());
         } catch {}
-        // DOM bridge fallbacks (if parsers dispatch these)
+        // DOM bridge fallbacks
         window.dispatchEvent(new CustomEvent("request_gang_status"));
         window.dispatchEvent(new CustomEvent("request_gang_members"));
         window.dispatchEvent(new CustomEvent("request_gang_ranks"));
-    };
+    }, []);
 
-    // Normalize members whenever raw members or ranks change
+    /* ---- normalize members any time inputs change ---- */
     useEffect(() => {
         if (!membersRaw.length) {
             setMembersNorm([]);
             return;
         }
-        // map rank.id -> position
-        const idToPos = new Map<number, number>();
-        for (const r of gangRanks) idToPos.set(r.id, r.position);
 
-        // map rank name (lower) -> position
+        const idToPos = new Map<number, number>();
+        gangRanks.forEach((r) => idToPos.set(r.id, r.position));
+
         const nameToPos = new Map<string, number>();
-        for (const r of gangRanks)
-            nameToPos.set((r.name || "").toLowerCase(), r.position);
+        gangRanks.forEach((r) =>
+            nameToPos.set((r.name || "").toLowerCase(), r.position)
+        );
 
         const normalized: GangMemberNorm[] = membersRaw.map((m) => {
-            // robustly decide rankOrder
-            let rankOrder = Number.isFinite(m.rankOrder)
-                ? (m.rankOrder as number)
-                : m.rankId !== undefined && idToPos.has(m.rankId)
-                ? (idToPos.get(m.rankId) as number)
-                : m.rankName && nameToPos.has((m.rankName || "").toLowerCase())
-                ? (nameToPos.get((m.rankName || "").toLowerCase()) as number)
-                : -1;
+            let rankOrder = -1;
+
+            // only resolve order if we actually have ranks
+            if (gangRanks.length) {
+                if (Number.isFinite(m.rankOrder))
+                    rankOrder = Number(m.rankOrder);
+                else if (m.rankId !== undefined && idToPos.has(m.rankId))
+                    rankOrder = idToPos.get(m.rankId)!;
+                else if (
+                    m.rankName &&
+                    nameToPos.has((m.rankName || "").toLowerCase())
+                )
+                    rankOrder = nameToPos.get(
+                        (m.rankName || "").toLowerCase()
+                    )!;
+            }
 
             return {
                 userId: m.userId,
@@ -342,7 +460,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         setMembersNorm(normalized);
     }, [membersRaw, gangRanks]);
 
-    // Compute admin/owner if server didn't set flags
+    /* ---- compute admin/owner if server didn't set flags ---- */
     useEffect(() => {
         if (!viewer) return;
         const topPos = gangRanks.reduce(
@@ -364,7 +482,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         if (!isGangAdmin && (viewersAdmin || isGangOwner)) setIsGangAdmin(true);
     }, [viewer, membersNorm, gangRanks, isGangOwner, isGangAdmin]);
 
-    // Hydrate immediately from last known status (prevents black flash)
+    /* ---- hydrate from last known, then wire everything ---- */
     useEffect(() => {
         const s = (window as any).__lastGangStatus;
         if (s && typeof s === "object") {
@@ -375,39 +493,23 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             if (s.secondaryColor)
                 setSecondaryColor(withHash(s.secondaryColor) || "#000000");
             if (s.iconKey) setGangIcon(String(s.iconKey).toUpperCase());
-
-            // hydrate turfs if present
-            const { north, south, east, west, turfs, turfsOwned, turfFlags } =
-                s || {};
-            applyTurfData({
-                north,
-                south,
-                east,
-                west,
-                turfs,
-                turfsOwned,
-                turfFlags,
-            });
+            applyTurfData(s);
         }
     }, []);
 
-    // Load palette, members, ranks, and setup listeners
     useEffect(() => {
         const applyStatus = (data: any) => {
             if (!data) return;
-
             (window as any).__lastGangStatus = data;
 
             setGangName(data.gangName ?? "");
             setGangRank(Number(data.gangRank ?? 0) || 0);
-
-            // set colors UNCONDITIONALLY when server sends them (fixes delayed color appearance)
             if (data.primaryColor)
                 setPrimaryColor(withHash(data.primaryColor) || "#000000");
             if (data.secondaryColor)
                 setSecondaryColor(withHash(data.secondaryColor) || "#000000");
 
-            // icon key or url
+            // icon
             let key: string = (data.iconKey ?? data.icon ?? "")
                 .toString()
                 .trim();
@@ -417,7 +519,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             }
             if (key) setGangIcon(key.toUpperCase());
 
-            // Stats
+            // stats
             setGangXP(Number(data.xp ?? 0));
             setGangXPMax(Number(data.maxXp ?? 100));
             setGangKills(Number(data.kills ?? 0));
@@ -426,41 +528,27 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             setGangPickpockets(Number(data.pickpockets ?? 0));
             setGangDamage(Number(data.totalDamage ?? 0));
 
-            // turf count from explicit count or from owned flags/arrays
+            // turf count
             const tcount = Number(
                 data.turfsControlled ?? data.turfCount ?? NaN
             );
-            if (!Number.isNaN(tcount)) setGangTurfCount(tcount);
+            const owned = applyTurfData(data);
+            setGangTurfCount(Number.isNaN(tcount) ? owned : tcount);
 
-            // parse turf ownership details -> sets flags & computed count if needed
-            const { north, south, east, west, turfs, turfsOwned, turfFlags } =
-                data || {};
-            const owned = applyTurfData({
-                north,
-                south,
-                east,
-                west,
-                turfs,
-                turfsOwned,
-                turfFlags,
-            });
-            if (Number.isNaN(tcount)) setGangTurfCount(owned);
-
-            // Permissions
-            const owner = !!(data.isGangOwner || data.owner);
-            const admin = !!(
-                data.isAdmin ||
-                data.isGangAdmin ||
-                data.admin ||
-                owner
+            setIsGangOwner(!!(data.isGangOwner || data.owner));
+            setIsGangAdmin(
+                !!(
+                    data.isAdmin ||
+                    data.isGangAdmin ||
+                    data.admin ||
+                    data.isGangOwner ||
+                    data.owner
+                )
             );
-            setIsGangOwner(owner);
-            setIsGangAdmin(admin);
         };
 
         const handleStatus = (ev: Event) =>
             applyStatus((ev as CustomEvent).detail);
-
         const coerceMemberArray = (detail: any): any[] => {
             if (Array.isArray(detail)) return detail;
             if (Array.isArray(detail?.members)) return detail.members;
@@ -468,7 +556,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             if (Array.isArray(detail?.data)) return detail.data;
             return [];
         };
-
         const handleMembers = (ev: Event) => {
             const detail: any = (ev as CustomEvent).detail;
             const src = coerceMemberArray(detail);
@@ -494,7 +581,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             }));
             setMembersRaw(mapped);
         };
-
         const handleRanks = (ev: Event) => {
             const detail: any = (ev as CustomEvent).detail;
             const ranks: any[] = Array.isArray(detail?.ranks)
@@ -502,7 +588,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                 : Array.isArray(detail)
                 ? detail
                 : [];
-            const mapped: GangRank[] = ranks.map((r) => ({
+            const mapped: GangRank[] = ranks.map((r: any) => ({
                 id: Number(r.id),
                 name: String(r.name ?? ""),
                 position: Number(r.position ?? r.rankOrder ?? r.order ?? 0),
@@ -516,7 +602,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             setGangRanks(mapped);
         };
 
-        // Attach listeners
         window.addEventListener(
             "gang_status_result",
             handleStatus as EventListener
@@ -547,23 +632,21 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             handleRanks as EventListener
         );
 
-        // Palette setup
+        // palette
         SendMessageComposer(new GetPartPaletteHexesComposer("cc"));
         const onHexes = (ev: Event) => {
             const { part, hexes } = (ev as CustomEvent).detail || {};
             if (part !== "cc" || !Array.isArray(hexes)) return;
-            const withHashList = hexes.map(
-                (h: string) => `#${String(h).toUpperCase()}`
+            setCcSwatches(
+                hexes.map((h: string) => `#${String(h).toUpperCase()}`)
             );
-            setCcSwatches(withHashList);
-            // do NOT override colors here if we already received them from status
         };
         window.addEventListener(
             "palette_hexes_result",
             onHexes as EventListener
         );
 
-        // Positioning + initial refresh
+        // position + initial fetch
         const saved = localStorage.getItem("gangs-detail-position");
         if (saved) {
             try {
@@ -590,7 +673,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             setPosition(centered);
         }
         setPositionReady(true);
-
         refreshAll();
 
         return () => {
@@ -631,12 +713,10 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                 onHexes as EventListener
             );
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [refreshAll]);
 
-    // If user switches to Manage tab, re-fetch to ensure latest members/ranks
     useEffect(() => {
-        if (activeTab === "manage") {
+        if (activeTab === "members") {
             try {
                 if (GetGangMembersComposer)
                     SendMessageComposer(new GetGangMembersComposer());
@@ -657,7 +737,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         return () => window.removeEventListener("resize", onResize);
     }, []);
 
-    // Group members by rank
     const groupedMembers = useMemo(() => {
         const map: Record<number, GangMemberNorm[]> = {};
         for (const m of membersNorm) {
@@ -668,6 +747,14 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         return map;
     }, [membersNorm]);
 
+    const knownPositions = new Set(gangRanks.map((r) => r.position));
+    const orphanPositions = Object.keys(groupedMembers)
+        .map(Number)
+        .filter(
+            (p) =>
+                p !== -1 && !knownPositions.has(p) && groupedMembers[p]?.length
+        );
+
     const toggleCollapse = (rankOrder: number) => {
         setCollapsedRanks((prev) =>
             prev.includes(rankOrder)
@@ -676,7 +763,8 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         );
     };
 
-    // Actions
+    /* ---- actions ---- */
+    const [inviteUsername, setInviteUsername] = useState("");
     const sendGangInvite = () => {
         const u = inviteUsername.trim();
         if (!u) return;
@@ -684,18 +772,45 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         setInviteUsername("");
         setTimeout(refreshAll, 120);
     };
+
     const handleLeaveGangClick = () => {
         SendMessageComposer(new LeaveGangComposer());
+
         setMembersRaw([]);
         setMembersNorm([]);
         setIsGangOwner(false);
         setIsGangAdmin(false);
+
+        // clear turf bonuses locally
+        setOwnsNorth(false);
+        setOwnsSouth(false);
+        setOwnsEast(false);
+        setOwnsWest(false);
+
+        // clear cache used on hydration
+        (window as any).__lastGangStatus = {
+            inGang: false,
+            gangName: "",
+            gangRank: 0,
+            primaryColor: "",
+            secondaryColor: "",
+            xp: 0,
+            maxXp: 0,
+            kills: 0,
+            deaths: 0,
+            robberies: 0,
+            pickpockets: 0,
+            totalDamage: 0,
+            turfsControlled: 0,
+            isGangAdmin: false,
+            iconKey: "",
+        };
+
         setTimeout(() => {
             refreshAll();
             onClose();
         }, 120);
     };
-
     const handleEditRoleSubmit = () => {
         if (!editRoleId) return;
         SendMessageComposer(
@@ -716,7 +831,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         setConfirmDeleteRoleId(rankId);
         setShowConfirmRoleDeleteModal(true);
     };
-
     const confirmDeleteRole = () => {
         if (confirmDeleteRoleId !== null) {
             SendMessageComposer(
@@ -742,33 +856,11 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
 
     if (!positionReady) return null;
 
-    const SwatchGrid: FC<{
-        value: string;
-        onChange: (hex: string) => void;
-    }> = ({ value, onChange }) => (
-        <div className="swatch-grid">
-            {ccSwatches.map((hex) => (
-                <button
-                    key={hex}
-                    className={"swatch" + (hex === value ? " selected" : "")}
-                    style={{ backgroundColor: hex }}
-                    onClick={() => onChange(hex)}
-                    title={hex}
-                />
-            ))}
-            {!ccSwatches.length && (
-                <div className="swatch-loading">Loading colors…</div>
-            )}
-        </div>
-    );
-
-    const ownerOrAdmin = isGangOwner || isGangAdmin;
-
-    // derive perks from owned turfs
+    /* ---- perks from owned turfs ---- */
     const perks: string[] = [];
-    if (ownsNorth) perks.push("North Turf — 10% chance of critical hit");
-    if (ownsSouth) perks.push("South Turf — +10 health per gang member");
-    if (ownsEast) perks.push("East Turf — energy cost reduced by 50%");
+    if (ownsNorth) perks.push("North Turf — 10% critical hit chance");
+    if (ownsSouth) perks.push("South Turf — +10 health per member");
+    if (ownsEast) perks.push("East Turf — 50% reduced energy cost");
     if (ownsWest) perks.push("West Turf — passive healing everywhere");
 
     return (
@@ -777,7 +869,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             className={`gangs-detail-view ${visible ? "fade-in" : "fade-out"}`}
             style={{ position: "absolute", left: position.x, top: position.y }}
         >
-            {/* ===== Header / Drag handle ===== */}
+            {/* Header / Drag */}
             <div
                 className="gangs-header"
                 onMouseDown={(e) => {
@@ -816,53 +908,63 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                             className="color-half right"
                             style={{ backgroundColor: secondaryColor }}
                         />
-                        {selectedIconSrc && (
+
+                        {/* 👇 overlay the picked icon on the split box */}
+                        {(selectedIconSrc || gangIcon) && (
                             <img
                                 className="gang-icon"
                                 src={selectedIconSrc || keyToIconPath(gangIcon)}
-                                alt="gang icon"
+                                alt=""
+                                aria-hidden="true"
                                 draggable={false}
                             />
                         )}
                     </div>
+
                     <div className="gang-name-text">{gangName}</div>
                 </div>
-                <button className="close-button" onClick={handleClose}>
-                    ✖
-                </button>
+
+                <button className="close-button" onClick={handleClose}></button>
             </div>
 
-            {/* ===== Tabs ===== */}
+            {/* Tabs */}
             <div className="gangs-tabs">
                 <button
-                    onClick={() => setActiveTab("info")}
-                    className={activeTab === "info" ? "active" : ""}
+                    onClick={() => setActiveTab("general")}
+                    className={activeTab === "general" ? "active" : ""}
                 >
-                    Gang Information
+                    General
                 </button>
                 <button
-                    onClick={() => setActiveTab("manage")}
-                    className={activeTab === "manage" ? "active" : ""}
+                    onClick={() => setActiveTab("members")}
+                    className={activeTab === "members" ? "active" : ""}
                 >
-                    Manage Gang
+                    Members
                 </button>
                 <button
                     onClick={() => setActiveTab("settings")}
                     className={activeTab === "settings" ? "active" : ""}
                 >
-                    Gang Settings
+                    Settings
                 </button>
             </div>
 
-            {/* ===== Content (tab fades) ===== */}
+            {/* Content */}
             <div className="gangs-content">
                 <div className="tab-panel" key={activeTab}>
-                    {/* ---------- INFO ---------- */}
-                    {activeTab === "info" && (
+                    {/* ----- GENERAL ----- */}
+                    {activeTab === "general" && (
                         <div className="info-tab">
+                            {/* banner / XP */}
                             <div className="info-section gang-header">
                                 <div className="gang-banner">
-                                    <div className="gang-banner-left">
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 10,
+                                        }}
+                                    >
                                         <img
                                             src={
                                                 selectedIconSrc ||
@@ -882,30 +984,10 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                     </div>
                                 </div>
 
-                                <div className="gang-colors-large">
-                                    <div
-                                        className="primary-color"
-                                        style={{
-                                            backgroundColor: primaryColor,
-                                        }}
-                                    />
-                                    <div
-                                        className="secondary-color"
-                                        style={{
-                                            backgroundColor: secondaryColor,
-                                        }}
-                                    />
-                                    {selectedIconSrc && (
-                                        <img
-                                            className="gang-icon-small"
-                                            src={selectedIconSrc}
-                                            alt="icon"
-                                        />
-                                    )}
-                                </div>
-
-                                <div className="gang-details">
-                                    <h2 className="gang-name">{gangName}</h2>
+                                <div
+                                    className="gang-details"
+                                    style={{ marginTop: 10 }}
+                                >
                                     <div className="xp-bar-container">
                                         <div
                                             className="xp-bar-fill"
@@ -927,49 +1009,95 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                 </div>
                             </div>
 
+                            {/* ===== OWNED TURFS (tile grid) ===== */}
                             <div className="info-section">
-                                <h3>Perks</h3>
-                                <div className="perk-grid">
-                                    {perks.length ? (
-                                        perks.map((p) => (
-                                            <div
-                                                className="perk-box active"
-                                                key={p}
-                                                title={p}
-                                            >
-                                                {p}
+                                <h3>Your Turfs</h3>
+
+                                {(() => {
+                                    const ownedMap: Record<string, boolean> = {
+                                        north: ownsNorth,
+                                        south: ownsSouth,
+                                        east: ownsEast,
+                                        west: ownsWest,
+                                    };
+
+                                    const owned = TURFS.filter(
+                                        (t) => ownedMap[t.key]
+                                    );
+
+                                    if (!owned.length) {
+                                        return (
+                                            <div className="no-turfs">
+                                                You don’t control any turfs yet.
                                             </div>
-                                        ))
-                                    ) : (
-                                        <>
-                                            <div className="perk-box" />
-                                            <div className="perk-box" />
-                                            <div className="perk-box" />
-                                            <div className="perk-box" />
-                                        </>
-                                    )}
-                                </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div className="turf-grid two-col">
+                                            {owned.map((t) => (
+                                                <div
+                                                    key={t.key}
+                                                    className="turf-tile"
+                                                >
+                                                    <div className="turf-image-wrap">
+                                                        <img
+                                                            className="turf-image"
+                                                            src={t.img}
+                                                            alt={t.name}
+                                                            draggable={false}
+                                                        />
+                                                    </div>
+                                                    <div className="turf-meta">
+                                                        <div className="turf-name">
+                                                            {t.name}
+                                                        </div>
+                                                        <div className="turf-bonus">
+                                                            {t.bonus}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
+                            {/* stats tiles (tile-like like DiamondStore) */}
                             <div className="info-section">
                                 <h3>Gang Stats</h3>
-                                <div className="gang-stat">
-                                    Total Members:{" "}
-                                    <span>{membersNorm.length}</span>
-                                </div>
-                                <div className="gang-stat">
-                                    Total Kills: <span>{gangKills}</span>
-                                </div>
-                                <div className="gang-stat">
-                                    Turf Controlled:{" "}
-                                    <span>{gangTurfCount}</span>
+                                <div className="stat-tiles">
+                                    <div className="gang-stat">
+                                        Total Members:
+                                        <span>{membersNorm.length}</span>
+                                    </div>
+                                    <div className="gang-stat">
+                                        Total Kills:<span>{gangKills}</span>
+                                    </div>
+                                    <div className="gang-stat">
+                                        Total Deaths:<span>{gangDeaths}</span>
+                                    </div>
+                                    <div className="gang-stat">
+                                        Robberies:<span>{gangRobberies}</span>
+                                    </div>
+                                    <div className="gang-stat">
+                                        Pick Pockets:
+                                        <span>{gangPickpockets}</span>
+                                    </div>
+                                    <div className="gang-stat">
+                                        Total Damage:<span>{gangDamage}</span>
+                                    </div>
+                                    <div className="gang-stat">
+                                        Turfs Controlled:
+                                        <span>{gangTurfCount}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* ---------- MANAGE ---------- */}
-                    {activeTab === "manage" && (
+                    {/* ----- MEMBERS ----- */}
+                    {activeTab === "members" && (
                         <div className="manage-tab">
                             <div className="gangs-subheader">
                                 <div className="gangs-subheader-left">
@@ -1015,67 +1143,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                 </div>
                             </div>
 
-                            {showConfirmDeleteModal && (
-                                <div className="gangs-modal-overlay">
-                                    <div className="gangs-modal-popup scale-in">
-                                        <div className="popup-header">
-                                            <span>Confirm Disband</span>
-                                            <button
-                                                className="close-button"
-                                                onClick={() =>
-                                                    setShowConfirmDeleteModal(
-                                                        false
-                                                    )
-                                                }
-                                            >
-                                                ✖
-                                            </button>
-                                        </div>
-                                        <div className="popup-body">
-                                            <p>
-                                                Are you sure you want to disband
-                                                your gang? This cannot be
-                                                undone.
-                                            </p>
-                                            <div className="popup-actions">
-                                                <button
-                                                    className="habbo-btn danger"
-                                                    onClick={() => {
-                                                        SendMessageComposer(
-                                                            new DeleteGangMessageComposer()
-                                                        );
-                                                        setShowConfirmDeleteModal(
-                                                            false
-                                                        );
-                                                        setMembersRaw([]);
-                                                        setMembersNorm([]);
-                                                        setIsGangOwner(false);
-                                                        setIsGangAdmin(false);
-                                                        setTimeout(() => {
-                                                            refreshAll();
-                                                            handleClose();
-                                                        }, 120);
-                                                    }}
-                                                >
-                                                    Yes, Disband
-                                                </button>
-                                                <button
-                                                    className="habbo-btn default"
-                                                    onClick={() =>
-                                                        setShowConfirmDeleteModal(
-                                                            false
-                                                        )
-                                                    }
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Ranks + members */}
+                            {/* ranks + members by rank (tile cards) */}
                             {gangRanks
                                 .slice()
                                 .sort((a, b) => a.position - b.position)
@@ -1250,14 +1318,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                                                         width: "18%",
                                                                         minWidth:
                                                                             "100px",
-                                                                        textAlign:
-                                                                            "center",
-                                                                        display:
-                                                                            "flex",
-                                                                        flexDirection:
-                                                                            "column",
-                                                                        alignItems:
-                                                                            "center",
                                                                     }}
                                                                 >
                                                                     <img
@@ -1267,10 +1327,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                                                         alt={
                                                                             member.username
                                                                         }
-                                                                        style={{
-                                                                            width: 48,
-                                                                            height: 48,
-                                                                        }}
                                                                     />
                                                                     <span
                                                                         style={{
@@ -1341,6 +1397,47 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                     );
                                 })}
 
+                            {orphanPositions.map((pos) => (
+                                <div
+                                    key={`orphan-${pos}`}
+                                    className="gang-rank-group"
+                                    style={{ marginTop: 10 }}
+                                >
+                                    <div
+                                        className="rank-label"
+                                        style={{
+                                            fontStyle: "italic",
+                                            opacity: 0.8,
+                                        }}
+                                    >
+                                        Unknown Role (pos {pos})
+                                    </div>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            flexWrap: "wrap",
+                                            gap: 12,
+                                            marginTop: 8,
+                                        }}
+                                    >
+                                        {groupedMembers[pos].map((member) => (
+                                            <div
+                                                key={member.userId}
+                                                className="gang-member-card"
+                                            >
+                                                <img
+                                                    src={`https://www.habbo.com/habbo-imaging/avatarimage?figure=${encodeURIComponent(
+                                                        member.figure
+                                                    )}&headonly=1&direction=2&gesture=sml`}
+                                                    alt={member.username}
+                                                />
+                                                <span>{member.username}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+
                             {/* Unranked */}
                             {groupedMembers[-1] && (
                                 <div
@@ -1387,13 +1484,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                                                 width: "18%",
                                                                 minWidth:
                                                                     "100px",
-                                                                textAlign:
-                                                                    "center",
-                                                                display: "flex",
-                                                                flexDirection:
-                                                                    "column",
-                                                                alignItems:
-                                                                    "center",
                                                             }}
                                                         >
                                                             <img
@@ -1403,10 +1493,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                                                 alt={
                                                                     member.username
                                                                 }
-                                                                style={{
-                                                                    width: 48,
-                                                                    height: 48,
-                                                                }}
                                                             />
                                                             <span
                                                                 style={{
@@ -1431,6 +1517,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                 </div>
                             )}
 
+                            {/* add role */}
                             {ownerOrAdmin && (
                                 <div style={{ marginTop: 20 }}>
                                     <button
@@ -1446,313 +1533,34 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                         </div>
                     )}
 
-                    {/* ---------- NEW ROLE MODAL ---------- */}
-                    {showNewRoleModal && (
-                        <div className="new-role-popup fade-in">
-                            <div className="popup-header">
-                                <span>New Role</span>
-                                <button
-                                    className="close-button"
-                                    onClick={() => setShowNewRoleModal(false)}
-                                >
-                                    ✖
-                                </button>
-                            </div>
-                            <div className="popup-body">
-                                <input
-                                    type="text"
-                                    placeholder="Enter role name"
-                                    value={newRoleName}
-                                    onChange={(e) =>
-                                        setNewRoleName(e.target.value)
-                                    }
-                                    className="gangs-invite-input"
-                                />
-                                <div className="permission-checkboxes">
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            checked={rolePermissions.bankAccess}
-                                            onChange={() =>
-                                                setRolePermissions((p) => ({
-                                                    ...p,
-                                                    bankAccess: !p.bankAccess,
-                                                }))
-                                            }
-                                        />{" "}
-                                        Bank Access
-                                    </label>
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            checked={
-                                                rolePermissions.kickMembers
-                                            }
-                                            onChange={() =>
-                                                setRolePermissions((p) => ({
-                                                    ...p,
-                                                    kickMembers: !p.kickMembers,
-                                                }))
-                                            }
-                                        />{" "}
-                                        Kick Members
-                                    </label>
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            checked={
-                                                rolePermissions.inviteMembers
-                                            }
-                                            onChange={() =>
-                                                setRolePermissions((p) => ({
-                                                    ...p,
-                                                    inviteMembers:
-                                                        !p.inviteMembers,
-                                                }))
-                                            }
-                                        />{" "}
-                                        Invite Members
-                                    </label>
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            checked={
-                                                rolePermissions.administrator
-                                            }
-                                            onChange={() =>
-                                                setRolePermissions((p) => ({
-                                                    ...p,
-                                                    administrator:
-                                                        !p.administrator,
-                                                }))
-                                            }
-                                        />{" "}
-                                        Administrator
-                                    </label>
-                                </div>
-                                <div className="popup-actions">
-                                    <button
-                                        className="habbo-btn default"
-                                        onClick={() => {
-                                            const name = newRoleName.trim();
-                                            if (!name) return;
-                                            SendMessageComposer(
-                                                new CreateGangRoleComposer(
-                                                    name,
-                                                    rolePermissions.bankAccess,
-                                                    rolePermissions.kickMembers,
-                                                    rolePermissions.inviteMembers,
-                                                    rolePermissions.administrator
-                                                )
-                                            );
-                                            setShowNewRoleModal(false);
-                                            setNewRoleName("");
-                                            setRolePermissions({
-                                                bankAccess: false,
-                                                kickMembers: false,
-                                                inviteMembers: false,
-                                                administrator: false,
-                                            });
-                                            setTimeout(refreshAll, 120);
-                                        }}
-                                    >
-                                        Save
-                                    </button>
-                                    <button
-                                        className="habbo-btn danger"
-                                        onClick={() =>
-                                            setShowNewRoleModal(false)
-                                        }
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ---------- EDIT ROLE MODAL ---------- */}
-                    {showEditRoleModal && (
-                        <div className="gangs-modal-overlay">
-                            <div className="gangs-modal-popup scale-in">
-                                <div className="popup-header">
-                                    <span>Edit Role</span>
-                                    <button
-                                        className="close-button"
-                                        onClick={() =>
-                                            setShowEditRoleModal(false)
-                                        }
-                                    >
-                                        ✖
-                                    </button>
-                                </div>
-                                <div className="popup-body">
-                                    <label>Role Name</label>
-                                    <input
-                                        type="text"
-                                        value={roleName}
-                                        className="gangs-invite-input"
-                                        onChange={(e) =>
-                                            setRoleName(e.target.value)
-                                        }
-                                    />
-                                    <div className="permission-checkboxes">
-                                        <label>
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    rolePermissions.bankAccess
-                                                }
-                                                onChange={(e) =>
-                                                    setRolePermissions({
-                                                        ...rolePermissions,
-                                                        bankAccess:
-                                                            e.target.checked,
-                                                    })
-                                                }
-                                            />{" "}
-                                            Bank Access
-                                        </label>
-                                        <label>
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    rolePermissions.kickMembers
-                                                }
-                                                onChange={(e) =>
-                                                    setRolePermissions({
-                                                        ...rolePermissions,
-                                                        kickMembers:
-                                                            e.target.checked,
-                                                    })
-                                                }
-                                            />{" "}
-                                            Kick Members
-                                        </label>
-                                        <label>
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    rolePermissions.inviteMembers
-                                                }
-                                                onChange={(e) =>
-                                                    setRolePermissions({
-                                                        ...rolePermissions,
-                                                        inviteMembers:
-                                                            e.target.checked,
-                                                    })
-                                                }
-                                            />{" "}
-                                            Invite Members
-                                        </label>
-                                        <label>
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    rolePermissions.administrator
-                                                }
-                                                onChange={(e) =>
-                                                    setRolePermissions({
-                                                        ...rolePermissions,
-                                                        administrator:
-                                                            e.target.checked,
-                                                    })
-                                                }
-                                            />{" "}
-                                            Administrator
-                                        </label>
-                                    </div>
-                                    <div className="popup-footer">
-                                        <button
-                                            className="habbo-btn default"
-                                            onClick={handleEditRoleSubmit}
-                                        >
-                                            Save Changes
-                                        </button>
-                                        <button
-                                            className="habbo-btn danger"
-                                            onClick={() =>
-                                                setShowEditRoleModal(false)
-                                            }
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ---------- CONFIRM ROLE DELETE ---------- */}
-                    {showConfirmRoleDeleteModal && (
-                        <div className="gangs-modal-overlay">
-                            <div className="gangs-modal-popup scale-in">
-                                <div className="popup-header">
-                                    <span>Confirm Deletion</span>
-                                    <button
-                                        className="close-button"
-                                        onClick={() =>
-                                            setShowConfirmRoleDeleteModal(false)
-                                        }
-                                    >
-                                        ✖
-                                    </button>
-                                </div>
-                                <div className="popup-body">
-                                    <p>
-                                        Are you sure you want to delete this
-                                        role?
-                                    </p>
-                                    <div className="popup-actions">
-                                        <button
-                                            className="habbo-btn danger"
-                                            onClick={confirmDeleteRole}
-                                        >
-                                            Yes, Delete
-                                        </button>
-                                        <button
-                                            className="habbo-btn default"
-                                            onClick={() => {
-                                                setShowConfirmRoleDeleteModal(
-                                                    false
-                                                );
-                                                setConfirmDeleteRoleId(null);
-                                            }}
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ---------- SETTINGS ---------- */}
+                    {/* ----- SETTINGS ----- */}
                     {activeTab === "settings" && (
                         <div className="settings-tab">
-                            <div className="settings-row">
+                            {/* Palettes side-by-side */}
+                            <div className="settings-row two-col">
                                 <div className="settings-col">
                                     <h3>Primary Color</h3>
-                                    <SwatchGrid
+                                    <PaginatedSwatchGrid
+                                        swatches={ccSwatches}
                                         value={primaryColor}
                                         onChange={setPrimaryColor}
                                     />
                                 </div>
                                 <div className="settings-col">
                                     <h3>Secondary Color</h3>
-                                    <SwatchGrid
+                                    <PaginatedSwatchGrid
+                                        swatches={ccSwatches}
                                         value={secondaryColor}
                                         onChange={setSecondaryColor}
                                     />
                                 </div>
                             </div>
 
-                            <div
-                                className="settings-row"
-                                style={{ marginTop: 12 }}
-                            >
-                                <div className="settings-col full">
-                                    <h3>Select Icon</h3>
+                            {/* Icon selector + Preview side-by-side */}
+                            <div className="settings-row two-col">
+                                <div className="settings-col">
+                                    <h3>Gang Icon</h3>
+
                                     <div className="icon-selector">
                                         {visibleIcons.map((icon) => {
                                             const key = iconKeyFromSrc(
@@ -1828,8 +1636,8 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                             onClick={() =>
                                                 setIconsPage((p) =>
                                                     Math.min(
-                                                        p + 1,
-                                                        totalIconPages - 1
+                                                        totalIconPages - 1,
+                                                        p + 1
                                                     )
                                                 )
                                             }
@@ -1841,14 +1649,9 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                         </button>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Preview */}
-                            <div
-                                className="settings-row"
-                                style={{ marginTop: 12 }}
-                            >
-                                <div className="settings-col full">
+                                <div className="settings-col">
+                                    <h3>Preview</h3>
                                     <div className="gang-preview settings">
                                         <div
                                             className="preview-colors"
@@ -1868,77 +1671,333 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                             {gangName || "Your Gang"}
                                         </div>
                                     </div>
-                                </div>
-                            </div>
 
-                            <div className="settings-actions">
-                                <button
-                                    className="habbo-btn default"
-                                    onClick={() => {
-                                        SendMessageComposer(
-                                            new EditGangComposer(
-                                                stripHash(primaryColor),
-                                                stripHash(secondaryColor),
-                                                gangIcon || ""
-                                            )
-                                        );
-                                        setTimeout(refreshAll, 120);
-                                        onClose();
-                                    }}
-                                >
-                                    Save Appearance
-                                </button>
+                                    <div className="settings-actions right">
+                                        <button
+                                            className="habbo-btn default"
+                                            onClick={() => {
+                                                SendMessageComposer(
+                                                    new EditGangComposer(
+                                                        stripHash(primaryColor),
+                                                        stripHash(
+                                                            secondaryColor
+                                                        ),
+                                                        gangIcon || ""
+                                                    )
+                                                );
+                                                setTimeout(refreshAll, 120);
+                                                onClose();
+                                            }}
+                                        >
+                                            Save Appearance
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Confirm Disband */}
+            {showConfirmDeleteModal && (
+                <div className="gangs-modal-overlay">
+                    <div className="gangs-modal-popup scale-in">
+                        <div className="popup-header">
+                            <span>Confirm Disband</span>
+                            <button
+                                className="close-button"
+                                onClick={() => setShowConfirmDeleteModal(false)}
+                            >
+                                ✖
+                            </button>
+                        </div>
+                        <div className="popup-body">
+                            <p>
+                                Are you sure you want to disband your gang? This
+                                cannot be undone.
+                            </p>
+                            <div className="popup-actions">
+                                <button
+                                    className="habbo-btn danger"
+                                    onClick={() => {
+                                        SendMessageComposer(
+                                            new DeleteGangMessageComposer()
+                                        );
+                                        setShowConfirmDeleteModal(false);
+                                        setMembersRaw([]);
+                                        setMembersNorm([]);
+                                        setIsGangOwner(false);
+                                        setIsGangAdmin(false);
+                                        setTimeout(() => {
+                                            refreshAll();
+                                            handleClose();
+                                        }, 120);
+                                    }}
+                                >
+                                    Yes, Disband
+                                </button>
+                                <button
+                                    className="habbo-btn default"
+                                    onClick={() =>
+                                        setShowConfirmDeleteModal(false)
+                                    }
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* New Role */}
+            {showNewRoleModal && (
+                <div className="new-role-popup fade-in">
+                    <div className="popup-header">
+                        <span>New Role</span>
+                        <button
+                            className="close-button"
+                            onClick={() => setShowNewRoleModal(false)}
+                        >
+                            ✖
+                        </button>
+                    </div>
+                    <div className="popup-body">
+                        <input
+                            type="text"
+                            placeholder="Enter role name"
+                            value={newRoleName}
+                            onChange={(e) => setNewRoleName(e.target.value)}
+                            className="gangs-invite-input"
+                        />
+                        <div className="permission-checkboxes">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.bankAccess}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            bankAccess: !p.bankAccess,
+                                        }))
+                                    }
+                                />{" "}
+                                Bank Access
+                            </label>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.kickMembers}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            kickMembers: !p.kickMembers,
+                                        }))
+                                    }
+                                />{" "}
+                                Kick Members
+                            </label>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.inviteMembers}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            inviteMembers: !p.inviteMembers,
+                                        }))
+                                    }
+                                />{" "}
+                                Invite Members
+                            </label>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.administrator}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            administrator: !p.administrator,
+                                        }))
+                                    }
+                                />{" "}
+                                Administrator
+                            </label>
+                        </div>
+                        <div className="popup-actions">
+                            <button
+                                className="habbo-btn default"
+                                onClick={() => {
+                                    const name = newRoleName.trim();
+                                    if (!name) return;
+                                    SendMessageComposer(
+                                        new CreateGangRoleComposer(
+                                            name,
+                                            rolePermissions.bankAccess,
+                                            rolePermissions.kickMembers,
+                                            rolePermissions.inviteMembers,
+                                            rolePermissions.administrator
+                                        )
+                                    );
+                                    setShowNewRoleModal(false);
+                                    setNewRoleName("");
+                                    setRolePermissions({
+                                        bankAccess: false,
+                                        kickMembers: false,
+                                        inviteMembers: false,
+                                        administrator: false,
+                                    });
+                                    setTimeout(refreshAll, 120);
+                                }}
+                            >
+                                Save
+                            </button>
+                            <button
+                                className="habbo-btn danger"
+                                onClick={() => setShowNewRoleModal(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Role */}
+            {showEditRoleModal && (
+                <div className="gangs-modal-overlay">
+                    <div className="gangs-modal-popup scale-in">
+                        <div className="popup-header">
+                            <span>Edit Role</span>
+                            <button
+                                className="close-button"
+                                onClick={() => setShowEditRoleModal(false)}
+                            >
+                                ✖
+                            </button>
+                        </div>
+                        <div className="popup-body">
+                            <label>Role Name</label>
+                            <input
+                                type="text"
+                                value={roleName}
+                                className="gangs-invite-input"
+                                onChange={(e) => setRoleName(e.target.value)}
+                            />
+                            <div className="permission-checkboxes">
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={rolePermissions.bankAccess}
+                                        onChange={(e) =>
+                                            setRolePermissions({
+                                                ...rolePermissions,
+                                                bankAccess: e.target.checked,
+                                            })
+                                        }
+                                    />{" "}
+                                    Bank Access
+                                </label>
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={rolePermissions.kickMembers}
+                                        onChange={(e) =>
+                                            setRolePermissions({
+                                                ...rolePermissions,
+                                                kickMembers: e.target.checked,
+                                            })
+                                        }
+                                    />{" "}
+                                    Kick Members
+                                </label>
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={rolePermissions.inviteMembers}
+                                        onChange={(e) =>
+                                            setRolePermissions({
+                                                ...rolePermissions,
+                                                inviteMembers: e.target.checked,
+                                            })
+                                        }
+                                    />{" "}
+                                    Invite Members
+                                </label>
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={rolePermissions.administrator}
+                                        onChange={(e) =>
+                                            setRolePermissions({
+                                                ...rolePermissions,
+                                                administrator: e.target.checked,
+                                            })
+                                        }
+                                    />{" "}
+                                    Administrator
+                                </label>
+                            </div>
+                            <div className="popup-footer">
+                                <button
+                                    className="habbo-btn default"
+                                    onClick={handleEditRoleSubmit}
+                                >
+                                    Save Changes
+                                </button>
+                                <button
+                                    className="habbo-btn danger"
+                                    onClick={() => setShowEditRoleModal(false)}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirm Role Delete */}
+            {showConfirmRoleDeleteModal && (
+                <div className="gangs-modal-overlay">
+                    <div className="gangs-modal-popup scale-in">
+                        <div className="popup-header">
+                            <span>Confirm Deletion</span>
+                            <button
+                                className="close-button"
+                                onClick={() =>
+                                    setShowConfirmRoleDeleteModal(false)
+                                }
+                            >
+                                ✖
+                            </button>
+                        </div>
+                        <div className="popup-body">
+                            <p>Are you sure you want to delete this role?</p>
+                            <div className="popup-actions">
+                                <button
+                                    className="habbo-btn danger"
+                                    onClick={confirmDeleteRole}
+                                >
+                                    Yes, Delete
+                                </button>
+                                <button
+                                    className="habbo-btn default"
+                                    onClick={() => {
+                                        setShowConfirmRoleDeleteModal(false);
+                                        setConfirmDeleteRoleId(null);
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
-
-    // ===== helpers =====
-    function applyTurfData(input: any): number {
-        // accepts a variety of shapes from backend:
-        // - booleans: north/south/east/west
-        // - array: turfs/turfsOwned/turfFlags like ["north","west"] or ["N","W"]
-        const { north, south, east, west, turfs, turfsOwned, turfFlags } =
-            input || {};
-        let n = !!north,
-            s = !!south,
-            e = !!east,
-            w = !!west;
-
-        const arr: any[] = Array.isArray(turfs)
-            ? turfs
-            : Array.isArray(turfsOwned)
-            ? turfsOwned
-            : Array.isArray(turfFlags)
-            ? turfFlags
-            : [];
-        if (arr.length) {
-            const norm = (v: any) =>
-                String(v || "")
-                    .trim()
-                    .toLowerCase();
-            const has = (k: string) =>
-                arr.some((v) => {
-                    const n = norm(v);
-                    if (!n) return false;
-                    return n === k || n[0] === k[0]; // e.g. "north" or "n"
-                });
-            n = n || has("north");
-            s = s || has("south");
-            e = e || has("east");
-            w = w || has("west");
-        }
-
-        setOwnsNorth(n);
-        setOwnsSouth(s);
-        setOwnsEast(e);
-        setOwnsWest(w);
-
-        return [n, s, e, w].filter(Boolean).length;
-    }
 };
 
 export default GangsDetailView;

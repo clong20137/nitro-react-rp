@@ -320,7 +320,7 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
                     className="close-button"
                     aria-label="Close"
                 >
-                    ✖
+                    
                 </button>
             </div>
 

@@ -2,6 +2,7 @@ import React, { FC, useEffect, useRef, useState } from "react";
 import "./MyProfileView.scss";
 import { GetCommunication } from "../../api/nitro/GetCommunication";
 import { UpgradeStatComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/UpgradeStatComposer";
+import { setRPStats } from "./rpStatsCache";
 
 /* --------------------------------- Types --------------------------------- */
 
@@ -124,6 +125,14 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
     );
 
     useEffect(() => {
+        // keep global cache in sync
+        setRPStats({
+            gathering: stats.gathering ?? 1,
+            level: stats.level ?? 1,
+        });
+    }, [stats.gathering, stats.level]);
+
+    useEffect(() => {
         const onGangStatus = (ev: any) => {
             const d = ev.detail || {};
             if (typeof d.gangName === "string") setGangName(d.gangName);
@@ -236,7 +245,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                     onClick={onClose}
                     aria-label="Close"
                 >
-                    ✖
                 </button>
             </div>
 

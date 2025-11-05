@@ -2,7 +2,7 @@
     width: 1000px;
     position: fixed;
     background: #dfdfdf;
-    border: 1px solid #000;
+    border: 2px solid #ffffff;
     box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
     z-index: 1000;
     border-radius: 8px;
@@ -86,7 +86,7 @@
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
     border-bottom: 2px solid #153c7a;
-    background: linear-gradient(180deg, #6bb3ff 0, #6bb3ff 50%, #2f6bd1 50%, #2f6bd1);
+    background: linear-gradient(180deg,#000,#000 50%,#232323 0,#232323);
     color: #fff;
     text-shadow: 1px 1px 0 #1a3d86;
     user-select: none;

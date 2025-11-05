@@ -7,7 +7,7 @@
     position: absolute;
     top: 20px;
     left: 5px;
-    border:solid 2px #FFFFFF;
+    border: solid 2px #FFFFFF;
     box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
     animation: fadeIn 0.8s;
     z-index: 100;
@@ -671,6 +671,84 @@
         margin: 10px 0 0;
     }
 }
+
+@media (max-width: 600px) {
+    :root {
+        --stats-scale: 0.82;
+    }
+
+    /* base shrink on small screens */
+
+    .stats-bar-container {
+        position: fixed;
+        /* keep it pinned like desktop */
+        top: 8px;
+        left: 8px;
+        transform: scale(var(--stats-scale));
+        transform-origin: top left;
+        /* shrink from the corner */
+        will-change: transform;
+        z-index: 2200;
+        /* above room canvas */
+        /* keep the desktop row layout */
+        flex-direction: row !important;
+        align-items: center !important;
+        width: auto !important;
+        max-width: none !important;
+    }
+
+    /* keep opponent anchor aligned to the scaled block */
+    .opponent-anchor {
+        top: -16px;
+        /* nudge slightly for smaller scale */
+        left: calc(100% + 8px);
+        transform: translateZ(0);
+        /* avoid subpixel fuzz on mobile */
+    }
+
+    /* bars & aggression widths can stay; scale handles the rest.
+If you want a touch more density, uncomment these:
+.bar,
+.aggression-bar-wrapper { width: 160px; }
+*/
+
+    /* little visual tighten so it doesn't feel heavy when scaled */
+    .stats-bar-container {
+        box-shadow:
+            0 6px 16px rgba(0, 0, 0, .20),
+            0 2px 0 rgba(0, 0, 0, .22),
+            inset 0 -3px rgba(0, 0, 0, .10);
+    }
+}
+
+/* very small phones */
+@media (max-width: 480px) {
+    :root {
+        --stats-scale: 0.72;
+    }
+
+    /* optional: slightly slimmer bars under heavy shrink
+.bar,
+.aggression-bar-wrapper { width: 150px; }
+*/
+
+    /* keep labels readable at this size */
+    .avatar-name {
+        font-size: 12px;
+    }
+
+    .avatar-level {
+        font-size: 10px;
+    }
+}
+
+/* ultra small (e.g., 360–380px) */
+@media (max-width: 380px) {
+    :root {
+        --stats-scale: 0.64;
+    }
+}
+
 
 /* 📱 Phones (<= 480px): ultra compact */
 @media (max-width: 480px) {

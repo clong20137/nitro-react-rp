@@ -55,6 +55,41 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
     }
 }
 
+/* Tabs */
+.ds-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 8px 8px 0;
+    background: rgb(255 255 255 / 100%);
+    border-bottom: 1px solid #585858;
+    margin: -10px -10px 10px;
+}
+
+.ds-tab {
+    appearance: none;
+    border: 1px solid #9aa9b5;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    background: linear-gradient(#fff 0%, #dcdcdc 100%);
+    font-weight: 800;
+    font-size: 13px;
+    padding: 6px 12px;
+    cursor: pointer;
+    color: #0e1b25;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .5);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .06);
+    transition: transform .12s ease, filter .12s ease;
+
+    &:hover {
+        filter: brightness(1.04);
+        transform: translateY(-1px);
+    }
+
+    &.active {
+        border-color: #8097a9;
+    }
+}
+
 /* ===== Header (drag handle) ===== */
 .ds-header {
     display: flex;
@@ -124,13 +159,13 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
 }
 
 /* ===== Reuse Settings styles for grids & modals ===== */
-@import "../roleplay/SettingsView"; // if you prefer not to import, copy the blocks below
+@import "../roleplay/SettingsView";
 
 /* Minimal copies needed (same as SettingsView) */
 .appearance-preview {
     border: 1px solid #585858;
     border-radius: 6px;
-    background: rgba(24,24,24,.88);
+    background: rgba(24, 24, 24, .88);
     padding: 10px;
     margin-bottom: 10px;
 }
@@ -141,45 +176,34 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
     gap: 6px;
 
     .pill {
-        background: #fff;
+        background: #000000;
         border: 1px solid #cfcfcf;
         border-radius: 999px;
         padding: 2px 8px;
         font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
 }
 
-.appearance-group {
-    margin-top: 10px;
-
-    .group-title {
-        font-weight: 900;
-        color: #fff;
-        margin-bottom: 6px;
-
-        &.with-sub {
-            display: flex;
-            align-items: baseline;
-            gap: 8px;
-
-            small {
-                color: #c2c2c2;
-                font-weight: 600;
-            }
-        }
-    }
-}
-
-/* Grid & cards (dark look like you posted) */
+/* Grid & cards (dark look) */
 .bubble-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
     gap: 6px;
 }
 
+/* ► tighter grid when viewing Name Icons (16x16) */
+.bubble-grid.icons-mode {
+    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+    gap: 5px;
+}
+
 .bubble-card {
     position: relative;
-    padding: 4px;
+    padding: 3px;
+    /* a hair tighter */
     border: 1px solid #585858;
     border-radius: 8px;
     background: rgba(24, 24, 24, .88);
@@ -244,6 +268,21 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
     }
 }
 
+/* ► smaller thumb when the card represents a Name Icon */
+.bubble-thumb.icons {
+    height: 24px;
+}
+
+.bubble-thumb.icons img {
+    transform: none;
+    opacity: 1;
+}
+
+.bubble-thumb.icons .bubble-id {
+    font-size: 9px;
+    padding: 0 4px;
+}
+
 .bubble-card.locked {
     filter: grayscale(.12) opacity(.9);
 }
@@ -259,11 +298,14 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
 
     .price {
         font-weight: 900;
-        font-size: 12px;
+        font-size: 11px;
         background: #f1f7ff;
         border: 1px solid #adc6e6;
         border-radius: 6px;
         padding: 2px 6px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
     }
 
     .owned {
@@ -287,10 +329,10 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
     border-radius: 4px;
     text-shadow: 0 1px 0 rgba(0, 0, 0, .4);
     pointer-events: none;
-    z-index:999;
+    z-index: 999;
 }
 
-/* Confirm modal (reused) */
+/* Confirm modal */
 .overlay {
     position: fixed;
     inset: 0;
@@ -304,14 +346,14 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
 .confirm-modal {
     width: 360px;
     background: #dedede;
-    border: 2px solid #22425d;
+    border: 2px solid #ffffff;
     border-radius: 10px;
     box-shadow: $olrp-shadow;
     overflow: hidden;
 }
 
 .cm-header {
-    background: linear-gradient(180deg, #426e8f, #426e8f 50%, #5682a2 0, #5682a2);
+    background: linear-gradient(180deg, #000, #000 50%, #232323 0, #232323);
     color: #fff;
     font-weight: 800;
     padding: 8px 10px;
@@ -322,21 +364,22 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
     gap: 12px;
     align-items: center;
     padding: 12px;
+    background: rgba(24, 24, 24, .88);
 
     .cm-thumb {
-        width: 64px;
-        height: 48px;
-        border: 1px solid #cfcfcf;
-        border-radius: 8px;
+        width: 24px;
+        height: 24px;
+        border: 1px solid #585858;
+        border-radius: 2px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #fff;
+        background: rgba(24, 24, 24, .88);
     }
 
     .cm-thumb img {
-        max-width: 100%;
-        max-height: 100%;
+        max-width: 16px;
+        max-height: 16px;
         object-fit: contain;
     }
 
@@ -356,12 +399,273 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
     justify-content: flex-end;
     gap: 8px;
     padding: 10px;
+    background: rgba(24, 24, 24, .95);
 }
 
-/* Utility icon hook */
+/* Utility icon hooks */
+.ico {
+    display: inline-block;
+    vertical-align: -2px;
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
+.ico-diamond-sm {
+    width: 14px;
+    height: 14px;
+    background-image: url("../../icons/diamonds.png");
+    margin-right: 4px;
+}
+
+/* Existing large diamond hook (kept for compatibility) */
 .ico-diamond {
     background-image: url("../../icons/diamonds.png");
     background-size: contain;
     background-repeat: no-repeat;
     display: inline-block;
+}
+
+/* === Size bump already handled by component; reuse theme === */
+
+/* Featured (main page) */
+.featured-wrap {
+    display: grid;
+    gap: 10px;
+}
+
+/* Banners row */
+.featured-banners {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+
+    .banner-tile {
+        position: relative;
+        height: 110px;
+        border: 1px solid #585858;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #111;
+        cursor: pointer;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, .12);
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: saturate(1.05) contrast(1.02);
+            pointer-events: none;
+        }
+
+        .banner-copy {
+            position: absolute;
+            left: 8px;
+            bottom: 8px;
+            background: rgba(0, 0, 0, .45);
+            border: 1px solid rgba(255, 255, 255, .22);
+            border-radius: 6px;
+            padding: 6px 8px;
+            color: #fff;
+
+            .banner-h {
+                font-weight: 900;
+            }
+
+            .banner-s {
+                font-size: 12px;
+                opacity: .92;
+            }
+        }
+    }
+}
+
+/* Bundle grid */
+.feature-section {
+    margin-top: 2px;
+}
+
+.bundle-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.bundle-card {
+    position: relative;
+    border: 1px solid #585858;
+    border-radius: 8px;
+    background: rgba(24, 24, 24, .88);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .12);
+    overflow: hidden;
+
+    .bundle-media {
+        height: 90px;
+        background: #0f0f0f;
+        background-size: cover;
+        background-position: center;
+        border-bottom: 1px solid #2a2a2a;
+    }
+
+    .bundle-body {
+        padding: 8px;
+
+        .bundle-title {
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .bundle-desc {
+            color: #d4d4d4;
+            font-size: 12px;
+            margin-top: 2px;
+            min-height: 28px;
+        }
+
+        .bundle-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 8px;
+
+            .price {
+                font-weight: 900;
+                font-size: 11px;
+                background: #000000;
+                border: 1px solid #adc6e6;
+                border-radius: 6px;
+                padding: 2px 6px;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .btn--buy {
+                padding: 4px 8px;
+                font-weight: 800;
+            }
+        }
+    }
+}
+
+/* Tag styles on bundles */
+.ribbon--best {
+    background: linear-gradient(180deg, #2c7b2f, #39a942) !important;
+    border-color: #0e3a13 !important;
+}
+
+.ribbon--hot {
+    background: linear-gradient(180deg, #b83c34, #cf4c44) !important;
+    border-color: #6d1410 !important;
+}
+
+.ribbon--new {
+    background: linear-gradient(180deg, #2b6ab0, #3b86db) !important;
+    border-color: #0c2b52 !important;
+}
+
+/* Tokens */
+.tokens-wrap {
+    display: grid;
+    gap: 10px;
+}
+
+.token-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.token-card {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 8px;
+    border: 1px solid #585858;
+    border-radius: 8px;
+    background: rgba(24, 24, 24, .88);
+    padding: 8px;
+
+    &.active {
+        outline: 2px solid #2ecc71;
+        outline-offset: 0;
+    }
+}
+
+.token-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 6px;
+    border: 1px solid #3a3a3a;
+    background: #0e0e0e;
+    background-size: cover;
+    background-position: center;
+
+    /* You can swap these to real art assets */
+    &.token-vip {
+        //background-image: url("/store/tokens/vip.png");
+    }
+
+    &.token-double_xp {
+        //  background-image: url("/store/tokens/double_xp.png");
+    }
+}
+
+.token-body {
+    display: grid;
+    align-content: center;
+    gap: 4px;
+
+    .token-title {
+        color: #fff;
+        font-weight: 900;
+    }
+
+    .token-sub {
+        color: #cfcfcf;
+        font-size: 12px;
+    }
+
+    .token-active {
+        color: #2ecc71;
+    }
+
+    .token-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 4px;
+
+        .owned {
+            font-weight: 900;
+            color: #2e7d32;
+        }
+
+        .price {
+            font-weight: 900;
+            font-size: 11px;
+            background: #f1f7ff;
+            border: 1px solid #adc6e6;
+            border-radius: 6px;
+            padding: 2px 6px;
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+        }
+    }
+}
+
+/* Minor extras */
+.loading-row {
+    text-align: center;
+    color: #e5e5e5;
+    opacity: .8;
+    padding: 4px 0;
+}
+
+/* Little preview block in confirm for featured/tokens */
+.bundle-preview-block {
+    width: 24px;
+    height: 24px;
+    border-radius: 3px;
+    background: #222;
+    border: 1px solid #585858;
 }

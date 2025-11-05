@@ -45,7 +45,7 @@ $arrow-height: 60px;
   position: relative;
   width: $sidebar-width;
   padding: 10px 12px;
-  background: rgba(24,24,24,.88);
+  background: rgba(24, 24, 24, .88);
   border: solid 2px #FFFFFF;
   border-left: 0;
   border-radius: 0 16px 16px 0;
@@ -78,7 +78,7 @@ $arrow-height: 60px;
     width: $arrow-width;
     height: $arrow-height;
     border-radius: 0 10px 10px 0;
-    background: rgba(24,24,24,.88);
+    background: rgba(24, 24, 24, .88);
     /* same bg to blend */
     border: 2px solid #FFFFFF;
     border-left: 0;
@@ -126,7 +126,7 @@ $arrow-height: 60px;
 .left-sidebar-container.closed .left-sidebar__toggle::before,
 .left-sidebar-container.collapsed .left-sidebar__toggle::before {
   transform: translateY(-50%) rotate(-135deg);
-  
+
 }
 
 /* ---- Pills (icon holders) ---- */
@@ -134,7 +134,7 @@ $arrow-height: 60px;
   width: $chip-size;
   height: $chip-size;
   border-radius: 12px;
-  background: rgba(24,24,24,.88);
+  background: rgba(24, 24, 24, .88);
   /* your pill color */
   border: 1px solid #585858;
   box-shadow: $shadow-inset, 0 2px 6px rgba(0, 0, 0, .25);
@@ -279,43 +279,45 @@ $arrow-height: 60px;
 
 /* ---- Mobile dock (<=768px) ---- */
 @media (max-width: 768px) {
+  :root {
+    --chatbar-h: 56px;
+  }
+
   .left-sidebar-wrapper {
     position: fixed;
     left: 50%;
-    bottom: 10px;
+    /* ↑ give more breathing room above the chat bar */
+    bottom: calc(var(--chatbar-h, 56px) + 14px);
     top: auto;
     transform: translateX(-50%);
-    z-index: 1000;
+    z-index: 2200;
+    pointer-events: none;
   }
 
   .left-sidebar-container {
-    transform: translateX(-50%);
+    transform: translateX(0);
+    pointer-events: auto;
 
+    /* closed state just slips under the chat bar */
     &.closed,
     &.collapsed {
-      transform: translate(-50%, 130%);
+      transform: translateY(calc(var(--chatbar-h, 56px) + 24px));
     }
   }
 
   .left-sidebar {
     flex-direction: row;
+    align-items: center;
+    gap: 8px;
     padding: 10px 12px;
     border-radius: 12px;
     width: auto;
+    background: rgba(24, 24, 24, .88);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
 
+    /* 🔕 hide the toggle on mobile */
     &__toggle {
-      right: 50%;
-      top: -14px;
-      transform: translate(50%, 0);
-      width: 60px;
-      height: 22px;
-      border-radius: 10px 10px 0 0;
-
-      /* up chevron when docked */
-      &::before {
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(45deg);
-      }
+      display: none !important;
     }
   }
 
@@ -324,6 +326,7 @@ $arrow-height: 60px;
     height: 52px;
   }
 
+  /* Tooltips flip up on mobile */
   .sidebar-chip[data-tip]::before,
   .sidebar-chip[data-tip]::after {
     left: 50%;
@@ -339,6 +342,8 @@ $arrow-height: 60px;
     margin-left: 0;
   }
 }
+
+
 
 /* ---- Reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {

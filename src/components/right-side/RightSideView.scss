@@ -263,6 +263,96 @@ RESPONSIVE
     }
 }
 
+/* =======================================================
+RIGHT SIDE: MOBILE COMPACT / VERTICAL
+======================================================= */
+@media (max-width: 600px) {
+    .nitro-right-compact {
+        right: 6px;
+        top: 70px;
+        /* clears compact stats pill */
+        width: 148px;
+        /* ↓ from ~180–340 */
+        max-width: 148px;
+        gap: 6px;
+        z-index: 2200;
+    }
+
+    .rs-mini {
+        gap: 4px;
+        padding: 6px;
+    }
+
+    .rs-mini .chip {
+        width: 100%;
+        min-height: 28px;
+        padding: 5px 6px;
+        font-size: 11px;
+        justify-content: flex-start;
+    }
+
+    .ico {
+        width: 16px;
+        height: 16px;
+    }
+
+    .rs-card {
+        padding: 6px;
+        width: 100%;
+    }
+
+    .rs-title {
+        font-size: 12px;
+        gap: 4px;
+    }
+
+    .rs-title .chip-title {
+        width: 100%;
+    }
+
+    .rs-title-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .rs-counter {
+        margin-top: 4px;
+        gap: 4px;
+    }
+
+    .rs-counter .chip {
+        padding: 5px 6px;
+        font-size: 11px;
+    }
+
+    .rs-counter .chip--icon {
+        padding: 5px;
+    }
+}
+
+/* ultra small */
+@media (max-width: 380px) {
+    .nitro-right-compact {
+        width: 140px;
+        max-width: 140px;
+    }
+}
 
 
+/* Tiny phones: squeeze a bit more */
+@media (max-width: 380px) {
+    .nitro-right-compact {
+        width: 168px;
+        max-width: 168px;
+    }
 
+    .rs-mini .chip,
+    .rs-card .chip {
+        padding: 6px;
+    }
+
+    .rs-title {
+        font-size: 12px;
+    }
+}
