@@ -6,6 +6,7 @@ import { MyProfileView } from "./MyProfileView";
 import { StartWorkComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/StartWorkComposer";
 import { CallPoliceComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CallPoliceComposer";
 import { PassiveModeComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PassiveModeComposer";
+import { OpponentStatsOverlay } from "./OpponentStatsOverlay";
 
 /** ---- onboarding anchor hook (local copy) ---- */
 type AnchorEventDetail = { id: string; el: HTMLElement | null };
@@ -323,7 +324,6 @@ export const StatsBar: FC = () => {
                     <div className="avatar-level">Level: {level}</div>
                 </div>
             </div>
-
             <div className="stats-right">
                 <div className="stat">
                     <div className="icons heart" />
@@ -366,7 +366,6 @@ export const StatsBar: FC = () => {
                     />
                 </div>
             </div>
-
             {showProfile && (
                 <MyProfileView
                     onClose={() => setShowProfile(false)}
@@ -405,6 +404,12 @@ export const StatsBar: FC = () => {
                     onUpgrade={(stat) => console.log("Upgrade stat:", stat)}
                 />
             )}
+            <OpponentStatsOverlay
+                onClose={() =>
+                    window.dispatchEvent(new CustomEvent("user_inspect_clear"))
+                }
+            />
+            ;
         </div>
     );
 };

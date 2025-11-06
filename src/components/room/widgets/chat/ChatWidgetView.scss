@@ -1193,7 +1193,8 @@
             }
 
         }
-         &.bubble-69 {
+
+        &.bubble-69 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_69.png");
 
             &::before {
@@ -1221,7 +1222,8 @@
             }
 
         }
-         &.bubble-70 {
+
+        &.bubble-70 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_70.png");
 
             &::before {
@@ -1595,6 +1597,7 @@
             background: url("../../../../assets/images/chat/chatbubbles/bubble_68_extra.png");
         }
     }
+
     &.bubble-69 {
         background-image: url("../../../../assets/images/chat/chatbubbles/bubble_69.png");
 
@@ -1609,7 +1612,8 @@
             //background: url("../../../../assets/images/chat/chatbubbles/bubble_68_extra.png");
         }
     }
-     &.bubble-70 {
+
+    &.bubble-70 {
         background-image: url("../../../../assets/images/chat/chatbubbles/bubble_70.png");
 
         &::before {
@@ -1732,4 +1736,17 @@ APPENDED FIXES (no other changes)
     .chat-content {
         margin-left: 27px;
     }
+}
+
+/* bold + underlined mention */
+.mention {
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+/* optional: tiny spacing tweak for icon */
+.name-icon {
+    vertical-align: text-bottom;
+    margin-right: 2px;
+    image-rendering: pixelated;
 }

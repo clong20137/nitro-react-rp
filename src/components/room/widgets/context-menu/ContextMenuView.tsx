@@ -76,10 +76,15 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         ...rest
     } = props;
 
-    /* ------------- respect “Disable Context Menu” setting ------------- */
+    /* ------------- respect “Disable Context Menu” & Click-Through ------------- */
 
     const [contextMenuDisabled, setContextMenuDisabled] = useState<boolean>(
         () => readBool("contextMenuDisabled", false)
+    );
+
+    // Click-through flag (seed from global, update via bridge)
+    const [ctEnabled, setCtEnabled] = useState<boolean>(
+        () => !!(window as any).__ctEnabled
     );
 
     useEffect(() => {
@@ -91,6 +96,12 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
             if (disabled && onClose) onClose();
         };
 
+        const onCT = (e: Event) => {
+            const enabled = !!(e as CustomEvent)?.detail?.enabled;
+            setCtEnabled(enabled);
+            if (enabled && onClose) onClose(); // hide immediately when CT turns on
+        };
+
         const onStorage = (ev: StorageEvent) => {
             if (ev.key === "contextMenuDisabled") {
                 const disabled = readBool("contextMenuDisabled", false);
@@ -100,18 +111,32 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         };
 
         window.addEventListener("toggleContextMenu", onToggle as EventListener);
+        window.addEventListener("click_through_state", onCT as EventListener);
         window.addEventListener("storage", onStorage);
+
+        // sync once from global in case CT was toggled before mount
+        const syncFromGlobal = () => {
+            const now = !!(window as any).__ctEnabled;
+            setCtEnabled(now);
+            if (now && onClose) onClose();
+        };
+        setTimeout(syncFromGlobal, 0);
+
         return () => {
             window.removeEventListener(
                 "toggleContextMenu",
                 onToggle as EventListener
             );
+            window.removeEventListener(
+                "click_through_state",
+                onCT as EventListener
+            );
             window.removeEventListener("storage", onStorage);
         };
     }, [onClose]);
 
-    // If disabled, do not render at all
-    if (contextMenuDisabled) return null;
+    // If disabled or click-through is enabled, do not render at all
+    if (contextMenuDisabled || ctEnabled) return null;
 
     /* ---------------- state ---------------- */
 
@@ -237,7 +262,7 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
 
                 if (bounds && location) updatePosition(bounds, location);
             } catch {
-                // Swallow any frame errors (e.g., unmounted mid-tick) to avoid black screen
+                // swallow any frame errors to avoid black screen
             }
         };
 
@@ -263,13 +288,16 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         FADE_TIME = 1;
     }, []);
 
-    // Auto-fire inspect for other users only
+    // Auto-fire inspect for other users only (blocked when click-through is on)
     useEffect(() => {
+        if (ctEnabled) return; // do not auto-open when click-through is enabled
         if (userType !== RoomObjectType.USER) return;
+
         const currentUserId = GetSessionDataManager().userId;
         if (!userData || userData.webID === currentUserId) return;
+
         toggleStats();
-    }, [objectId, userType, userData]);
+    }, [objectId, userType, userData, ctEnabled]);
 
     /* ---------------- render ---------------- */
 

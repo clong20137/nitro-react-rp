@@ -1,6 +1,10 @@
 import { RoomChatSettings, RoomObjectCategory } from "@nitrots/nitro-renderer";
 import { FC, useEffect, useMemo, useRef, useState } from "react";
-import { ChatBubbleMessage, GetRoomEngine } from "../../../../api";
+import {
+    ChatBubbleMessage,
+    GetRoomEngine,
+    GetSessionDataManager,
+} from "../../../../api";
 
 interface ChatWidgetMessageViewProps {
     chat: ChatBubbleMessage;
@@ -8,8 +12,11 @@ interface ChatWidgetMessageViewProps {
     bubbleWidth?: number;
 }
 
-/** Use the same folder you used in the store */
+/** Base for name icons (same as store) */
 const NAME_ICON_BASE = "/nitro-react/src/assets/images/chat/nameicons";
+
+/** Mention ping sound */
+const MENTION_PING_URL = "/assets/sounds/mention-ping.mp3";
 
 export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
     props
@@ -20,7 +27,11 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
         bubbleWidth = RoomChatSettings.CHAT_BUBBLE_WIDTH_NORMAL,
     } = props;
     const [isVisible, setIsVisible] = useState(false);
-    const elementRef = useRef<HTMLDivElement>();
+    const elementRef = useRef<HTMLDivElement>(null);
+    const pingPlayedRef = useRef(false);
+
+    const myName = (GetSessionDataManager()?.userName || "").trim();
+    const myNameLower = myName.toLowerCase();
 
     const getBubbleWidth = useMemo(() => {
         switch (bubbleWidth) {
@@ -30,6 +41,8 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
                 return 240;
             case RoomChatSettings.CHAT_BUBBLE_WIDTH_WIDE:
                 return 2000;
+            default:
+                return 350;
         }
     }, [bubbleWidth]);
 
@@ -39,6 +52,55 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
         chat.formattedText?.startsWith("*") &&
         chat.formattedText?.endsWith("*");
 
+    /** Build icon (if provided by server) */
+    const nameIconUrl =
+        chat.showNameIcon && chat.nameIconKey
+            ? `${NAME_ICON_BASE}/${chat.nameIconKey}.png`
+            : null;
+
+    const usernameHtmlCore = `${chat.username}: `;
+    const usernameMarkup =
+        (nameIconUrl
+            ? `<img class="name-icon" src="${nameIconUrl}" alt="" aria-hidden="true" draggable="false" /> `
+            : "") + usernameHtmlCore;
+
+    /** Detect if THIS message mentions me (case-insensitive) */
+    const thisMentionsMe = useMemo(() => {
+        const txt = chat?.formattedText || "";
+        const me = myNameLower;
+        if (!txt || !me) return false;
+
+        const scanRe = /@([A-Za-z0-9_-]+)/g;
+        let m: RegExpExecArray | null;
+        while ((m = scanRe.exec(txt)) !== null) {
+            if ((m[1] || "").toLowerCase() === me) return true;
+        }
+        return false;
+    }, [chat?.formattedText, myNameLower]);
+
+    /** Format with mention spans (allows multiple mentions) */
+    const formattedWithMentions = useMemo(() => {
+        const txt = chat?.formattedText || "";
+        if (!txt) return "";
+
+        const replaceRe = /@([A-Za-z0-9_-]+)/g;
+
+        const html = txt.replace(replaceRe, (_m, handle: string) => {
+            const safe = handle;
+            return `<span class="mention">@${safe}</span>`;
+        });
+
+        return html;
+    }, [chat?.formattedText]);
+
+    /** Bubble style: roleplay (4), mention highlight (25), else normal */
+    const bubbleStyleId = useMemo(() => {
+        if (isRoleplay) return 4;
+        if (thisMentionsMe) return 25;
+        return chat.styleId;
+    }, [isRoleplay, thisMentionsMe, chat.styleId]);
+
+    /** Measure / place bubble */
     useEffect(() => {
         const el = elementRef.current;
         if (!el) return;
@@ -72,24 +134,23 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
 
     useEffect(() => setIsVisible(chat.visible), [chat.visible]);
 
-    const bubbleStyleId = isRoleplay ? 4 : chat.styleId;
+    /** Play ping for me once if I'm mentioned */
+    useEffect(() => {
+        if (!thisMentionsMe) {
+            pingPlayedRef.current = false;
+            return;
+        }
+        if (pingPlayedRef.current) return;
+        pingPlayedRef.current = true;
 
-    // If server attached these (recommended):
-    // chat.showNameIcon: boolean
-    // chat.nameIconKey: string (e.g., "1", "2", ... or file key)
-    const nameIconUrl =
-        chat.showNameIcon && chat.nameIconKey
-            ? `${NAME_ICON_BASE}/${chat.nameIconKey}.png`
-            : null;
-
-    // 👇 Build the exact username HTML the client expects,
-    // but prefix our icon <img> BEFORE the "[ADM]" (which is inside username HTML)
-    // We simply prepend it to the whole username HTML string.
-    const usernameHtmlCore = `${chat.username}: `; // this is what you had before
-    const usernameMarkup =
-        (nameIconUrl
-            ? `<img class="name-icon" src="${nameIconUrl}" alt="" aria-hidden="true" draggable="false" /> `
-            : "") + usernameHtmlCore;
+        try {
+            const audio = new Audio(MENTION_PING_URL);
+            audio.volume = 1.0;
+            audio.play().catch(() => {});
+        } catch {
+            /* ignore */
+        }
+    }, [thisMentionsMe]);
 
     return (
         <div
@@ -139,7 +200,6 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
                         <>
                             <b
                                 className="username mr-1"
-                                // NOTE: we inject the icon markup directly here so it appears before [ADM]
                                 dangerouslySetInnerHTML={{
                                     __html: usernameMarkup,
                                 }}
@@ -147,7 +207,7 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
                             <span
                                 className="message"
                                 dangerouslySetInnerHTML={{
-                                    __html: chat.formattedText,
+                                    __html: formattedWithMentions,
                                 }}
                             />
                         </>

@@ -1,162 +1,217 @@
-.hotel-alert-container {
+/* OlympusRP — Compact Hotel Toasts */
+.hotel-toast-region {
     position: fixed;
     top: 12px;
-    left: 0;
-    right: 0;
+    right: 400px;
     z-index: 9999;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
     pointer-events: none;
+    /* clicks pass through except toasts */
 }
 
-.hotel-alert {
-    pointer-events: auto;
-    max-width: 720px;
-    width: calc(100% - 24px);
+/* Base token colors (aligns with your theme) */
+$bg: #426e8f;
+$bg-soft: #3c5e78;
+$border: #22425d;
+$shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -2px rgba(0, 0, 0, .12);
 
-    /* 3 columns: [icon] [content] [close] */
+$accent-info: #9dd1ff;
+$accent-success: #9ae6b4;
+$accent-warning: #ffd280;
+$accent-danger: #ff9aa2;
+
+.hotel-toast {
+    pointer-events: auto;
     display: grid;
     grid-template-columns: auto 1fr auto;
-    grid-template-rows: auto auto;
-    /* title row, message row */
-    column-gap: 12px;
-    row-gap: 6px;
+    column-gap: 10px;
     align-items: center;
-    /* vertically center items by default */
 
-    background: #426e8f;
+    max-width: 360px;
+    /* smaller! */
+    width: calc(100vw - 24px);
+    background: rgba(24,24,24,.88);
     color: #fff;
+    border: 2px solid #FFF;
     border-radius: 10px;
-    padding: 14px 16px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
-    border: 1px solid #22425d;
-    backdrop-filter: blur(3px);
+    box-shadow: $shadow;
+    padding: 10px 10px 10px 10px;
+    position: relative;
+    overflow: hidden;
 
-    transform: translateY(-12px);
+    transform: translateY(calc((var(--delay-index, 0)) * 6px)) translateX(12px);
     opacity: 0;
-    animation: hotelAlertIn 180ms ease-out forwards;
+    animation: toastIn 160ms ease-out forwards;
+    /* cascade delays slightly so multiple don’t pop at once */
+    animation-delay: calc((var(--delay-index, 0)) * 60ms);
+
+    &.paused .hotel-toast__progress {
+        animation-play-state: paused;
+    }
 }
 
-.hotel-alert.out {
-    animation: hotelAlertOut 220ms ease-in forwards;
+/* Variants = tiny left border + subtle glow */
+.hotel-toast::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 3px;
+    border-radius: 2px;
+    background: #cfe9ff;
+    /* default (info) fallback */
+    opacity: .9;
 }
 
-/* Icon cell (col 1, spans both rows) */
-.hotel-alert__icon {
-    grid-column: 1 / 2;
-    grid-row: 1 / 3;
-    /* cover title + message rows */
+.variant-info::before {
+    background: $accent-info;
+}
+
+.variant-success::before {
+    background: $accent-success;
+}
+
+.variant-warning::before {
+    background: $accent-warning;
+}
+
+.variant-danger::before {
+    background: $accent-danger;
+}
+
+.hotel-toast__icon {
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    margin-left: 4px;
+
+    img {
+        width: 24px;
+        height: 24px;
+    }
 }
 
-.hotel-alert__icon img {
-    width: 28px;
-    height: 28px;
-    object-fit: contain;
-    user-select: none;
+.hotel-toast__body {
+    display: grid;
+    row-gap: 4px;
+    min-width: 0;
 }
 
-/* Title immediately to the right of icon */
-.hotel-alert__title {
-    grid-column: 2 / 3;
-    /* right of icon */
-    grid-row: 1 / 2;
-    font-weight: 700;
+.hotel-toast__title {
+    font-weight: 800;
+    font-size: 14px;
     letter-spacing: .2px;
-    font-size: 22px;
-    /* a bit smaller so it sits nicely next to icon */
-    line-height: 1.1;
+    line-height: 1;
     opacity: .95;
-    margin: 0;
 }
 
-/* Message under the title, still in the middle column */
-.hotel-alert__message {
-    grid-column: 2 / 3;
-    grid-row: 2 / 3;
-    font-size: 16px;
-    line-height: 1.35;
-    background: #3c5e78;
-    padding: 10px;
+.hotel-toast__message {
+    font-size: 13px;
+    line-height: 1.25;
+    background: $bg-soft;
     border-radius: 6px;
+    padding: 8px;
     opacity: .95;
     white-space: pre-wrap;
+    word-break: break-word;
 }
 
-/* Close button in the far-right column, vertically centered across both rows */
-.hotel-alert__close {
-    grid-column: 3 / 4;
-    grid-row: 1 / 3;
-    /* span both rows */
-    align-self: center;
-    /* <-- vertical centering */
-    justify-self: center;
-    /* horizontal centering in its column */
-
-    width: 28px;
-    height: 28px;
+.hotel-toast__close {
+    width: 24px;
+    height: 24px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-
-    border: none;
+    border: 2px solid #921911;
     border-radius: 4px;
     background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
-    box-shadow: 0 0 0 1.6px #fff;
+    box-shadow: 0 0 0 1.3px #fff;
     color: #fff;
-    font-size: 18px;
-    border: 2px solid #921911;
+    font-size: 16px;
+    line-height: 1;
     cursor: pointer;
     padding: 0;
-    line-height: 1;
-    transition: opacity 120ms ease;
+    transition: transform 100ms ease, filter 100ms ease;
+    margin-left: 4px;
 
     &:hover {
-        background: repeating-linear-gradient(#f55749, #f55749 50%, #d33a32 0, #d33a32);
+        filter: brightness(1.05);
+    }
+
+    &:active {
+        transform: translateY(1px);
     }
 }
 
-/* Animations */
-@keyframes hotelAlertIn {
+/* Thin progress bar at the very bottom (fills left→right) */
+.hotel-toast__progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, .5), rgba(255, 255, 255, .9));
+    transform-origin: left center;
+    animation-name: toastProgress;
+    animation-timing-function: linear;
+}
+
+@keyframes toastIn {
     from {
-        transform: translateY(-12px);
+        transform: translateY(calc((var(--delay-index, 0)) * 6px)) translateX(20px);
         opacity: 0;
     }
 
     to {
-        transform: translateY(0);
+        transform: translateY(calc((var(--delay-index, 0)) * 6px)) translateX(0);
         opacity: 1;
     }
 }
 
-@keyframes hotelAlertOut {
+@keyframes toastProgress {
     from {
-        transform: translateY(0);
-        opacity: 1;
+        transform: scaleX(0);
     }
 
     to {
-        transform: translateY(-10px);
-        opacity: 0;
+        transform: scaleX(1);
     }
 }
 
-/* Small screens */
+/* Mobile tweaks */
 @media (max-width: 420px) {
-    .hotel-alert {
-        padding: 12px;
+    .hotel-toast-region {
+        top: 10px;
+        right: 10px;
+        gap: 6px;
     }
 
-    .hotel-alert__title {
-        font-size: 18px;
+    .hotel-toast {
+        max-width: 320px;
+        padding: 8px;
     }
 
-    .hotel-alert__message {
-        font-size: 14px;
-        margin: 8px 0;
+    .hotel-toast__message {
+        font-size: 12.5px;
+        padding: 6px;
+    }
+
+    .hotel-toast__title {
+        font-size: 13.5px;
+    }
+
+    .hotel-toast__icon {
+        width: 26px;
+        height: 26px;
+
+        img {
+            width: 22px;
+            height: 22px;
+        }
     }
 }

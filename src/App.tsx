@@ -10,6 +10,7 @@ import {
     RoomEngineEvent,
     WebGL,
 } from "@nitrots/nitro-renderer";
+
 import { FC, useCallback, useEffect, useState } from "react";
 import {
     DispatchUiEvent,
@@ -18,6 +19,7 @@ import {
     GetNitroInstance,
     GetUIVersion,
 } from "./api";
+
 import {
     Base,
     TransitionAnimation,
@@ -25,88 +27,99 @@ import {
     LayoutProgressBar,
     Text,
 } from "./common";
+
 import { LoadingView } from "./components/loading/LoadingView";
 import { MainView } from "./components/main/MainView";
-
 import { LeftSidebarView } from "./components/roleplay/LeftSideBarView";
 import StatsBar from "./components/roleplay/StatsBar";
 import { PreloadProvider } from "./contexts/PreloadContext";
 import { initEventBridge } from "./events/EventBridge";
+
 import {
     useConfigurationEvent,
     useLocalizationEvent,
     useMainEvent,
     useRoomEngineEvent,
 } from "./hooks";
+
 import IntervalWebWorker from "./workers/IntervalWebWorker";
 import { WorkerBuilder } from "./workers/WorkerBuilder";
-import { LiveFeed } from "./components/roleplay/LiveFeed";
 
+import { LiveFeed } from "./components/roleplay/LiveFeed";
 import { PoliceCallView } from "./components/roleplay/PoliceCallView";
-import { Stats } from "fs";
 import BlackjackView from "./components/roleplay/BlackJackView";
 import MarketplaceView from "./components/roleplay/MarketplaceView";
-import OpponentStatsOverlay from "./components/roleplay/OpponentStatsOverlay";
 import HighLowView from "./components/roleplay/HighLowView";
 import SlotMachineView from "./components/roleplay/SlotMachineView";
-import { WheelModuleEvent } from "@nitrots/nitro-renderer/src/nitro/communication/messages/incoming/roleplay/WheelModuleEvent";
-import BigWheelView from "./components/roleplay/BigWheelView";
 import { HotelAlertView } from "./components/roleplay/HotelAlertView";
 import { OnboardingOverlay } from "./components/roleplay/OnboardingOverlay";
+import { initClickThroughUsers } from "./components/roleplay/ClickThroughUsers";
+
+// optional: if you later restore big wheel
+// import BigWheelView from "./components/roleplay/BigWheelView";
+
 NitroVersion.UI_VERSION = GetUIVersion();
 
-export const App: FC<{}> = (props) => {
+export const App: FC = () => {
     const [isReady, setIsReady] = useState(false);
     const [isError, setIsError] = useState(false);
     const [message, setMessage] = useState("Getting Ready");
     const [percent, setPercent] = useState(0);
     const [imageRendering, setImageRendering] = useState<boolean>(true);
 
-    /* NEW: in-client disconnect overlay state */
+    /* Disconnect overlay */
     const [dcVisible, setDcVisible] = useState(false);
     const [dcSeconds, setDcSeconds] = useState(15);
 
+    /* ==============================================
+Bootstrap Nitro
+===============================================*/
     if (!GetNitroInstance()) {
         //@ts-ignore
         if (!NitroConfig) throw new Error("NitroConfig is not defined!");
 
         Nitro.bootstrap();
-
         const worker = new WorkerBuilder(IntervalWebWorker);
-
         Nitro.instance.setWorker(worker);
     }
 
+    /* ==============================================
+Core init handler
+===============================================*/
     const handler = useCallback((event: NitroEvent) => {
         switch (event.type) {
             case ConfigurationEvent.LOADED:
                 GetNitroInstance().localization.init();
-                setPercent((prevValue) => prevValue + 20);
+                setPercent((prev) => prev + 20);
                 return;
+
             case ConfigurationEvent.FAILED:
                 setIsError(true);
                 setMessage("Configuration Failed");
                 return;
+
             case Nitro.WEBGL_UNAVAILABLE:
                 setIsError(true);
                 setMessage("WebGL Required");
                 return;
+
             case Nitro.WEBGL_CONTEXT_LOST:
                 setIsError(true);
                 setMessage("WebGL Context Lost - Reloading");
-
                 setTimeout(() => window.location.reload(), 1500);
                 return;
+
             case NitroCommunicationDemoEvent.CONNECTION_HANDSHAKING:
-                setPercent((prevValue) => prevValue + 20);
+                setPercent((prev) => prev + 20);
                 return;
+
             case NitroCommunicationDemoEvent.CONNECTION_HANDSHAKE_FAILED:
                 setIsError(true);
                 setMessage("Handshake Failed");
                 return;
-            case NitroCommunicationDemoEvent.CONNECTION_AUTHENTICATED:
-                setPercent((prevValue) => prevValue + 20);
 
+            case NitroCommunicationDemoEvent.CONNECTION_AUTHENTICATED:
+                setPercent((prev) => prev + 20);
                 GetNitroInstance().init();
 
                 if (LegacyExternalInterface.available)
@@ -117,29 +130,20 @@ export const App: FC<{}> = (props) => {
                         []
                     );
                 return;
+
             case NitroCommunicationDemoEvent.CONNECTION_ERROR:
+            case NitroCommunicationDemoEvent.CONNECTION_CLOSED:
                 setIsError(true);
                 setMessage("Connection Error");
-                /* show the in-client disconnect overlay */
                 setDcVisible(true);
                 setDcSeconds(15);
                 return;
-            case NitroCommunicationDemoEvent.CONNECTION_CLOSED:
-                //if(GetNitroInstance().roomEngine) GetNitroInstance().roomEngine.dispose();
-                //setIsError(true);
-                setMessage("Connection Error");
 
-                HabboWebTools.send(-1, "client.init.handshake.fail");
-
-                /* show the in-client disconnect overlay */
-                setDcVisible(true);
-                setDcSeconds(15);
-                return;
             case RoomEngineEvent.ENGINE_INITIALIZED:
-                setPercent((prevValue) => prevValue + 20);
-
+                setPercent((prev) => prev + 20);
                 setTimeout(() => setIsReady(true), 300);
                 return;
+
             case NitroLocalizationEvent.LOADED: {
                 const assetUrls = GetConfiguration<string[]>(
                     "preload.assets.urls"
@@ -159,8 +163,7 @@ export const App: FC<{}> = (props) => {
                     (status: boolean) => {
                         if (status) {
                             GetCommunication().init();
-
-                            setPercent((prevValue) => prevValue + 20);
+                            setPercent((prev) => prev + 20);
                         } else {
                             setIsError(true);
                             setMessage("Assets Failed");
@@ -172,6 +175,7 @@ export const App: FC<{}> = (props) => {
         }
     }, []);
 
+    /* Event bindings */
     useMainEvent(Nitro.WEBGL_UNAVAILABLE, handler);
     useMainEvent(Nitro.WEBGL_CONTEXT_LOST, handler);
     useMainEvent(NitroCommunicationDemoEvent.CONNECTION_HANDSHAKING, handler);
@@ -187,10 +191,17 @@ export const App: FC<{}> = (props) => {
     useConfigurationEvent(ConfigurationEvent.LOADED, handler);
     useConfigurationEvent(ConfigurationEvent.FAILED, handler);
 
+    /* ==============================================
+Init bridges (ClickThrough + EventBridge)
+===============================================*/
     useEffect(() => {
+        initClickThroughUsers(); // ✅ initializes click-through bridge once
         initEventBridge();
     }, []);
 
+    /* ==============================================
+WebGL check & resize
+===============================================*/
     useEffect(() => {
         if (!WebGL.isWebGLAvailable()) {
             DispatchUiEvent(new NitroEvent(Nitro.WEBGL_UNAVAILABLE));
@@ -198,39 +209,37 @@ export const App: FC<{}> = (props) => {
             GetNitroInstance().core.configuration.init();
         }
 
-        const resize = (event: UIEvent) =>
-            setImageRendering(!(window.devicePixelRatio % 1));
-
+        const resize = () => setImageRendering(!(window.devicePixelRatio % 1));
         window.addEventListener("resize", resize);
+        resize();
 
-        resize(null);
-
-        return () => {
-            window.removeEventListener("resize", resize);
-        };
+        return () => window.removeEventListener("resize", resize);
     }, []);
 
-    /* NEW: countdown driver for the disconnect overlay */
+    /* ==============================================
+Disconnect overlay countdown
+===============================================*/
     useEffect(() => {
         if (!dcVisible) return;
-
         if (dcSeconds <= 0) {
             window.location.reload();
             return;
         }
-
         const id = setTimeout(() => setDcSeconds((s) => s - 1), 1000);
         return () => clearTimeout(id);
     }, [dcVisible, dcSeconds]);
 
     const reloadNow = () => window.location.reload();
 
+    /* ==============================================
+Render
+===============================================*/
     return (
         <PreloadProvider>
             <Base
                 fit
                 overflow="hidden"
-                className={imageRendering && "image-rendering-pixelated"}
+                className={imageRendering ? "image-rendering-pixelated" : ""}
             >
                 {(!isReady || isError) && (
                     <LoadingView
@@ -239,26 +248,31 @@ export const App: FC<{}> = (props) => {
                         percent={percent}
                     />
                 )}
+
                 <TransitionAnimation
                     type={TransitionAnimationTypes.FADE_IN}
                     inProp={isReady}
                 >
                     <MainView />
                 </TransitionAnimation>
+
                 <Base id="draggable-windows-container" />
-                {isReady && <StatsBar></StatsBar>}
-                <OpponentStatsOverlay></OpponentStatsOverlay>
-                <OnboardingOverlay></OnboardingOverlay>
-                <LiveFeed></LiveFeed> /<BlackjackView></BlackjackView>
-                <HighLowView></HighLowView>
-                <SlotMachineView></SlotMachineView>
-                <MarketplaceView></MarketplaceView>
-                <HotelAlertView></HotelAlertView>
-                { /*<BigWheelView></BigWheelView> */ }
+
+                {isReady && <StatsBar />}
+
+                <OnboardingOverlay />
+                <LiveFeed />
+                <BlackjackView />
+                <HighLowView />
+                <SlotMachineView />
+                <MarketplaceView />
+                <HotelAlertView />
+                {/* <BigWheelView /> */}
                 <PoliceCallView
                     onTaxi={() => console.log("Taxi to caller room")}
                 />
-                {/* NEW: In-client disconnect overlay (no Blade dependency) */}
+
+                {/* Disconnect overlay */}
                 {dcVisible && (
                     <div
                         style={{
@@ -300,7 +314,6 @@ export const App: FC<{}> = (props) => {
                                 Reloading in {dcSeconds}s
                             </Text>
 
-                            {/* Use the same gold loader styling by reusing your class */}
                             <LayoutProgressBar
                                 progress={((15 - dcSeconds) / 15) * 100}
                                 className="mt-2 large oly-progress"
