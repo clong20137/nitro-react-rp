@@ -6,7 +6,7 @@
     width: 750px;
     box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
     border: solid 2px #ffffff;
-    background: rgba(24, 24, 24, .88);
+    background: #dfdfdf;
     color: #ffffff;
     z-index: 9999;
     border-radius: 8px;
@@ -14,7 +14,7 @@
 
 /* ---------- Header ---------- */
 .profile-header {
-    background: linear-gradient(180deg, #000, #000 50%, #232323 0, #232323);
+    background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
     color: #fff;
     display: flex;
     justify-content: space-between;
@@ -69,7 +69,7 @@
 
 .avatar-section {
     padding: 1vw;
-    background: rgba(24, 24, 24, .95);
+    background: #cdcdcd;
     border-radius: 8px;
     display: flex;
     flex-direction: column;
@@ -128,7 +128,7 @@
     gap: 6px;
     margin-top: 10px;
     font-size: 13px;
-    background: rgba(24, 24, 24, .88);
+    background: #cdcdcd;
     border-radius: 8px;
     padding: 6px;
 }
@@ -150,7 +150,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #404040;
+    background: #dfdfdf;
     border-radius: 6px;
     padding: 10px;
     margin: 10px;
@@ -164,6 +164,7 @@
     .corp-lines {
         .corp-title {
             font-weight: 700;
+            color:#000;
         }
 
         .corp-sub {
@@ -227,6 +228,7 @@
     justify-content: center;
     gap: 6px;
     margin: 8px 0 0px;
+    background:#2478b7;
 
 
     .tab-btn {
@@ -234,7 +236,7 @@
         padding: 10px 16px;
         border: 2px solid #ffffff;
         border-bottom: none;
-        background: linear-gradient(180deg, #000, #000 50%, #232323 0, #232323);
+        background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
         color: #FFF;
         font-weight: 700;
         text-align: center;
@@ -244,8 +246,8 @@
 
         &.active {
 
-            background: #5b5b5b;
-            color: #ffffff;
+            background: #cdcdcd;
+            color: #000000;
         }
     }
 }
@@ -259,7 +261,7 @@
 /* Level & XP */
 .level-xp {
     font-size: 14px;
-    background: rgba(24, 24, 24, .95);
+    background: #cdcdcd;
     border-radius: 8px;
     padding: 8px;
 
@@ -273,7 +275,7 @@
 
         .xp-fill {
             height: 100%;
-            background: linear-gradient(180deg, #ff8420, #ff8420 50%, #d7660b 0, #d7660b);
+            background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
             border-radius: 2px;
         }
     }
@@ -295,7 +297,7 @@
     margin-top: 10px;
     font-size: 14px;
     padding: 8px;
-    background: rgba(24, 24, 24, .88);
+    background:#cdcdcd;
     border-radius: 8px;
 }
 
@@ -309,18 +311,18 @@
 .skill-name {
     width: 150px;
     font-weight: 700;
-    color: #ffffff;
+    color: #000000;
 }
 
 .skill-bar-wrapper {
     flex: 1;
     height: 24px;
-    background: #404040;
+    background: #dfdfdf;
     border-radius: 2px;
     overflow: hidden;
 
     .skill-bar-fill {
-        background: linear-gradient(180deg,#ff8420,#ff8420 50%,#d7660b 0,#d7660b);
+        background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
         height: 100%;
         display: flex;
         align-items: center;
@@ -357,12 +359,12 @@
     gap: 4px;
 
     .stat-badge {
-        background: rgba(24, 24, 24, .88);
+        background: #cdcdcd;
         border-radius: 5px;
         padding: 3px;
         font-size: 12px;
         font-weight: 600;
-        color: #ffffff;
+        color: #000000;
     }
 }
 

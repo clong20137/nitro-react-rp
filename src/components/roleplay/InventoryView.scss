@@ -5,7 +5,7 @@
     top: 100px;
     left: 10%;
     width: max-content;
-    background: rgba(24,24,24,.88);
+    background: #dfdfdf;
     border: solid 2px #ffffff;
     border-radius: 10px;
     box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
@@ -64,7 +64,7 @@
 .inventory-header {
     position: relative;
     color: #fff;
-    background: linear-gradient(180deg,#000,#000 50%,#232323 0,#232323);
+    background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
     font-weight: bold;
     text-align: center;
     font-size: 20px;

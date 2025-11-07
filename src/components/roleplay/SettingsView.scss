@@ -13,7 +13,7 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
     position: fixed;
     z-index: 1200;
     width: 420px;
-    background: rgba(24,24,24,.88);
+    background: #dfdfdf;
     border: 2px solid #FFFFFF;
     border-radius: 10px;
     box-shadow: $olrp-shadow;
@@ -59,7 +59,7 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: $olrp-header-grad;
+    background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
     color: #fff;
     padding: 8px 10px;
     font-size: 18px;
@@ -109,22 +109,23 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
     display: flex;
     gap: 6px;
     padding: 8px 8px 0;
-    background: rgb(255 255 255 / 100%);
+    background: #2478b7;
     border-bottom: 1px solid #585858;
+    justify-content:center;
 }
 
 .settings-tab {
     appearance: none;
-    border: 1px solid #9aa9b5;
+    border: 2px solid #fff;
+    color:#FFF;
     border-bottom: none;
     border-radius: 8px 8px 0 0;
-    background: linear-gradient(#fff 0%, #dcdcdc 100%);
+    background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
     font-weight: 800;
     font-size: 13px;
-    padding: 6px 12px;
+    padding: 10px 16px;
     cursor: pointer;
-    color: #0e1b25;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, .5);
+    color: #ffffff;
     box-shadow: 0 1px 0 rgba(0, 0, 0, .06);
     transition: transform .12s ease, filter .12s ease;
 
@@ -134,7 +135,8 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
     }
 
     &.active {
-        border-color: #8097a9;
+        background:#cdcdcd;
+        color:#000;
     }
 }
 
@@ -334,9 +336,8 @@ Appearance • Chat Bubble Picker
     position: relative;
     padding: 4px;
     /* was 6px */
-    border: 1px solid #585858;
-    border-radius: 8px;
-    background: rgba(24,24,24,.88);
+    border-radius: 6px;
+    background: #cdcdcd;
     cursor: pointer;
     transition: transform .1s ease, box-shadow .12s ease;
     user-select: none;
