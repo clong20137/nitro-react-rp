@@ -52,8 +52,10 @@ try {
 }
 
 /* ---------- Assets ---------- */
-const BUBBLE_ASSET_BASE = "/nitro-react/src/assets/images/chat/chatbubbles";
-const NAMEICON_ASSET_BASE = "/nitro-react/src/assets/images/chat/nameicons";
+const BUBBLE_ASSET_BASE = "/nitro/icons/chat/chatbubbles";
+const NAMEICON_ASSET_BASE = "/nitro/icons/nameicons/";
+
+
 const bubbleGif = (id: number) => `${BUBBLE_ASSET_BASE}/bubble_${id}.gif`;
 const bubblePng = (id: number) => `${BUBBLE_ASSET_BASE}/bubble_${id}.png`;
 const nameIconPng = (id: number) => `${NAMEICON_ASSET_BASE}/${id}.png`;

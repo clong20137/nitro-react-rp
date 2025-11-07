@@ -10,10 +10,10 @@
     padding: 8px 10px;
     min-width: 280px;
     max-width: 420px;
-    background: #426e8f;
-    border: 2px solid #22425d;
+    background: rgba(24, 24, 24, .88);
+    border: 2px solid #ffffff;
     border-radius: 8px;
-    box-shadow: 0 10px 24px rgba(0,0,0,.22),0 2px 0 rgba(0,0,0,.25),inset 0 -4px rgba(0,0,0,.12);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
     z-index: 9999;
     user-select: none;
 
@@ -73,10 +73,10 @@
 /* === Bar === */
 .gathering-bar-horizontal {
     position: relative;
-    height: 10px;
-    border: 2px solid #22425d;
-    border-radius: 999px;
-    background: #426e8f;
+    height: 24px;
+    border: 2px solid #ffffff;
+    border-radius: 6px;
+    background: rgba(24, 24, 24, .88);
     overflow: hidden;
 }
 
@@ -87,7 +87,7 @@
     top: 0;
     bottom: 0;
     width: 0%;
-    background: linear-gradient(#426e8f, #5687ac);
+    background: linear-gradient(180deg, #f67222, #f67222 50%, #d45b11 0, #d45b11);
     animation: gather-fill var(--gather-dur) linear forwards;
 }
 
@@ -105,7 +105,7 @@
 .gathering-count {
     margin-left: 8px;
     font-weight: 700;
-    font-size: 12px;
+    font-size: 20px;
     min-width: 44px;
     text-align: right;
     color: #eaf3ff;

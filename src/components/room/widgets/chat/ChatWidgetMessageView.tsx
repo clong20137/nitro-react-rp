@@ -18,6 +18,20 @@ const NAME_ICON_BASE = "/nitro-react/src/assets/images/chat/nameicons";
 /** Mention ping sound */
 const MENTION_PING_URL = "/assets/sounds/mention-ping.mp3";
 
+/** Escape helper for non-mention text */
+const escapeHtml = (s: string) =>
+    s.replace(
+        /[&<>"']/g,
+        (c) =>
+            ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+            }[c] as string)
+    );
+
 export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
     props
 ) => {
@@ -26,6 +40,7 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
         makeRoom,
         bubbleWidth = RoomChatSettings.CHAT_BUBBLE_WIDTH_NORMAL,
     } = props;
+
     const [isVisible, setIsVisible] = useState(false);
     const elementRef = useRef<HTMLDivElement>(null);
     const pingPlayedRef = useRef(false);
@@ -78,19 +93,43 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
         return false;
     }, [chat?.formattedText, myNameLower]);
 
-    /** Format with mention spans (allows multiple mentions) */
+    /** Format with mention spans (multiple mentions, safe escaping) */
     const formattedWithMentions = useMemo(() => {
-        const txt = chat?.formattedText || "";
-        if (!txt) return "";
+        const raw = chat?.formattedText || "";
+        if (!raw) return "";
 
-        const replaceRe = /@([A-Za-z0-9_-]+)/g;
+        // escape HTML first (so user text can't inject markup)
+        const esc = raw
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
 
-        const html = txt.replace(replaceRe, (_m, handle: string) => {
-            const safe = handle;
-            return `<span class="mention">@${safe}</span>`;
-        });
+        const re = /@([A-Za-z0-9_-]+)/g;
+        const parts: string[] = [];
+        let last = 0;
+        let prevWasMention = false;
+        let m: RegExpExecArray | null;
 
-        return html;
+        while ((m = re.exec(esc)) !== null) {
+            // push any plain text before this match
+            if (m.index > last) {
+                parts.push(esc.slice(last, m.index));
+                prevWasMention = false;
+            }
+
+            // add a zero-width separator if the previous token was a mention
+            if (prevWasMention) parts.push("&#8203;"); // keeps both @'s visible
+
+            const handle = m[1];
+            parts.push(`<span class="mention">@${handle}</span>`);
+            prevWasMention = true;
+            last = m.index + m[0].length;
+        }
+
+        // tail
+        if (last < esc.length) parts.push(esc.slice(last));
+
+        return parts.join("");
     }, [chat?.formattedText]);
 
     /** Bubble style: roleplay (4), mention highlight (25), else normal */

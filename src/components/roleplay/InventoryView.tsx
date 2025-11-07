@@ -137,6 +137,10 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         window.addEventListener("mousemove", onMouseMove);
         window.addEventListener("mouseup", onMouseUp);
     };
+
+    const isWeaponOrShieldType = (item?: InventoryContext) =>
+        !!item &&
+        ["weapon", "shield"].includes((item.item_type || "").toLowerCase());
     const onHeaderTouchStart = (e: React.TouchEvent) => {
         const t = e.touches[0];
         if (!t) return;
@@ -165,13 +169,13 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
 
     // durability helpers
     const getDurabilityMax = (item: InventoryContext) => {
+        if (!isWeaponOrShieldType(item)) return 0; // <-- only weapons/shields
         const md = (item as any)?.max_durability;
         if (typeof md === "number") return md;
-        const t = (item.item_type || "").toLowerCase();
-        if (t === "potion") return 30;
         return 100;
     };
     const getDurabilityPercent = (item: InventoryContext) => {
+        if (!isWeaponOrShieldType(item)) return 0; // <-- only weapons/shields
         if (typeof item.durability !== "number") return 0;
         const max = getDurabilityMax(item);
         const pct = (item.durability / Math.max(1, max)) * 100;
@@ -443,23 +447,24 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                                             </div>
                                         )}
 
-                                        {typeof item.durability ===
-                                            "number" && (
-                                            <div className="durability-bar">
-                                                <div
-                                                    className="durability-fill"
-                                                    style={{
-                                                        width: `${getDurabilityPercent(
-                                                            item
-                                                        )}%`,
-                                                        backgroundColor:
-                                                            getDurabilityColor(
+                                        {isWeaponOrShieldType(item) &&
+                                            typeof item.durability ===
+                                                "number" && (
+                                                <div className="durability-bar">
+                                                    <div
+                                                        className="durability-fill"
+                                                        style={{
+                                                            width: `${getDurabilityPercent(
                                                                 item
-                                                            ),
-                                                    }}
-                                                />
-                                            </div>
-                                        )}
+                                                            )}%`,
+                                                            backgroundColor:
+                                                                getDurabilityColor(
+                                                                    item
+                                                                ),
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
 
                                         {numberLabel && (
                                             <div className="slot-number filled-corner">
@@ -491,14 +496,15 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                                                     <br />
                                                 </>
                                             )}
-                                            {typeof item.durability ===
-                                                "number" && (
-                                                <>
-                                                    Durability:{" "}
-                                                    {item.durability}/
-                                                    {getDurabilityMax(item)}
-                                                </>
-                                            )}
+                                            {isWeaponOrShieldType(item) &&
+                                                typeof item.durability ===
+                                                    "number" && (
+                                                    <>
+                                                        Durability:{" "}
+                                                        {item.durability}/
+                                                        {getDurabilityMax(item)}
+                                                    </>
+                                                )}
                                         </div>
                                     </div>
                                 )}

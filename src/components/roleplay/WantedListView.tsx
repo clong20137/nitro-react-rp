@@ -1,14 +1,12 @@
 import { FC, useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./WantedListView.scss";
 
-type ChargesValue = string[] | string;
-
 interface WantedUser {
     userId: number;
     username: string;
     figure: string;
     wantedLevel: number;
-    charges: ChargesValue; // now supports string[] (new) or string (legacy)
+    charges: string[]; // normalized to array in state
 }
 
 interface WantedListViewProps {
@@ -77,26 +75,63 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
         }
     }, []);
 
+    // request a fresh snapshot on mount (best-effort, safe if not available)
+    useEffect(() => {
+        try {
+            // If you have a real composer, use it here:
+            // GetConnection().send(new WantedListRequestComposer());
+            const anyWin = window as any;
+            if (
+                anyWin?.Nitro?.connection &&
+                anyWin?.WantedListRequestComposer
+            ) {
+                anyWin.Nitro.connection.send(
+                    new anyWin.WantedListRequestComposer()
+                );
+            } else {
+                // Optional: broadcast a request event your app shell can intercept
+                window.dispatchEvent(new CustomEvent("wanted_list_request"));
+            }
+        } catch {
+            /* no-op */
+        }
+    }, []);
+
     // listen for wanted list updates (from parser / server)
     useEffect(() => {
         const onUpdate = (e: Event) => {
-            const data = (e as CustomEvent).detail as WantedUser[] | undefined;
-            if (!Array.isArray(data)) return;
-            setWantedUsers(
-                data.map((u) => ({
-                    ...u,
-                    // normalize charges to string[]
-                    charges: Array.isArray(u.charges)
-                        ? u.charges
-                        : typeof u.charges === "string" && u.charges.length
-                        ? u.charges
-                              .split("|")
-                              .map((s) => s.trim())
-                              .filter(Boolean)
-                        : [],
-                }))
-            );
+            const raw = (e as CustomEvent).detail as any[] | undefined;
+            if (!Array.isArray(raw)) return;
+
+            const normalizeCharges = (u: any): string[] => {
+                // Prefer already parsed array from parser
+                if (Array.isArray(u.chargesList))
+                    return u.chargesList.filter(Boolean);
+
+                // Accept array under 'charges'
+                if (Array.isArray(u.charges)) return u.charges.filter(Boolean);
+
+                // Fall back to string in either comma- or pipe-delimited form
+                if (typeof u.charges === "string" && u.charges.length) {
+                    return u.charges
+                        .split(/[|,]/g)
+                        .map((s: string) => s.trim())
+                        .filter(Boolean);
+                }
+                return [];
+            };
+
+            const mapped: WantedUser[] = raw.map((u) => ({
+                userId: Number(u.userId) || 0,
+                username: String(u.username || ""),
+                figure: String(u.figure || ""),
+                wantedLevel: Number(u.wantedLevel) || 0,
+                charges: normalizeCharges(u),
+            }));
+
+            setWantedUsers(mapped);
         };
+
         window.addEventListener(
             "wanted_list_update",
             onUpdate as EventListener
@@ -274,14 +309,8 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
         </div>
     );
 
-    const renderCharges = (charges: ChargesValue) => {
-        const list = Array.isArray(charges)
-            ? charges
-            : (charges || "")
-                  .split("|")
-                  .map((s) => s.trim())
-                  .filter(Boolean);
-
+    const renderCharges = (charges: string[]) => {
+        const list = Array.isArray(charges) ? charges : [];
         if (list.length === 0)
             return <div className="charges charges--empty">No charges</div>;
 
@@ -319,9 +348,7 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
                     onClick={handleClose}
                     className="close-button"
                     aria-label="Close"
-                >
-                    
-                </button>
+                />
             </div>
 
             <div className="wanted-content">

@@ -84,8 +84,8 @@ const EVT_STORE = "settings:chat_bubbles_owned";
 const EVT_ICON_STORE = "settings:name_icons_owned";
 
 /* Assets */
-const BUBBLE_ASSET_BASE = "/nitro-react/src/assets/images/chat/chatbubbles";
-const NAMEICON_ASSET_BASE = "/nitro-react/src/assets/images/chat/nameicons";
+const BUBBLE_ASSET_BASE = "/nitro/icons/chat/chatbubbles";
+const NAMEICON_ASSET_BASE = "/nitro/icons/nameicons/";
 
 const clamp = (v: number, min: number, max: number) =>
     Math.min(Math.max(v, min), max);

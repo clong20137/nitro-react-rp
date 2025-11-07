@@ -409,7 +409,7 @@ export const StatsBar: FC = () => {
                     window.dispatchEvent(new CustomEvent("user_inspect_clear"))
                 }
             />
-            ;
+            
         </div>
     );
 };
