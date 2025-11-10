@@ -1,6 +1,9 @@
 import { FC, useMemo, useRef, useState, useEffect, useCallback } from "react";
 import { SendMessageComposer, GetSessionDataManager } from "../../api";
 
+import { RequestTokenStoreComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/RequestTokenStoreComposer";
+import { PurchaseTokenComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PurchaseTokenComposer";
+
 /* ==== Existing Bubbles packets ==== */
 import { RequestChatBubbleStoreComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/RequestChatBubbleStoreComposer";
 import { PurchaseChatBubbleComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PurchaseChatBubbleComposer";
@@ -31,34 +34,14 @@ const EVT_TOKENS_STORE_RAW = "store_tokens_shop";
 const EVT_TOKENS_PURCHASE_OK_RAW = "store_tokens_purchase_ok_raw";
 const EVT_TOKENS_PURCHASE_FAIL_RAW = "store_tokens_purchase_fail_raw";
 
-/* ---------- Optional Composers (loaded only if you add them later) ---------- */
-/** This avoids build errors until your backend exists. */
-let RequestFeaturedStoreComposerRef: any;
-let PurchaseBundleComposerRef: any;
-let RequestTokenStoreComposerRef: any;
-let PurchaseTokenComposerRef: any;
-try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    RequestFeaturedStoreComposerRef =
-        require("@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/RequestFeaturedStoreComposer").RequestFeaturedStoreComposer;
-    PurchaseBundleComposerRef =
-        require("@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PurchaseBundleComposer").PurchaseBundleComposer;
-    RequestTokenStoreComposerRef =
-        require("@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/RequestTokenStoreComposer").RequestTokenStoreComposer;
-    PurchaseTokenComposerRef =
-        require("@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PurchaseTokenComposer").PurchaseTokenComposer;
-} catch {
-    /* optional */
-}
-
 /* ---------- Assets ---------- */
 const BUBBLE_ASSET_BASE = "/nitro/icons/chat/chatbubbles";
 const NAMEICON_ASSET_BASE = "/nitro/icons/nameicons/";
 
-
 const bubbleGif = (id: number) => `${BUBBLE_ASSET_BASE}/bubble_${id}.gif`;
 const bubblePng = (id: number) => `${BUBBLE_ASSET_BASE}/bubble_${id}.png`;
 const nameIconPng = (id: number) => `${NAMEICON_ASSET_BASE}/${id}.png`;
+
 
 /* --------------------------------------------------------
 BubbleImg: prefer PNG, pre-load GIF in parallel as backup
@@ -357,47 +340,27 @@ export const DiamondsStoreView: FC<{ onClose: () => void }> = ({ onClose }) => {
         }
     }, []);
 
-    const requestFeaturedStore = useCallback(() => {
-        // Either call your server composer (if present) or rely on an external window event
-        if (RequestFeaturedStoreComposerRef) {
-            try {
-                setFeaturedLoading(true);
-                SendMessageComposer(new RequestFeaturedStoreComposerRef());
-            } catch (e) {
-                setFeaturedLoading(false);
-                console.error(
-                    "[DiamondStore] RequestFeaturedStoreComposer failed",
-                    e
-                );
-            }
-        }
-    }, []);
+
 
     const requestTokensStore = useCallback(() => {
-        if (RequestTokenStoreComposerRef) {
-            try {
-                setTokensLoading(true);
-                SendMessageComposer(new RequestTokenStoreComposerRef());
-            } catch (e) {
-                setTokensLoading(false);
-                console.error(
-                    "[DiamondStore] RequestTokenStoreComposer failed",
-                    e
-                );
-            }
+        try {
+            setTokensLoading(true);
+            SendMessageComposer(new RequestTokenStoreComposer());
+        } catch (e) {
+            setTokensLoading(false);
+            console.error("[DiamondStore] RequestTokenStoreComposer failed", e);
         }
     }, []);
 
     /* Request all on mount (so tab switch is instant) */
     useEffect(() => {
-        requestFeaturedStore();
         requestTokensStore();
         requestBubbleStore();
         requestIconStore();
     }, [
         requestBubbleStore,
         requestIconStore,
-        requestFeaturedStore,
+
         requestTokensStore,
     ]);
 
@@ -742,7 +705,42 @@ export const DiamondsStoreView: FC<{ onClose: () => void }> = ({ onClose }) => {
         if (kind === "tokens") {
             const meta = tokenItems.find((t) => t.id === id);
             if (!meta) return;
-            if (meta.owned) return; // already active
+            if (meta.owned) return setConfirm(null);
+            if (diamonds < meta.price) return;
+
+            try {
+                setPurchaseBusy(true);
+
+                // Anti-freeze: auto-clear busy if server never replies
+                const safety = setTimeout(() => {
+                    setPurchaseBusy(false);
+                    console.warn(
+                        "[DiamondStore] Token purchase timed out (no server reply)"
+                    );
+                }, 8000);
+
+                SendMessageComposer(new PurchaseTokenComposer(id));
+
+                // When OK/FAIL arrives, your existing listeners will run setPurchaseBusy(false)
+                // and close the confirm; also clear this timeout:
+                const clearOnAny = () => {
+                    clearTimeout(safety);
+                };
+                window.addEventListener(
+                    EVT_TOKENS_PURCHASE_OK_RAW,
+                    clearOnAny as EventListener,
+                    { once: true }
+                );
+                window.addEventListener(
+                    EVT_TOKENS_PURCHASE_FAIL_RAW,
+                    clearOnAny as EventListener,
+                    { once: true }
+                );
+            } catch (e) {
+                setPurchaseBusy(false);
+                console.error("[DiamondStore] PurchaseTokenComposer failed", e);
+            }
+            return;
         }
         // bundles can always be re-bought unless you flag otherwise
         setConfirm({ kind, id });
@@ -784,58 +782,8 @@ export const DiamondsStoreView: FC<{ onClose: () => void }> = ({ onClose }) => {
             }
             return;
         }
-        if (kind === "featured") {
-            const meta = bundles.find((b) => b.id === id);
-            if (!meta) return;
-            if (diamonds < meta.price) return;
-            if (PurchaseBundleComposerRef) {
-                try {
-                    setPurchaseBusy(true);
-                    SendMessageComposer(new PurchaseBundleComposerRef(id));
-                } catch (e) {
-                    setPurchaseBusy(false);
-                    console.error(
-                        "[DiamondStore] PurchaseBundleComposer failed",
-                        e
-                    );
-                }
-            } else {
-                // UI-only fallback: emit an intent for your app layer to handle
-                setPurchaseBusy(true);
-                window.dispatchEvent(
-                    new CustomEvent("store_featured_purchase_intent", {
-                        detail: { bundleId: id },
-                    })
-                );
-            }
-            return;
-        }
-        if (kind === "tokens") {
-            const meta = tokenItems.find((t) => t.id === id);
-            if (!meta) return;
-            if (meta.owned) return setConfirm(null);
-            if (diamonds < meta.price) return;
-            if (PurchaseTokenComposerRef) {
-                try {
-                    setPurchaseBusy(true);
-                    SendMessageComposer(new PurchaseTokenComposerRef(id));
-                } catch (e) {
-                    setPurchaseBusy(false);
-                    console.error(
-                        "[DiamondStore] PurchaseTokenComposer failed",
-                        e
-                    );
-                }
-            } else {
-                setPurchaseBusy(true);
-                window.dispatchEvent(
-                    new CustomEvent("store_tokens_purchase_intent", {
-                        detail: { tokenId: id },
-                    })
-                );
-            }
-            return;
-        }
+       
+        
     };
 
     /* ---------- Render helpers ---------- */
@@ -1013,7 +961,8 @@ export const DiamondsStoreView: FC<{ onClose: () => void }> = ({ onClose }) => {
             <div className="appearance-preview" aria-label="Wallet">
                 <div className="wallet">
                     <span className="pill">
-                        <b>Balance:</b> <i className="ico ico-diamond-sm" />{diamonds}
+                        <b>Balance:</b> <i className="ico ico-diamond-sm" />
+                        {diamonds}
                     </span>
                     {activeTab === "bubbles" && (
                         <span className="pill">
@@ -1219,10 +1168,20 @@ export const DiamondsStoreView: FC<{ onClose: () => void }> = ({ onClose }) => {
                                     }`}
                                     key={t.id}
                                 >
-                                    <div
-                                        className={`token-icon token-${t.key.toLowerCase()}`}
-                                        aria-hidden
-                                    />
+                                    {t.imageKey ? (
+                                        <img
+                                            className="token-icon-img"
+                                            src={`/icons/store/${t.imageKey}.png`}
+                                            alt=""
+                                            aria-hidden
+                                            draggable={false}
+                                        />
+                                    ) : (
+                                        <div
+                                            className={`token-icon token-${t.key.toLowerCase()}`}
+                                            aria-hidden
+                                        />
+                                    )}
                                     <div className="token-body">
                                         <div className="token-title">
                                             {t.title}

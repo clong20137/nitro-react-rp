@@ -227,7 +227,6 @@
     display: flex;
     justify-content: center;
     gap: 6px;
-    margin: 8px 0 0px;
     background:#2478b7;
 
 
@@ -253,7 +252,7 @@
 }
 
 .tab-content {
-    background: rgba(24, 24, 24, .88);
+    background: #dfdfdf;
     border-radius: 0 0px 8px 8px;
     padding: 10px;
 }
@@ -266,7 +265,7 @@
     padding: 8px;
 
     .xp-bar {
-        background: #404040;
+        background: #dfdfdf;
         height: 20px;
         margin: 6px 0;
         border-radius: 4px;
@@ -341,7 +340,7 @@
 
 .upgrade-btn {
     margin-left: 6px;
-    background: #3c9e4d;
+    background: #2478b7;
     color: #fff;
     border: none;
     border-radius: 4px;
@@ -371,9 +370,10 @@
 /* ===================== ACHIEVEMENTS TAB ===================== */
 
 .achievements-panel {
-    background: rgba(24, 24, 24, .88);
+    background: #cdcdcd;
     border-radius: 8px;
     padding: 8px;
+    color:#000;
 }
 
 .achievements-list {
@@ -542,7 +542,6 @@
 
     /* Tabs */
     .profile-tabs {
-        margin-top: 6px;
         gap: 4px;
         padding: 0 6px;
         overflow-x: auto;

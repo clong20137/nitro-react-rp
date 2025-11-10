@@ -1,14 +1,19 @@
 import { FC, useEffect, useRef, useState } from "react";
 import "./LiveFeed.scss";
 
-// ✅ composers
 import { SendMessageComposer } from "../../api";
 import { EmsCallDecisionComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/EmsCallDecisionComposer";
 
-interface FeedMessage {
+type FeedMessage = {
     id: number;
+
+    // What we DISPLAY in the feed:
     text: string;
-    username: string; // victim username
+
+    // Full original message for Police view:
+    fullText?: string;
+
+    username: string;
     figure: string;
     type?: string;
     persistent?: boolean;
@@ -19,13 +24,14 @@ interface FeedMessage {
     victimId?: number;
     location?: string;
 
-    // ✅ for fade-out animation
+    // Virtual room metadata (provided by PoliceCallEvent bridge):
+    virtualRoomId?: number;
+    virtualRoomName?: string;
+
     closing?: boolean;
-}
+};
 
 let messageId = 0;
-
-// single source of truth for animation timing (keep in sync with SCSS)
 const ANIM_MS = 250;
 
 export const LiveFeed: FC = () => {
@@ -40,7 +46,6 @@ export const LiveFeed: FC = () => {
             audio.volume = volume;
             audioMapRef.current.set(id, audio);
             audio.play().catch(() => {});
-            // stop any lingering audio after 60s
             window.setTimeout(() => stopLoop(id), 60_000);
         } catch {}
     };
@@ -56,7 +61,6 @@ export const LiveFeed: FC = () => {
         }
     };
 
-    // helper to animate out then remove
     const animateOutThenRemove = (id: number) => {
         setMessages((prev) =>
             prev.map((m) => (m.id === id ? { ...m, closing: true } : m))
@@ -66,9 +70,10 @@ export const LiveFeed: FC = () => {
         }, ANIM_MS);
     };
 
+    // Handle both: generic live feed AND dedicated police call bridge
     useEffect(() => {
         const handleEvent = (event: any) => {
-            const d = event.detail;
+            const d = event?.detail;
             if (!d?.message) return;
 
             const isPoliceCall =
@@ -77,15 +82,23 @@ export const LiveFeed: FC = () => {
 
             const newMsg: FeedMessage = {
                 id: messageId++,
-                text: d.message,
+
+                // Show only a generic label for police calls:
+                text: isPoliceCall ? "Police Call" : d.message,
+                fullText: d.message,
+
                 username: d.username,
                 figure: d.figure,
                 type: d.type,
                 isPoliceCall,
                 isEMSCall,
                 persistent: d.persistent ?? (isPoliceCall || isEMSCall),
+
                 victimId: d.victimId,
                 location: d.location,
+
+                virtualRoomId: d.virtualRoomId,
+                virtualRoomName: d.virtualRoomName,
             };
 
             setMessages((prev) => [...prev, newMsg]);
@@ -95,7 +108,6 @@ export const LiveFeed: FC = () => {
             else if (newMsg.isEMSCall)
                 playLoop(newMsg.id, "/sounds/ambulance.mp3", 0.6);
             else if (!newMsg.persistent) {
-                // 🔔 timed notices now fade out before removal
                 window.setTimeout(() => {
                     stopLoop(newMsg.id);
                     animateOutThenRemove(newMsg.id);
@@ -104,7 +116,12 @@ export const LiveFeed: FC = () => {
         };
 
         window.addEventListener("live_feed_event", handleEvent);
-        return () => window.removeEventListener("live_feed_event", handleEvent);
+        window.addEventListener("police_call_event", handleEvent);
+
+        return () => {
+            window.removeEventListener("live_feed_event", handleEvent);
+            window.removeEventListener("police_call_event", handleEvent);
+        };
     }, []);
 
     useEffect(() => {
@@ -129,7 +146,6 @@ export const LiveFeed: FC = () => {
         animateOutThenRemove(id);
     };
 
-    // send composers directly
     const acceptEMS = (msg: FeedMessage) => {
         SendMessageComposer(new EmsCallDecisionComposer(msg.username, true));
         dismiss(msg.id);
@@ -159,7 +175,20 @@ export const LiveFeed: FC = () => {
                         src={`https://www.habbo.com/habbo-imaging/avatarimage?figure=${msg.figure}&direction=2&headonly=1&size=m`}
                         alt={`${msg.username}'s avatar`}
                     />
-                    <span className="message-text">{msg.text}</span>
+
+                    <span className="message-text">
+                        {msg.text}
+                        {msg.isPoliceCall &&
+                        (msg.virtualRoomId || msg.virtualRoomName) ? (
+                            <span
+                                className="vr-room-pill"
+                                title={`vRoom ${msg.virtualRoomId ?? "?"}`}
+                            >
+                                {msg.virtualRoomName ??
+                                    `VR ${msg.virtualRoomId}`}
+                            </span>
+                        ) : null}
+                    </span>
 
                     {msg.isPoliceCall && (
                         <div className="call-buttons">
@@ -171,7 +200,12 @@ export const LiveFeed: FC = () => {
                                             detail: {
                                                 username: msg.username,
                                                 figure: msg.figure,
-                                                message: msg.text,
+                                                message:
+                                                    msg.fullText ?? msg.text,
+                                                virtualRoomId:
+                                                    msg.virtualRoomId ?? 0,
+                                                virtualRoomName:
+                                                    msg.virtualRoomName ?? "",
                                             },
                                         })
                                     );
@@ -210,3 +244,5 @@ export const LiveFeed: FC = () => {
         </div>
     );
 };
+
+export default LiveFeed;

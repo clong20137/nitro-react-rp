@@ -268,9 +268,7 @@ Render
                 <MarketplaceView />
                 <HotelAlertView />
                 {/* <BigWheelView /> */}
-                <PoliceCallView
-                    onTaxi={() => console.log("Taxi to caller room")}
-                />
+                <PoliceCallView  />
 
                 {/* Disconnect overlay */}
                 {dcVisible && (

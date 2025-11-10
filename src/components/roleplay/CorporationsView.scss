@@ -1,13 +1,13 @@
 .corporations-view {
-    width: 1000px;
-    position: fixed;
+    position: absolute;
+    z-index: 1100;
     background: #dfdfdf;
-    border: 2px solid #ffffff;
-    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
-    z-index: 1000;
-    border-radius: 8px;
-    color: #000;
+    border: 2px solid #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, .4);
+    overflow: hidden;
     transform-origin: bottom right;
+    box-shadow: 0 0 rgba(0, 0, 0, .4), 0 0 rgba(0, 0, 0, .3), inset 0 -4px rgba(0, 0, 0, .2);
 
     &.enter {
         opacity: 0;
@@ -74,23 +74,16 @@
 
 /* ========= Header (full Habbo-style bar) ========= */
 .corporations-header {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 36px;
-    padding: 0 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    border-bottom: 2px solid #153c7a;
-    background: linear-gradient(180deg,#000,#000 50%,#232323 0,#232323);
+    background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
     color: #fff;
-    text-shadow: 1px 1px 0 #1a3d86;
-    user-select: none;
+    padding: 8px 10px;
+    font-size: 20px;
     cursor: grab;
+    -webkit-user-select: none;
+    user-select: none;
 
     .title {
         font-weight: 800;

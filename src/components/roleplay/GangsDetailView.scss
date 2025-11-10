@@ -75,13 +75,12 @@ $dur-slow: 420ms;
 
 /* ===== Header (drag handle) ===== */
 .gangs-header {
-    background: linear-gradient(180deg, #000, #000 50%, #232323 0, #232323);
+    background: linear-gradient(180deg,#0067b3,#0067b3 50%,#005da3 0,#005da3);
     color: #fff;
     padding: 8px 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid #585858;
     cursor: grab;
 }
 
@@ -270,20 +269,19 @@ $dur-slow: 420ms;
     justify-content:center;
     gap: 6px;
     padding: 8px 8px 0;
-    background: #fff;
-    border-bottom: 1px solid #585858;
+    background: #2478b7;
 
     button {
         appearance: none;
-        border: 1px solid #9aa9b5;
+        border: 2px solid #ffffff;
         border-bottom: none;
         border-radius: 8px 8px 0 0;
-        background: linear-gradient(#fff 0%, #dcdcdc 100%);
+        background: linear-gradient(180deg,#0067b3,#0067b3 50%,#005da3 0,#005da3);
         font-weight: 800;
         font-size: 16px;
-        padding: 6px 12px;
+        padding: 10px 12px;
         cursor: pointer;
-        color: #0e1b25;
+        color: #ffffff;
         text-shadow: 0 1px 0 rgba(255, 255, 255, .5);
         box-shadow: 0 1px 0 rgba(0, 0, 0, .06);
         transition: transform .12s ease, filter .12s ease;
@@ -294,7 +292,8 @@ $dur-slow: 420ms;
         }
 
         &.active {
-            border-color: #8097a9;
+            background:#cdcdcd;
+            color:#000;
         }
     }
 }
@@ -320,8 +319,7 @@ GENERAL TAB
     gap: 12px;
 
     .info-section {
-        background: $bg;
-        border: 1px solid #585858;
+        background: #cdcdcd;
         border-radius: $radius;
         padding: 12px;
     }
@@ -367,12 +365,12 @@ GENERAL TAB
         border: 2px solid #FFF;
         
         border-radius: 6px;
-        background: #2e2e2e;
+        background: #cdcdcd;
         overflow: hidden;
 
         .xp-bar-fill {
             height: 100%;
-            background: linear-gradient(180deg, #2db026, #2db026 50%, #45cf3d 0, #45cf3d);
+            background: linear-gradient(180deg,#0067b3,#0067b3 50%,#005da3 0,#005da3);
         }
     }
 
@@ -409,14 +407,13 @@ GENERAL TAB
     .gang-stat {
         display: inline-block;
         min-width: 120px;
-        background: #000000;
-        border: 1px solid $panel-line;
+        background: #dfdfdf;
         border-radius: 8px;
         padding: 10px 12px;
         text-align: center;
         margin-right: 8px;
         margin-bottom: 8px;
-        color: #FFF;
+        color: #000000;
         font-weight: 700;
 
         span {

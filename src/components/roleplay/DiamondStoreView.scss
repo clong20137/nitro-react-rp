@@ -63,7 +63,7 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
     background: #2478b7;
     border-bottom: 1px solid #585858;
     margin: -10px -10px 10px;
-    justify-content:center;
+    justify-content: center;
 }
 
 .ds-tab {
@@ -86,8 +86,8 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
     }
 
     &.active {
-        color:#000;
-        background:#cdcdcd;
+        color: #000;
+        background: #cdcdcd;
     }
 }
 
@@ -423,6 +423,11 @@ $olrp-header-grad: linear-gradient(180deg, #000000, #000000 50%, #232323 0, #232
     background-size: contain;
     background-repeat: no-repeat;
     display: inline-block;
+}
+
+.token-icon.token-double_xp {
+   // background-image: url('../../icons/store/xpboost.png'); // or map t.imageKey if you prefer
+    /* size/position rules that match your other token icons */
 }
 
 /* === Size bump already handled by component; reuse theme === */

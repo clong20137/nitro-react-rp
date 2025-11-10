@@ -1,14 +1,14 @@
 /* ===== Theme bits ===== */
 $border: #000;
 $bg: #dfdfdf;
-$head: linear-gradient(180deg, #000, #000 50%, #232323 0, #232323);
+$head: linear-gradient(180deg,#0067b3,#0067b3 50%,#005da3 0,#005da3);
 $shadow: 0 2px 0 rgba(0, 0, 0, .45);
 
 /* ===== Window ===== */
 .macros-view {
     position: fixed;
     width: 420px;
-    background: rgba(24,24,24,.88);
+    background:#dfdfdf;
     border: 2px solid #FFF;
     border-radius: 10px;
     box-shadow: $shadow;
