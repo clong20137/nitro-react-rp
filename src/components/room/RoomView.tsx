@@ -25,6 +25,7 @@ import { RoomObjectCategory } from "@nitrots/nitro-renderer/src/nitro/room/objec
 import AvatarGlowOverlay from "../roleplay/AvatarGlowOverlay";
 import JukeboxView from "../roleplay/JukeboxView";
 import { getRPStats } from "../roleplay/rpStatsCache";
+import { ATMView } from "../roleplay/ATMView";
 
 // ✅ Correct walk composer (your version)
 import { RoomUnitWalkComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/room/unit/RoomUnitWalkComposer";
@@ -206,7 +207,7 @@ Render
                     <GangClaimView />
                     <TaxiView />
                     <JukeboxView />
-
+                    <ATMView></ATMView>
                     {roomSession.isSpectator && <RoomSpectatorView />}
                 </>
             )}
