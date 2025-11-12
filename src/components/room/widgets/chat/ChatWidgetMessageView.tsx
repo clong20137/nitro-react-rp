@@ -18,19 +18,9 @@ const NAME_ICON_BASE = "/nitro-react/src/assets/images/chat/nameicons";
 /** Mention ping sound */
 const MENTION_PING_URL = "/assets/sounds/mention-ping.mp3";
 
-/** Escape helper for non-mention text */
-const escapeHtml = (s: string) =>
-    s.replace(
-        /[&<>"']/g,
-        (c) =>
-            ({
-                "&": "&amp;",
-                "<": "&lt;",
-                ">": "&gt;",
-                '"': "&quot;",
-                "'": "&#39;",
-            }[c] as string)
-    );
+/** Escape only angle brackets (avoid double-escaping &amp;#60;) */
+const escapeAngles = (s: string) =>
+    s.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
     props
@@ -98,11 +88,8 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
         const raw = chat?.formattedText || "";
         if (!raw) return "";
 
-        // escape HTML first (so user text can't inject markup)
-        const esc = raw
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;");
+        // escape ONLY < and > so & and &# codes remain intact
+        const esc = escapeAngles(raw);
 
         const re = /@([A-Za-z0-9_-]+)/g;
         const parts: string[] = [];
@@ -111,22 +98,16 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
         let m: RegExpExecArray | null;
 
         while ((m = re.exec(esc)) !== null) {
-            // push any plain text before this match
             if (m.index > last) {
                 parts.push(esc.slice(last, m.index));
                 prevWasMention = false;
             }
-
-            // add a zero-width separator if the previous token was a mention
-            if (prevWasMention) parts.push("&#8203;"); // keeps both @'s visible
-
-            const handle = m[1];
-            parts.push(`<span class="mention">@${handle}</span>`);
+            if (prevWasMention) parts.push("&#8203;"); // zero-width joiner
+            parts.push(`<span class="mention">@${m[1]}</span>`);
             prevWasMention = true;
             last = m.index + m[0].length;
         }
 
-        // tail
         if (last < esc.length) parts.push(esc.slice(last));
 
         return parts.join("");
@@ -230,9 +211,11 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
                         <span
                             className="message"
                             dangerouslySetInnerHTML={{
-                                __html: `*${chat.username} ${chat.formattedText
-                                    .slice(1, -1)
-                                    .trim()}*`,
+                                __html: `*${escapeAngles(
+                                    chat.username
+                                )} ${escapeAngles(
+                                    chat.formattedText.slice(1, -1).trim()
+                                )}*`,
                             }}
                         />
                     ) : (

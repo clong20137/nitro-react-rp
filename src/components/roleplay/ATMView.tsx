@@ -28,34 +28,72 @@ export const ATMView: FC = () => {
     const dragRef = useRef<HTMLDivElement | null>(null);
     const dragging = useRef({ active: false, offX: 0, offY: 0 });
 
-    // open from bridge
+    // helpers
+    const clamp = (v: number, min: number, max: number) =>
+        Math.max(min, Math.min(max, v));
+    const nz = (n: any) => (Number.isFinite(n) ? Number(n) : 0);
+
+    // ----- EVENT SYNC -----
     useEffect(() => {
+        const apply = (d: ATMPayload | undefined) => {
+            if (!d) return;
+            if (typeof d.username === "string") setUsername(d.username);
+            if (typeof d.bank === "number") setBank(Math.max(0, nz(d.bank)));
+            if (typeof d.cash === "number") setCash(Math.max(0, nz(d.cash)));
+        };
+
+        // Open -> set & show
         const onOpen = (e: Event) => {
-            const d = (e as CustomEvent<ATMPayload>)?.detail || {};
-            setUsername(String(d.username ?? ""));
-            setBank(Math.max(0, Number(d.bank ?? 0)));
-            setCash(Math.max(0, Number(d.cash ?? 0)));
+            apply((e as CustomEvent<ATMPayload>).detail);
             setAmount(0);
             setMode("menu");
             setVisible(true);
         };
-        const onUpdate = (e: Event) => {
-            const d = (e as CustomEvent<ATMPayload>)?.detail || {};
-            if (typeof d.bank === "number") setBank(Math.max(0, d.bank));
-            if (typeof d.cash === "number") setCash(Math.max(0, d.cash));
-        };
+
+        // Live ATM updates (e.g., after server confirms a txn or on login fanout)
+        const onATMUpdate = (e: Event) =>
+            apply((e as CustomEvent<ATMPayload>).detail);
+
+        // Global stats fanout (make sure your bridge fires these from UserStatsEvent)
+        const onStats = (e: Event) =>
+            apply((e as CustomEvent<ATMPayload>).detail);
+        const onStatsUpdate = (e: Event) =>
+            apply((e as CustomEvent<ATMPayload>).detail);
+
         window.addEventListener("atm_open", onOpen as EventListener);
-        window.addEventListener("atm_update", onUpdate as EventListener);
+        window.addEventListener("atm_update", onATMUpdate as EventListener);
+        window.addEventListener("user_stats", onStats as EventListener);
+        window.addEventListener(
+            "user_stats_update",
+            onStatsUpdate as EventListener
+        );
+
         return () => {
             window.removeEventListener("atm_open", onOpen as EventListener);
-            window.removeEventListener("atm_update", onUpdate as EventListener);
+            window.removeEventListener(
+                "atm_update",
+                onATMUpdate as EventListener
+            );
+            window.removeEventListener("user_stats", onStats as EventListener);
+            window.removeEventListener(
+                "user_stats_update",
+                onStatsUpdate as EventListener
+            );
         };
     }, []);
 
-    // drag handlers (attach to header only)
+    // Close on Esc
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setVisible(false);
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, []);
+
+    // ----- DRAG -----
     const onHeaderDown = (ev: React.MouseEvent) => {
-        const root = dragRef.current;
-        if (!root) return;
+        if (!dragRef.current) return;
         dragging.current.active = true;
         dragging.current.offX = ev.clientX - pos.x;
         dragging.current.offY = ev.clientY - pos.y;
@@ -63,12 +101,23 @@ export const ATMView: FC = () => {
         window.addEventListener("mousemove", onHeaderMove);
         window.addEventListener("mouseup", onHeaderUp);
     };
+
     const onHeaderMove = (ev: MouseEvent) => {
-        if (!dragging.current.active) return;
-        const x = ev.clientX - dragging.current.offX;
-        const y = ev.clientY - dragging.current.offY;
+        if (!dragging.current.active || !dragRef.current) return;
+        const root = dragRef.current;
+        const x = clamp(
+            ev.clientX - dragging.current.offX,
+            0,
+            window.innerWidth - root.offsetWidth
+        );
+        const y = clamp(
+            ev.clientY - dragging.current.offY,
+            0,
+            window.innerHeight - root.offsetHeight
+        );
         setPos({ x, y });
     };
+
     const onHeaderUp = () => {
         dragging.current.active = false;
         try {
@@ -82,7 +131,7 @@ export const ATMView: FC = () => {
         window.removeEventListener("mouseup", onHeaderUp);
     };
 
-    // helpers
+    // ----- UI actions -----
     const close = useCallback(() => {
         setVisible(false);
         setAmount(0);
@@ -112,15 +161,19 @@ export const ATMView: FC = () => {
 
     const onEnter = useCallback(() => {
         if (!canEnter) return;
+
         if (mode === "withdraw") {
             SendMessageComposer(new ATMWithdrawComposer(amount));
+            // optimistic (will auto-correct on next user_stats/atm_update)
             setBank((b) => Math.max(0, b - amount));
             setCash((c) => Math.max(0, c + amount));
         } else if (mode === "deposit") {
             SendMessageComposer(new ATMDepositComposer(amount));
+            // optimistic (will auto-correct on next user_stats/atm_update)
             setCash((c) => Math.max(0, c - amount));
             setBank((b) => Math.max(0, b + amount));
         }
+
         setAmount(0);
         setMode("menu");
     }, [canEnter, amount, mode]);
@@ -131,7 +184,9 @@ export const ATMView: FC = () => {
         <div className="atm-view-overlay">
             <div
                 ref={dragRef}
-                className="atm-view wanted-skin enter-br"
+                className={`atm-view wanted-skin enter-br ${
+                    mode !== "menu" ? "is-io" : "is-menu"
+                }`}
                 style={{ left: pos.x, top: pos.y }}
             >
                 {/* Header */}
@@ -291,6 +346,7 @@ export const ATMView: FC = () => {
                         </div>
                     )}
                 </div>
+
                 <div className="resize-handle" />
             </div>
         </div>
