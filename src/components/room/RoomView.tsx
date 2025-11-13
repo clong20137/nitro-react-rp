@@ -26,12 +26,15 @@ import AvatarGlowOverlay from "../roleplay/AvatarGlowOverlay";
 import JukeboxView from "../roleplay/JukeboxView";
 import { getRPStats } from "../roleplay/rpStatsCache";
 import { ATMView } from "../roleplay/ATMView";
+import { PhoneView } from "../roleplay/PhoneView";
+import { CommandsListView } from "../roleplay/CommandsListView";
 
 // ✅ Correct walk composer (your version)
 import { RoomUnitWalkComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/room/unit/RoomUnitWalkComposer";
 
 // We'll listen for tile mouse events as well
 import { RoomObjectTileMouseEvent } from "@nitrots/nitro-renderer/src/nitro/room/events/RoomObjectTileMouseEvent";
+import { BottomRightDockView } from "../roleplay/BottomRightDockView";
 
 /* -----------------------------------------------------------
 Click-through helpers
@@ -52,6 +55,7 @@ export const RoomView: FC = () => {
     const elementRef = useRef<HTMLDivElement>(null);
     const [glowForUnit, setGlowForUnit] = useState<number>(-1);
     const { gathering, level } = getRPStats();
+    const [phoneVisible, setPhoneVisible] = useState(true);
 
     // Cache last tile hovered (so we can click-through onto it)
     const lastTileRef = useRef<{ x: number; y: number } | null>(null);
@@ -208,6 +212,10 @@ Render
                     <TaxiView />
                     <JukeboxView />
                     <ATMView></ATMView>
+                    <CommandsListView
+                    />
+                    <BottomRightDockView></BottomRightDockView>
+
                     {roomSession.isSpectator && <RoomSpectatorView />}
                 </>
             )}

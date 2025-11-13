@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useMemo, useRef, useState } from "react";
+import React, { FC, useEffect, useRef, useState } from "react";
 import { createRoot, Root } from "react-dom/client";
 import "./BlackjackView.scss";
 
@@ -49,7 +49,7 @@ type BJState = {
     bet: number;
     messages: BJMsg[];
 
-    isDealer?: boolean;
+    isDealer?: boolean; // <-- from server
 };
 
 /* ---------- card helpers ---------- */
@@ -168,7 +168,7 @@ function useDrag(ref: React.RefObject<HTMLElement>) {
 }
 
 /* ---------- main view ---------- */
-type VCard = { id: number; code: string; down?: boolean };
+type VCard = { id: number; code: string };
 
 export const BlackjackView: FC = () => {
     const [open, setOpen] = useState(false);
@@ -177,7 +177,7 @@ export const BlackjackView: FC = () => {
         Array<{ id: number; text: string; level: string }>
     >([]);
 
-    // Staged visible cards with stable IDs
+    // staged visible cards with stable IDs
     const [visDealer, setVisDealer] = useState<VCard[]>([]);
     const [visPlayer, setVisPlayer] = useState<VCard[]>([]);
     const idSeq = useRef(1);
@@ -207,10 +207,10 @@ export const BlackjackView: FC = () => {
                             insuranceOffered: false,
                             bet: detail.bet ?? 0,
                             messages: [],
-                            isDealer: detail.isDealer ?? undefined,
+                            isDealer: detail.isDealer ?? false,
                         }
                 );
-                // brand new mount: clear stage
+                // brand-new mount: clear stage
                 setVisDealer([]);
                 setVisPlayer([]);
                 idSeq.current = 1;
@@ -250,7 +250,7 @@ export const BlackjackView: FC = () => {
                     messages: Array.isArray(incoming?.messages)
                         ? incoming.messages
                         : [],
-                    isDealer: incoming.isDealer,
+                    isDealer: !!incoming.isDealer,
                 };
 
                 setSt(safe);
@@ -269,11 +269,9 @@ export const BlackjackView: FC = () => {
                     );
                 }
 
-                // --- Stage management (prevent duplicates/redeal) ---
                 const prevPhase = lastPhaseRef.current;
                 lastPhaseRef.current = phase;
 
-                // Round reset when we go to INVITE or card counts shrink
                 const resetNeeded =
                     phase === "INVITE" ||
                     safe.playerHand.length < visPlayer.length ||
@@ -285,7 +283,7 @@ export const BlackjackView: FC = () => {
                     idSeq.current = 1;
                 }
 
-                // Player: append only new
+                // player – append only new
                 setVisPlayer((cur) => {
                     const next = [...cur];
                     for (let i = cur.length; i < safe.playerHand.length; i++) {
@@ -294,21 +292,17 @@ export const BlackjackView: FC = () => {
                             code: safe.playerHand[i],
                         });
                     }
-                    // If server resent fewer (already handled by reset); if same length, keep
                     return next;
                 });
 
-                // Dealer: append only new; index 1 is hole card that may flip later
+                // dealer – append only new (face-down is handled at render time)
                 setVisDealer((cur) => {
                     const next = [...cur];
                     for (let i = cur.length; i < safe.dealerCards.length; i++) {
-                        const code = safe.dealerCards[i];
-                        const down = !safe.dealerReveal && i === 1; // hide hole card until reveal
-                        next.push({ id: idSeq.current++, code, down });
-                    }
-                    // Flip hole card without adding a new one
-                    if (safe.dealerReveal && next[1] && next[1].down) {
-                        next[1] = { ...next[1], down: false };
+                        next.push({
+                            id: idSeq.current++,
+                            code: safe.dealerCards[i],
+                        });
                     }
                     return next;
                 });
@@ -335,8 +329,8 @@ export const BlackjackView: FC = () => {
     const playing = phase === "PLAYING";
     const myTurn = !!st?.playerTurn;
 
-    // Dealer sees Accept/Decline during INVITE; player sees “waiting…”
-    const isDealer = st?.isDealer ?? (inviting ? !myTurn : false);
+    // TRUST the flag from server only
+    const isDealer = !!st?.isDealer;
 
     const close = () => {
         setOpen(false);
@@ -350,18 +344,14 @@ export const BlackjackView: FC = () => {
             <div className="bj-header" title="Drag me">
                 <span>Blackjack</span>
                 <div className="spacer" />
-                <button className="btn grey" onClick={close}>
-                    ✕
-                </button>
+                <button className="bj-close" onClick={close} />
             </div>
 
             <div className="bj-body">
                 {/* INVITE */}
                 {inviting && (
                     <div className="invite-banner">
-                        <div>
-                            <b>Bet:</b> {st?.bet ?? 0}
-                        </div>
+                        <div className="invite-title">Bet {st?.bet ?? 0}</div>
                         <div className="act">
                             {isDealer ? (
                                 <>
@@ -392,11 +382,12 @@ export const BlackjackView: FC = () => {
                     <div className="row dealer">
                         <div className="label">Dealer</div>
                         <div className="hand">
-                            {visDealer.map((d) => (
+                            {visDealer.map((d, idx) => (
                                 <PlayingCard
                                     key={d.id}
                                     code={d.code}
-                                    faceDown={!!d.down}
+                                    // only the 2nd card is ever face-down, flips when dealerReveal becomes true
+                                    faceDown={!st?.dealerReveal && idx === 1}
                                     className="deal-in"
                                 />
                             ))}
@@ -426,7 +417,7 @@ export const BlackjackView: FC = () => {
                 </div>
 
                 {/* INSURANCE — player only */}
-                {playing && st?.insuranceOffered && myTurn && !isDealer && (
+                {playing && st?.insuranceOffered && !isDealer && myTurn && (
                     <div className="insurance">
                         Dealer shows an Ace. Take insurance?
                         <div className="act">
@@ -443,7 +434,7 @@ export const BlackjackView: FC = () => {
                     </div>
                 )}
 
-                {/* CONTROLS — player only */}
+                {/* CONTROLS — player only, never dealer */}
                 {playing && !isDealer && (
                     <div className="controls">
                         <div className="act">

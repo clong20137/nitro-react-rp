@@ -15,7 +15,7 @@ export const FriendsView: FC<{}> = props =>
         <>
             { createPortal(<FriendBarView onlineFriends={ onlineFriends } />, document.getElementById('toolbar-friend-bar-container')) }
             <FriendsListView />
-            <FriendsMessengerView />
+          
         </>
     );
 }

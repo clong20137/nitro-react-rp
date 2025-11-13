@@ -1,14 +1,11 @@
 .stats-bar-container {
     display: flex;
     align-items: center;
-    background: rgba(24, 24, 24, .88);
     padding: 4px;
     border-radius: 6px;
     position: absolute;
     top: 20px;
     left: 5px;
-    border: solid 2px #FFFFFF;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
     animation: fadeIn 0.8s;
     z-index: 100;
 }
@@ -168,6 +165,9 @@
     /* bars | actions */
     align-items: start;
     column-gap: 10px;
+    z-index:-1;
+    margin-left:-25px;
+    margin-top:-20px;
 }
 
 .stats-right .stat {
@@ -373,7 +373,7 @@
 
             .xp-ring-progress {
                 fill: none;
-                stroke: #38ac5b;
+                stroke: #0067b3;
                 stroke-width: 3;
                 stroke-linecap: round;
                 transition: stroke-dasharray 0.8s ease;

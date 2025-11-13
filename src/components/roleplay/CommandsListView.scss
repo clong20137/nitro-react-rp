@@ -1,0 +1,289 @@
+/* ============================================
+CommandsListView.scss
+============================================ */
+
+/* ===== Theme bits (same vibe as WantedList) ===== */
+$commands-bg: #dedede;
+$commands-border: #222;
+$commands-header-grad: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
+$commands-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+
+/* ===== Root container ===== */
+.commands-list-view {
+    position: absolute;
+    z-index: 1200;
+    background: #dfdfdf;
+    border: 2px solid #ffffff;
+    border-radius: 10px;
+    box-shadow: $commands-shadow,
+        0 0 rgba(0, 0, 0, .3),
+        inset 0 -4px rgba(0, 0, 0, .2);
+    overflow: hidden;
+    transform-origin: bottom right;
+
+    width: 520px;
+    max-width: 95vw;
+    height: 360px;
+    max-height: 80vh;
+}
+
+/* slide IN from bottom-right */
+.commands-list-view.enter-br {
+    animation: slideInBR 300ms cubic-bezier(.2, .9, .2, 1) both;
+}
+
+/* slide OUT toward bottom-right */
+.commands-list-view.exit-br {
+    animation: slideOutBR 220ms cubic-bezier(.2, .9, .2, 1) both;
+}
+
+@keyframes slideInBR {
+    from {
+        transform: translate(24px, 24px) scale(.98);
+        opacity: 0;
+    }
+
+    to {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutBR {
+    from {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+
+    to {
+        transform: translate(24px, 24px) scale(.98);
+        opacity: 0;
+    }
+}
+
+/* ===== Header / drag handle ===== */
+.commands-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: $commands-header-grad;
+    color: #fff;
+    padding: 8px 10px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: grab;
+    user-select: none;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .4);
+}
+
+.commands-title {
+    pointer-events: none;
+}
+
+/* little pill on the right of the title */
+.commands-pill {
+    margin-left: 8px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, .25);
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+/* ===== Close button (Habbo style) ===== */
+.close-button {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #921911;
+    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
+    border-radius: 4px;
+    box-shadow:
+        0 0 0 1.6px #fff,
+        0 2px 0 rgba(0, 0, 0, .22);
+    cursor: pointer;
+    padding: 0;
+    outline: none;
+
+    &:before,
+    &:after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 12px;
+        height: 2px;
+        background: #fff;
+        border-radius: 1px;
+        transform-origin: center;
+    }
+
+    &:before {
+        transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &:after {
+        transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    &:active {
+        transform: translateY(1px);
+        box-shadow:
+            0 0 0 1.6px #fff,
+            0 1px 0 rgba(0, 0, 0, .22);
+    }
+}
+
+/* ===== Content wrapper ===== */
+.commands-content {
+    height: calc(100% - 42px);
+    padding: 8px 10px 10px;
+    color: #000;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* ===== Search / filter bar (top row) ===== */
+.commands-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+.commands-search {
+    flex: 1 1 auto;
+
+    input {
+        width: 100%;
+        height: 26px;
+        border-radius: 4px;
+        border: 1px solid #777;
+        padding: 2px 8px;
+        font-size: 13px;
+        background: #f6f6f6;
+        outline: none;
+
+        &:focus {
+            border-color: #005da3;
+            box-shadow: 0 0 0 1px rgba(0, 93, 163, 0.35);
+        }
+    }
+}
+
+.commands-filter {
+    flex: 0 0 auto;
+
+    select {
+        height: 26px;
+        border-radius: 4px;
+        border: 1px solid #777;
+        padding: 2px 6px;
+        font-size: 12px;
+        background: linear-gradient(180deg, #ffffff, #e6e6e6);
+        outline: none;
+    }
+}
+
+/* ===== Table wrapper ===== */
+.commands-table-wrapper {
+    flex: 1 1 auto;
+    border: 1px solid #a3a3a3;
+    border-radius: 6px;
+    background: #ececec;
+    overflow: auto;
+    box-shadow:
+        inset 0 1px 0 #ffffff,
+        0 1px 0 rgba(0, 0, 0, .15);
+}
+
+/* ===== Table itself ===== */
+.commands-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.commands-table thead {
+    background: linear-gradient(180deg, #f4f4f4, #d6d6d6);
+    border-bottom: 1px solid #a3a3a3;
+
+    th {
+        padding: 4px 8px;
+        text-align: left;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        color: #444;
+    }
+}
+
+.col-command {
+    width: 20%;
+}
+
+.col-params {
+    width: 20%;
+}
+
+.col-desc {
+    width: 60%;
+}
+
+/* body rows */
+.commands-table tbody tr {
+    background: #f5f5f5;
+}
+
+.commands-table tbody tr:nth-child(even) {
+    background: #e9e9e9;
+}
+
+.commands-table tbody tr:hover {
+    background: #fff;
+}
+
+.commands-table td {
+    padding: 4px 8px;
+    border-top: 1px solid #d0d0d0;
+    vertical-align: middle;
+    font-size: 12px;
+}
+
+/* command name cell */
+.cmd-name {
+    font-weight: 700;
+    color: #111;
+}
+
+/* empty state row */
+.commands-empty-cell {
+    text-align: center;
+    padding: 20px 8px;
+    font-size: 13px;
+    color: #555;
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 480px) {
+    .commands-list-view {
+        width: 95% !important;
+        left: 50% !important;
+        transform: translateX(-50%);
+        font-size: 14px;
+    }
+
+    .commands-content {
+        max-height: 70vh;
+        padding: 8px;
+    }
+
+    .commands-table-wrapper {
+        font-size: 12px;
+    }
+}

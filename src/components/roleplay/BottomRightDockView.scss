@@ -1,0 +1,48 @@
+.bottom-right-dock {
+    position: fixed;
+    right: 8px;
+    bottom: 8px;
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    border-radius: 16px;
+    background: rgba(24, 24, 24, 0.88);
+    box-shadow: 0 0 4px rgba(0, 0, 0, .4);
+    border: 2px solid #fff;
+    z-index: 1000;
+}
+
+.dock-tile {
+    width: 36px;
+    height: 48px;
+    border-radius: 8px;
+    border: 2px solid #fff;
+    background: #0067b3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    outline: none;
+    cursor: pointer;
+}
+
+/* PHONE ICON FROM SCSS */
+.phone-tile {
+    background-image: url("../../icons/phone.png");
+    /* <-- your image */
+    background-size: 32px 47px;
+    background-repeat: no-repeat;
+
+    &:hover {
+        filter: brightness(1.15);
+    }
+
+    &:active {
+        transform: translateY(1px);
+    }
+}
+
+/* REMOVE OLD GLYPH */
+.phone-glyph {
+    display: none;
+}
