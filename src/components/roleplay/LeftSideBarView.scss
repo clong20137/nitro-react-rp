@@ -45,7 +45,7 @@ $arrow-height: 60px;
   position: relative;
   width: $sidebar-width;
   padding: 10px 12px;
-  background: rgba(24, 24, 24, .88);
+  background:#0067b3;
   border: solid 2px #FFFFFF;
   border-left: 0;
   border-radius: 0 16px 16px 0;
@@ -78,7 +78,7 @@ $arrow-height: 60px;
     width: $arrow-width;
     height: $arrow-height;
     border-radius: 0 10px 10px 0;
-    background: rgba(24, 24, 24, .88);
+    background: #0067b3;
     /* same bg to blend */
     border: 2px solid #FFFFFF;
     border-left: 0;
@@ -131,10 +131,10 @@ $arrow-height: 60px;
 
 /* ---- Pills (icon holders) ---- */
 .sidebar-chip {
-  width: $chip-size;
-  height: $chip-size;
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
-  background: #454545;
+  background: #2079bb;
   /* your pill color */
   box-shadow: $shadow-inset, 0 2px 6px rgba(0, 0, 0, .25);
   position: relative;
@@ -184,8 +184,8 @@ $arrow-height: 60px;
 
 /* ---- Icon images inside pills ---- */
 .sidebar-chip .chip-icon {
-  width: $icon-size;
-  height: $icon-size;
+  width: 42px;
+  height: 42px;
   background-repeat: no-repeat;
   background-size: contain;
   /* remove pixelation per request */
@@ -241,7 +241,7 @@ $arrow-height: 60px;
 
 .sidebar-chip[data-tip]::before {
   content: attr(data-tip);
-  background: rgba(0, 0, 0, .9);
+  background: #0067b3;
   color: #fff;
   font-size: 12px;
   line-height: 1;

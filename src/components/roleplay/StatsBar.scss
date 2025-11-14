@@ -1,3 +1,7 @@
+/* ===========================
+StatsBar.scss (fixed)
+=========================== */
+
 .stats-bar-container {
     display: flex;
     align-items: center;
@@ -10,12 +14,22 @@
     z-index: 100;
 }
 
+/* host that holds your bar + opponent bar side-by-side */
+.stats-bar-host {
+    position: relative;
+    width: fit-content;
+}
+
+/* opponent HUD anchor – keep it perfectly level with yours */
 .opponent-anchor {
     position: absolute;
     left: calc(100% + 8px);
     /* 8px gap to the right of your bar */
-    top: -20px;
+    top: 0;
+    /* no vertical offset */
 }
+
+/* ========= Quick actions (police / passive / etc) ========= */
 
 .quick-actions {
     display: flex;
@@ -158,30 +172,6 @@
     }
 }
 
-/* keep the actions tucked to the side of the bars */
-.stats-right {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    /* bars | actions */
-    align-items: start;
-    column-gap: 10px;
-    z-index:-1;
-    margin-left:-25px;
-    margin-top:-20px;
-}
-
-.stats-right .stat {
-    grid-column: 1 / 2;
-}
-
-.stats-right .aggression-bar-wrapper {
-    grid-column: 1 / 2;
-}
-
-.stats-right .quick-actions {
-    grid-column: 2 / 3;
-}
-
 .stats-bar-container,
 .opponent-anchor {
     z-index: 2000;
@@ -191,6 +181,8 @@
     position: relative;
     display: inline-block;
 }
+
+/* ========= Work toggle ========= */
 
 .work-toggle-wrapper {
     margin-top: 6px;
@@ -224,83 +216,132 @@
     }
 }
 
+/* ========= Opponent stats overlay ========= */
+
 .opponent-stats-bar {
     position: absolute;
     top: 15px;
     right: 15px;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 10px;
-    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.75);
+    padding: 10px 12px;
+    border-radius: 8px;
     color: white;
     width: 240px;
     z-index: 99;
+    box-shadow:
+        0 4px 10px rgba(0, 0, 0, .45),
+        inset 0 -2px 0 rgba(0, 0, 0, .6);
+}
 
-    .stats-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-weight: bold;
-        margin-bottom: 6px;
+/* corner action buttons: lock + close */
+.opponent-stats-bar .corner-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
 
-        .close-btn {
-            background: transparent;
+.opponent-stats-bar .corner-btn {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 2px solid #000;
+    background: linear-gradient(180deg, #f5f2e7, #d8d5cb);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    box-shadow: 0 1px 0 #fff, 0 2px 0 rgba(0, 0, 0, .4);
+    transition: transform .08s ease, box-shadow .12s ease;
+    font-size: 12px;
+    line-height: 1;
+}
 
-            color: white;
-            border: none;
-            font-size: 16px;
-            cursor: pointer;
-        }
+.opponent-stats-bar .corner-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, .2), 0 2px 0 rgba(0, 0, 0, .5);
+}
+
+.opponent-stats-bar .corner-btn.close {
+    color: #bd2a2a;
+}
+
+.opponent-stats-bar .corner-btn.lock {
+    color: #2b7a0b;
+}
+
+/* locked state accent */
+.opponent-stats-bar .corner-btn.lock.locked {
+    background: linear-gradient(180deg, #8fe08a, #3c8f34);
+}
+
+.opponent-stats-bar .stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.opponent-stats-bar .stat-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.opponent-stats-bar .stat-row .stat-label {
+    width: 60px;
+    font-size: 12px;
+}
+
+.opponent-stats-bar .stat-row .stat-bar {
+    flex-grow: 1;
+    height: 8px;
+    border-radius: 2px;
+    background: #444;
+    margin: 0 6px;
+    overflow: hidden;
+
+    .fill {
+        height: 100%;
+        transition: width 0.3s ease;
+        box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 #000;
     }
 
-    .stat-row {
-        display: flex;
-        align-items: center;
-        margin-bottom: 5px;
+    &.health .fill {
+        background: linear-gradient(180deg, #b82626, #b82626 50%, #ca3333 0, #ca3333);
+        box-shadow: inset 0 3px 0 #d86e68, inset 0 -1px 0 #000;
+    }
 
-        .stat-label {
-            width: 60px;
-            font-size: 12px;
-        }
+    &.energy .fill {
+        background: linear-gradient(180deg, #f1c40f, #f1c40f 50%, #f5d65a 0, #f5d65a);
+    }
 
-        .stat-bar {
-            flex-grow: 1;
-            height: 8px;
-            border-radius: 2px;
-            background: #444;
-            margin: 0 6px;
-            overflow: hidden;
+    &.hunger .fill {
+        background: linear-gradient(180deg, #13affe, #13affe 50%, #4bc1fe 0, #4bc1fe);
+    }
 
-            .fill {
-                height: 100%;
-                transition: width 0.3s ease;
-                box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 #000;
-            }
-
-            &.health .fill {
-                background: linear-gradient(180deg, #b82626, #b82626 50%, #ca3333 0, #ca3333);
-                box-shadow: inset 0 3px 0 #d86e68, inset 0 -1px 0 #000;
-            }
-
-            &.energy .fill {
-                background: linear-gradient(180deg, #f1c40f, #f1c40f 50%, #f5d65a 0, #f5d65a)
-            }
-
-            &.hunger .fill {
-                background: linear-gradient(180deg, #13affe, #13affe 50%, #4bc1fe 0, #4bc1fe)
-            }
-
-            &.aggression .fill {
-                background: white;
-            }
-        }
-
-        .stat-value {
-            width: 60px;
-            font-size: 12px;
-            text-align: right;
-        }
+    &.aggression .fill {
+        background: white;
     }
 }
+
+.opponent-stats-bar .stat-row .stat-value {
+    width: 60px;
+    font-size: 12px;
+    text-align: right;
+}
+
+/* drop the old gif-based buttons */
+.opponent .close-button_right,
+.opponent .target-btn {
+    display: none;
+}
+
+/* ========= XP tooltip ========= */
 
 .xp-tooltip {
     position: absolute;
@@ -330,87 +371,13 @@
     }
 }
 
+/* ========= Left column: avatar + XP ring ========= */
+
 .stats-left {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-
-    .greek-circle {
-        //border: 3px solid gold;
-        border-radius: 50%;
-        padding: 4px;
-        background: #222;
-        width: 64px;
-        height: 64px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        .greek-xp-ring {
-            border-radius: 50%;
-            padding: 4px;
-            background-clip: border-box;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.8s ease;
-
-            .xp-ring-svg {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 64px;
-                height: 64px;
-                transform: rotate(-90deg);
-            }
-
-            .xp-ring-background {
-                fill: none;
-                stroke: #eaece7;
-                stroke-width: 3;
-            }
-
-            .xp-ring-progress {
-                fill: none;
-                stroke: #0067b3;
-                stroke-width: 3;
-                stroke-linecap: round;
-                transition: stroke-dasharray 0.8s ease;
-            }
-        }
-
-        .avatar-head {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            z-index: -0;
-            object-fit: cover;
-            margin-top: 4px;
-            margin-bottom: 5px;
-            cursor: pointer;
-
-        }
-
-        .level-badge {
-            position: absolute;
-            bottom: -4px;
-            right: -4px;
-            background-color: #ffcc00;
-            color: #000;
-            border: 2px solid #fff;
-            border-radius: 50%;
-            font-size: 10px;
-            font-weight: bold;
-            width: 18px;
-            height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
-            z-index: 3;
-        }
-    }
 
     .avatar-name {
         color: white;
@@ -422,15 +389,101 @@
 
     .avatar-level {
         font-size: 12px;
-        color: #ffffff; // gold-ish
+        color: #ffffff;
         text-shadow: 0 0 2px black;
     }
 }
 
+.stats-avatar-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+/* clean dark disc + SVG XP ring */
+.stats-left .greek-circle {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+}
+
+.stats-left .greek-circle .greek-xp-ring {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stats-left .greek-circle .xp-ring-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 56px;
+    height: 56px;
+    transform: rotate(-90deg);
+    z-index: 1;
+}
+
+.xp-ring-background {
+    fill: none;
+    stroke: #eaece7;
+    stroke-width: 3;
+}
+
+.xp-ring-progress {
+    fill: none;
+    stroke: #0067b3;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.8s ease;
+}
+
+.stats-left .greek-circle .avatar-head {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    z-index: 2;
+    object-fit: cover;
+    margin: 0;
+    cursor: pointer;
+}
+
+.stats-left .greek-circle .level-badge {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    background-color: #ffcc00;
+    color: #000;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: bold;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
+    z-index: 3;
+}
+
+/* ========= Right column: bars + aggression ========= */
+
 .stats-right {
     display: flex;
     flex-direction: column;
-    margin-left: -10px;
+    margin-left: 0;
 }
 
 .stat {
@@ -456,15 +509,15 @@
     border-radius: 2px;
 
     &.health {
-        background: linear-gradient(180deg, #b82626, #b82626 50%, #ca3333 0, #ca3333)
+        background: linear-gradient(180deg, #b82626, #b82626 50%, #ca3333 0, #ca3333);
     }
 
     &.energy {
-        background: linear-gradient(180deg, #f1c40f, #f1c40f 50%, #f5d65a 0, #f5d65a)
+        background: linear-gradient(180deg, #f1c40f, #f1c40f 50%, #f5d65a 0, #f5d65a);
     }
 
     &.hunger {
-        background: linear-gradient(180deg, #13affe, #13affe 50%, #4bc1fe 0, #4bc1fe)
+        background: linear-gradient(180deg, #13affe, #13affe 50%, #4bc1fe 0, #4bc1fe);
     }
 }
 
@@ -480,30 +533,8 @@
     font-size: 12px;
     line-height: 3;
     z-index: 3;
-
     pointer-events: none;
 }
-
-.stats-avatar-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.greek-circle {
-    position: relative;
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: conic-gradient(#00ff00 50%, #444 50% 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-
-}
-
 
 .avatar-column {
     display: flex;
@@ -519,10 +550,10 @@
     gap: 6px;
 }
 
+/* Aggression bar */
 .aggression-bar-wrapper {
     width: 180px;
     height: 10px;
-    /* bump height so it's visible */
     margin-top: 6px;
     margin-left: 18px;
     background: rgba(24, 24, 24, .88);
@@ -542,7 +573,6 @@
     left: 0;
     height: 100%;
     width: var(--aggression-width, 0%);
-    /* driven by inline style or JS */
     background: #ff6200;
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, .25),
@@ -550,14 +580,18 @@
     transition: width 0.15s ease;
 }
 
+/* ========= Misc ========= */
 
-
-/* host that holds your bar + opponent bar side-by-side */
-.stats-bar-host {
+.call-police-wrapper {
     position: relative;
-    /* anchor */
-    width: fit-content;
-    /* shrink-wrap around bars */
+}
+
+.circle-progress {
+    fill: none;
+    stroke: #ffffff;
+    stroke-width: 3.8;
+    stroke-linecap: round;
+    transition: stroke-dasharray 1s linear;
 }
 
 @keyframes fadeIn {
@@ -572,46 +606,7 @@
     }
 }
 
-.call-police-wrapper {
-    position: relative;
-}
-
-
-
-
-.circle-progress {
-    fill: none;
-    stroke: #ffffff;
-    stroke-width: 3.8;
-    stroke-linecap: round;
-    transition: stroke-dasharray 1s linear;
-}
-
-.opponent .close-button_right {
-    position: absolute;
-    top: 4px;
-    right: -10px;
-    width: 16px;
-    height: 16px;
-    background: url('../../icons/close.gif') no-repeat center/contain;
-    border: none;
-    cursor: pointer;
-}
-
-.opponent .target-btn {
-    position: absolute;
-    top: 26px;
-    right: -10px;
-    width: 16px;
-    height: 16px;
-    background: url('../../icons/lock.gif') no-repeat center/contain;
-    border: none;
-    cursor: pointer;
-}
-
-.opponent .target-btn.locked {
-    //background-image: url('/icons/target_locked.png');
-}
+/* ========= Responsive tweaks ========= */
 
 /* 📱 Tablets (<= 1024px): shrink widths a bit */
 @media (max-width: 1024px) {
@@ -625,7 +620,6 @@
 
     .bar {
         width: 160px;
-        /* narrower bars */
     }
 
     .aggression-bar-wrapper {
@@ -672,86 +666,43 @@
     }
 }
 
+/* base shrink + pin on small phones */
 @media (max-width: 600px) {
     :root {
         --stats-scale: 0.82;
     }
 
-    /* base shrink on small screens */
-
     .stats-bar-container {
         position: fixed;
-        /* keep it pinned like desktop */
         top: 8px;
         left: 8px;
         transform: scale(var(--stats-scale));
         transform-origin: top left;
-        /* shrink from the corner */
         will-change: transform;
         z-index: 2200;
-        /* above room canvas */
-        /* keep the desktop row layout */
         flex-direction: row !important;
         align-items: center !important;
         width: auto !important;
         max-width: none !important;
-    }
-
-    /* keep opponent anchor aligned to the scaled block */
-    .opponent-anchor {
-        top: -16px;
-        /* nudge slightly for smaller scale */
-        left: calc(100% + 8px);
-        transform: translateZ(0);
-        /* avoid subpixel fuzz on mobile */
-    }
-
-    /* bars & aggression widths can stay; scale handles the rest.
-If you want a touch more density, uncomment these:
-.bar,
-.aggression-bar-wrapper { width: 160px; }
-*/
-
-    /* little visual tighten so it doesn't feel heavy when scaled */
-    .stats-bar-container {
         box-shadow:
             0 6px 16px rgba(0, 0, 0, .20),
             0 2px 0 rgba(0, 0, 0, .22),
             inset 0 -3px rgba(0, 0, 0, .10);
     }
+
+    .opponent-anchor {
+        top: 0;
+        left: calc(100% + 8px);
+        transform: translateZ(0);
+    }
 }
 
-/* very small phones */
+/* ultra compact phones */
 @media (max-width: 480px) {
     :root {
         --stats-scale: 0.72;
     }
 
-    /* optional: slightly slimmer bars under heavy shrink
-.bar,
-.aggression-bar-wrapper { width: 150px; }
-*/
-
-    /* keep labels readable at this size */
-    .avatar-name {
-        font-size: 12px;
-    }
-
-    .avatar-level {
-        font-size: 10px;
-    }
-}
-
-/* ultra small (e.g., 360–380px) */
-@media (max-width: 380px) {
-    :root {
-        --stats-scale: 0.64;
-    }
-}
-
-
-/* 📱 Phones (<= 480px): ultra compact */
-@media (max-width: 480px) {
     .stats-bar-container {
         padding: 6px;
         border-radius: 4px;
@@ -790,5 +741,12 @@ If you want a touch more density, uncomment these:
     .work-toggle-btn {
         font-size: 11px;
         padding: 6px 8px;
+    }
+}
+
+/* ultra small (e.g., 360–380px) */
+@media (max-width: 380px) {
+    :root {
+        --stats-scale: 0.64;
     }
 }

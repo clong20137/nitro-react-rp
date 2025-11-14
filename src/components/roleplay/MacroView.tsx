@@ -437,13 +437,24 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                     </div>
 
                     {/* Add Macro button */}
-                    <div className="row" style={{ marginBottom: 8 }}>
+                    <div className="row" style={{ gap: 8 }}>
                         <button
-                            className="habbo-green-btn"
+                            className="habbo-red-btn small"
+                            onClick={() =>
+                                canDeleteThisPreset &&
+                                activePreset &&
+                                deletePreset(activePreset.id)
+                            }
+                        >
+                            Delete
+                        </button>
+
+                        <button
+                            className="habbo-green-btn small"
                             type="button"
                             onClick={openAddModal}
                         >
-                            + Add Macro
+                            + Add
                         </button>
                     </div>
 

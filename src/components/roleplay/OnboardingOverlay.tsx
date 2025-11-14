@@ -319,21 +319,7 @@ export const OnboardingOverlay: FC = () => {
                 arrow: "left",
             },
 
-            /* 4) Corporations */
-            {
-                id: "corps",
-                targets: [
-                    ".left-sidebar .chip-corps",
-                    ".left-sidebar-container .chip-corps",
-                ],
-                title: "Corporations",
-                body: "Browse corporations, their ranks and perks. Join up, climb the ladder and unlock role-specific duties.",
-                padding: 8,
-                placement: "right",
-                arrow: "left",
-            },
-
-            /* 5) Gangs */
+            /* 4) Gangs */
             {
                 id: "gangs",
                 targets: [
@@ -342,6 +328,20 @@ export const OnboardingOverlay: FC = () => {
                 ],
                 title: "Gangs",
                 body: "Create or manage your gang, view membership and identity, and coordinate territory or activities.",
+                padding: 8,
+                placement: "right",
+                arrow: "left",
+            },
+
+            /* 5) Corporations */
+            {
+                id: "corps",
+                targets: [
+                    ".left-sidebar .chip-corps",
+                    ".left-sidebar-container .chip-corps",
+                ],
+                title: "Corporations",
+                body: "Browse corporations, their ranks and perks. Join up, climb the ladder and unlock role-specific duties.",
                 padding: 8,
                 placement: "right",
                 arrow: "left",
@@ -498,6 +498,11 @@ export const OnboardingOverlay: FC = () => {
 
     // visibility & never-black policy
     const visible = !welcomeSeen || (!guideDone && stepIndex < steps.length);
+
+    // 🔧 ensure we always clear pulse when overlay hides
+    useEffect(() => {
+        if (!visible) setPulseOn(null);
+    }, [visible]);
 
     // lock body scroll while visible
     useEffect(() => {

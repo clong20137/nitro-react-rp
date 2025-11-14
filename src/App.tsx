@@ -260,7 +260,7 @@ Render
 
                 {isReady && <StatsBar />}
 
-                <OnboardingOverlay />
+                
                 <LiveFeed />
                 <BlackjackView />
                 <HighLowView />
@@ -269,6 +269,7 @@ Render
                 <HotelAlertView />
                 {/* <BigWheelView /> */}
                 <PoliceCallView  />
+                <OnboardingOverlay />
 
                 {/* Disconnect overlay */}
                 {dcVisible && (

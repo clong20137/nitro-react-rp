@@ -52,24 +52,6 @@ export const RightSideView: FC<{}> = () => {
     const [draftName, setDraftName] = useState("");
     const nameInputRef = useRef<HTMLInputElement>(null);
 
-    /** --- Poll /api/online-count every 10s --- */
-    useEffect(() => {
-        const fetchOnline = async () => {
-            try {
-                const res = await fetch("http://localhost/api/online-count");
-                if (!res.ok) return;
-                const data = await res.json();
-                if (typeof data.count === "number") setOnlineUsers(data.count);
-                else if (typeof data === "number") setOnlineUsers(data);
-            } catch (e) {
-                console.warn("⚠️ Failed to fetch online count:", e);
-            }
-        };
-
-        fetchOnline();
-        const interval = setInterval(fetchOnline, 10000);
-        return () => clearInterval(interval);
-    }, []);
 
     useEffect(() => {
         const handleVRoomInfo = (e: any) => {

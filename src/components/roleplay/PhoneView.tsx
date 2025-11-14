@@ -3,37 +3,50 @@ import "./PhoneView.scss";
 
 import { MessengerFriend } from "../../api";
 import { FriendsListGroupView } from "../friends/views/friends-list/friends-list-group/FriendsListGroupView";
+import { FriendsMessengerThreadView } from "../friends/views/messenger/messenger-thread/FriendsMessengerThreadView";
 
 import { useMessenger, useFriends } from "../../hooks";
 import { GetSessionDataManager } from "../../api";
 
-// ✅ Re-use Nitro’s thread renderer so messages show correctly
-import { FriendsMessengerThreadView } from "../friends/views/messenger/messenger-thread/FriendsMessengerThreadView";
-// ✅ Use real avatar heads
-import { LayoutAvatarImageView } from "../../common";
-
-export type PhoneApp = "home" | "contacts" | "messages" | "settings";
+export type PhoneApp = "home" | "friends" | "messages" | "settings";
 
 interface PhoneViewProps {
     onClose: () => void;
 }
 
+// (kept in case you want them elsewhere)
+export interface FriendEntry {
+    id: number;
+    username: string;
+    figure?: string;
+    online: boolean;
+}
+
+export interface ConversationEntry {
+    id: number;
+    friendId: number;
+    friendName: string;
+    lastMessage: string;
+    unread: boolean;
+}
+
 export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
-    const [activeApp, setActiveApp] = useState<PhoneApp>("contacts");
+    const [activeApp, setActiveApp] = useState<PhoneApp>("home");
+
+    
 
     // REAL FRIEND DATA FROM STORE
     const { friends = [] } = useFriends(); // MessengerFriend[]
 
-    // --- DRAG STATE (fixed so it doesn't jump) ---
+    // --- DRAG STATE (using left/top to avoid teleporting) ---
     const phoneRef = useRef<HTMLDivElement | null>(null);
     const [dragging, setDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [position, setPosition] = useState({ x: 50, y: 80 }); // starting pos (px)
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (!dragging) return;
-
             setPosition((prev) => ({
                 x: e.clientX - dragOffset.x,
                 y: e.clientY - dragOffset.y,
@@ -54,7 +67,6 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
     const onMouseDownHeader = (e: React.MouseEvent) => {
         if (!phoneRef.current) return;
         const rect = phoneRef.current.getBoundingClientRect();
-
         setDragging(true);
         setDragOffset({
             x: e.clientX - rect.left,
@@ -62,8 +74,10 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
         });
     };
 
-    // Called by Contacts when user taps a friend
-    const handleMessageFriendFromContacts = () => {
+    
+
+    // Called by FriendsApp when user taps a friend
+    const handleMessageFriendFromFriendsApp = (friendId: number) => {
         setActiveApp("messages");
     };
 
@@ -73,25 +87,35 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
                 ref={phoneRef}
                 className="phone-frame phone-enter"
                 style={{
-                    transform: `translate(${position.x}px, ${position.y}px)`,
+                    left: position.x,
+                    top: position.y,
+                    position: "fixed",
                 }}
             >
                 <div className="phone-header" onMouseDown={onMouseDownHeader}>
                     <span className="phone-time">17:39</span>
+
+                    {/* center notch */}
                     <span className="phone-notch" />
+
+                    {/* close button to the right of the notch */}
                     <button className="phone-close" onClick={onClose}>
                         ✕
                     </button>
                 </div>
 
-                {/* HOME: we’ll start on Contacts for now */}
                 {activeApp === "home" && (
                     <div className="phone-home">
                         <div className="phone-app-grid">
                             <PhoneAppIcon
+                                label="Settings"
+                                icon="⚙️"
+                                onClick={() => setActiveApp("settings")}
+                            />
+                            <PhoneAppIcon
                                 label="Contacts"
                                 icon="👥"
-                                onClick={() => setActiveApp("contacts")}
+                                onClick={() => setActiveApp("friends")}
                                 badge={friends.length}
                             />
                             <PhoneAppIcon
@@ -100,19 +124,24 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
                                 onClick={() => setActiveApp("messages")}
                             />
                             <PhoneAppIcon
-                                label="Settings"
-                                icon="⚙️"
-                                onClick={() => setActiveApp("settings")}
+                                label="Achievements"
+                                icon="🏆"
+                                onClick={() => {}}
+                            />
+                            <PhoneAppIcon
+                                label="YouTube"
+                                icon="▶️"
+                                onClick={() => {}}
                             />
                         </div>
                     </div>
                 )}
 
-                {activeApp === "contacts" && (
-                    <ContactsApp
+                {activeApp === "friends" && (
+                    <FriendsApp
                         friends={friends}
                         onBack={() => setActiveApp("home")}
-                        onMessageFriend={handleMessageFriendFromContacts}
+                        onMessageFriend={handleMessageFriendFromFriendsApp}
                     />
                 )}
 
@@ -127,10 +156,6 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
         </div>
     );
 };
-
-/* =========================================================================
-PHONE APP ICONS
-========================================================================= */
 
 interface PhoneAppIconProps {
     label: string;
@@ -157,11 +182,11 @@ const PhoneAppIcon: React.FC<PhoneAppIconProps> = ({
 );
 
 /* =========================================================================
-MESSAGES APP – INBOX + THREAD VIEW (uses FriendsMessengerThreadView)
+MESSAGES APP – list + chat views (clean UI, using MessengerThread.groups)
 ========================================================================= */
 
 interface MessagesAppProps {
-    onBack: () => void;
+    onBack: () => void; // back to Phone home
 }
 
 const MessagesApp: React.FC<MessagesAppProps> = ({ onBack }) => {
@@ -173,50 +198,28 @@ const MessagesApp: React.FC<MessagesAppProps> = ({ onBack }) => {
         closeThread = null,
     } = useMessenger();
 
-    const [view, setView] = useState<"inbox" | "thread">("inbox");
+    const [mode, setMode] = useState<"list" | "chat">("list");
     const [messageText, setMessageText] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
-
     const messagesBoxRef = useRef<HTMLDivElement | null>(null);
 
-    const filteredThreads = visibleThreads.filter((t: any) =>
-        t.participant?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const sessionUserId = GetSessionDataManager().userId;
 
-    // When a thread becomes active (e.g. from Contacts), jump into thread view
-    useEffect(() => {
-        if (activeThread) setView("thread");
-    }, [activeThread]);
-
-    // Scroll to bottom when messages change
-    useEffect(() => {
-        if (!activeThread || !messagesBoxRef.current) return;
-        messagesBoxRef.current.scrollTop = messagesBoxRef.current.scrollHeight;
-    }, [activeThread]);
-
-    const hasMessages =
-        !!(activeThread as any)?.messages &&
-        (activeThread as any).messages.length > 0;
+    // ---- Helpers ---------------------------------------------------------
 
     const openThread = (threadId: number) => {
-        setActiveThreadId && setActiveThreadId(threadId);
-        setView("thread");
+        if (setActiveThreadId) setActiveThreadId(threadId);
+        setMode("chat");
     };
 
-    const backToInbox = () => {
-        setView("inbox");
-        // keep activeThread so it stays selected in list
+    const backToList = () => {
+        setMode("list");
     };
 
     const handleSend = () => {
         if (!activeThread || !sendMessage || !messageText.trim()) return;
 
-        sendMessage(
-            activeThread,
-            GetSessionDataManager().userId,
-            messageText.trim()
-        );
-
+        sendMessage(activeThread, sessionUserId, messageText.trim());
         setMessageText("");
     };
 
@@ -224,107 +227,145 @@ const MessagesApp: React.FC<MessagesAppProps> = ({ onBack }) => {
         if (e.key === "Enter") handleSend();
     };
 
-    if (view === "inbox") {
-        return (
-            <div className="phone-app phone-messages phone-messages-inbox">
-                <div className="phone-subheader">
-                    <button onClick={onBack} className="phone-back-btn">
-                        ‹ Home
-                    </button>
-                    <span className="phone-subtitle">Messages</span>
-                </div>
+    // preview text for list rows – uses groups/chats
+    const getLastMessagePreview = (thread: any): string => {
+        const groups = (thread?.groups || []) as any[];
 
-                <div className="phone-searchbar">
-                    <input
-                        type="text"
-                        placeholder="Search"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
+        if (!groups.length) return "New conversation";
 
-                <div className="phone-list phone-inbox-list">
-                    {filteredThreads.length === 0 && (
-                        <div className="phone-empty centered">
-                            No conversations yet.
+        const lastGroup = groups[groups.length - 1];
+        const chats = (lastGroup?.chats || []) as any[];
+
+        if (!chats.length) return "New conversation";
+
+        const lastChat = chats[chats.length - 1];
+        return lastChat?.message || "New conversation";
+    };
+
+    // search on participant name
+    const filteredThreads = visibleThreads.filter((thread: any) =>
+        thread?.participant?.name
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase())
+    );
+
+    // does this thread have any chats?
+    const hasMessages =
+        !!activeThread &&
+        Array.isArray((activeThread as any).groups) &&
+        (activeThread as any).groups.some(
+            (g: any) => Array.isArray(g.chats) && g.chats.length > 0
+        );
+
+    // scroll chat to bottom when opening a thread / switching to chat mode
+    useEffect(() => {
+        if (mode !== "chat" || !messagesBoxRef.current) return;
+        messagesBoxRef.current.scrollTop = messagesBoxRef.current.scrollHeight;
+    }, [mode, activeThread, (activeThread as any)?.groups?.length]);
+
+    // ---- Render ----------------------------------------------------------
+
+    return (
+        <div className="phone-app phone-messages">
+            {/* HEADER */}
+            <div className="phone-subheader">
+                {mode === "list" && (
+                    <>
+                        <button onClick={onBack} className="phone-back-btn">
+                            ‹ Home
+                        </button>
+                        <span className="phone-subtitle">Messages</span>
+                    </>
+                )}
+
+                {mode === "chat" && activeThread && (
+                    <>
+                        <button onClick={backToList} className="phone-back-btn">
+                            ‹ Messages
+                        </button>
+                        <div className="phone-chat-title">
+                            <div className="phone-chat-avatar" />
+                            <span className="phone-subtitle">
+                                {activeThread.participant?.name}
+                            </span>
                         </div>
-                    )}
+                    </>
+                )}
 
-                    {filteredThreads.map((thread: any) => (
-                        <div
-                            key={thread.threadId}
-                            className={
-                                "phone-inbox-row" +
-                                (activeThread &&
-                                activeThread.threadId === thread.threadId
-                                    ? " selected"
-                                    : "")
-                            }
-                            onClick={() => openThread(thread.threadId)}
-                        >
-                            <div className="phone-inbox-avatar">
-                                {thread.participant?.figure && (
-                                    <LayoutAvatarImageView
-                                        figure={thread.participant.figure}
-                                        headOnly={true}
-                                        direction={3}
-                                    />
+                <span style={{ flex: 1 }} />
+            </div>
+
+            {/* SEARCH BAR (both modes) */}
+            <div className="phone-searchbar">
+                <input
+                    type="text"
+                    placeholder="Search"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+                />
+            </div>
+
+            {/* LIST MODE ==================================================== */}
+            {mode === "list" && (
+                <div className="phone-messages-list-view">
+                    <div className="phone-messages-list">
+                        {filteredThreads.map((thread: any) => (
+                            <div
+                                key={thread.threadId}
+                                className="phone-convo-row"
+                                onClick={() => openThread(thread.threadId)}
+                            >
+                                <div className="phone-convo-avatar" />
+                                <div className="phone-convo-main">
+                                    <div className="phone-convo-name">
+                                        {thread.participant?.name}
+                                    </div>
+                                    <div className="phone-convo-last">
+                                        {getLastMessagePreview(thread)}
+                                    </div>
+                                </div>
+
+                                {closeThread && (
+                                    <button
+                                        className="phone-convo-delete"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            closeThread(thread.threadId);
+                                        }}
+                                        title="Delete conversation"
+                                    >
+                                        🗑
+                                    </button>
                                 )}
                             </div>
-                            <div className="phone-inbox-main">
-                                <div className="phone-inbox-name">
-                                    {thread.participant?.name}
-                                </div>
-                                <div className="phone-inbox-preview">
-                                    New conversation
-                                </div>
+                        ))}
+
+                        {!filteredThreads.length && (
+                            <div className="phone-empty centered">
+                                No conversations yet.
                             </div>
-                            {closeThread && (
-                                <button
-                                    className="phone-inbox-delete"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        closeThread(thread.threadId);
-                                    }}
-                                >
-                                    🗑
-                                </button>
-                            )}
-                        </div>
-                    ))}
+                        )}
+                    </div>
                 </div>
-            </div>
-        );
-    }
+            )}
 
-    // THREAD VIEW
-    return (
-        <div className="phone-app phone-messages phone-messages-thread">
-            <div className="phone-subheader">
-                <button onClick={backToInbox} className="phone-back-btn">
-                    ‹ Messages
-                </button>
-                <span className="phone-subtitle">
-                    {activeThread?.participant?.name || "Chat"}
-                </span>
-            </div>
-
-            {!activeThread ? (
-                <div className="phone-empty centered">
-                    Select a conversation
-                </div>
-            ) : (
-                <>
+            {/* CHAT MODE ==================================================== */}
+            {mode === "chat" && activeThread && (
+                <div className="phone-messages-chat-view">
                     <div className="phone-chat-body" ref={messagesBoxRef}>
                         {hasMessages ? (
-                            <FriendsMessengerThreadView thread={activeThread} />
+                            // ✅ use the same renderer as the old UI
+                            <FriendsMessengerThreadView
+                                thread={activeThread as any}
+                            />
                         ) : (
                             <div className="phone-chat-empty">
-                                <div className="phone-chat-empty-bubble" />
+                                <div className="phone-chat-empty-icon" />
                                 <div className="phone-chat-empty-title">
                                     No messages yet
                                 </div>
-                                <div className="phone-chat-empty-sub">
+                                <div className="phone-chat-empty-subtitle">
                                     Start a conversation with{" "}
                                     {activeThread.participant?.name}!
                                 </div>
@@ -342,79 +383,70 @@ const MessagesApp: React.FC<MessagesAppProps> = ({ onBack }) => {
                         />
                         <button onClick={handleSend}>Send</button>
                     </div>
-                </>
+                </div>
+            )}
+
+            {/* safety net */}
+            {mode === "chat" && !activeThread && (
+                <div className="phone-empty centered">
+                    Select a conversation from the list.
+                </div>
             )}
         </div>
     );
 };
 
 /* =========================================================================
-CONTACTS APP – ONLINE/OFFLINE + REAL AVATARS
-========================================================================= */
+FRIENDS (CONTACTS) APP – uses real MessengerFriend[]
+======================================================================== */
 
-interface ContactsAppProps {
+interface FriendsAppProps {
     friends: MessengerFriend[];
     onBack: () => void;
     onMessageFriend: (friendId: number) => void;
 }
 
-const ContactsApp: React.FC<ContactsAppProps> = ({
+const FriendsApp: React.FC<FriendsAppProps> = ({
     friends,
     onBack,
     onMessageFriend,
 }) => {
+    const [tab, setTab] = useState<"list" | "search">("list");
     const [searchTerm, setSearchTerm] = useState("");
+    const [searchResults, setSearchResults] = useState<MessengerFriend[]>([]);
+    const [selectedFriendsIds, setSelectedFriendsIds] = useState<number[]>([]);
 
     const { getMessageThread = null, setActiveThreadId = null } =
         useMessenger();
 
-    const lower = searchTerm.toLowerCase();
+    const handleSearch = () => {
+        if (!searchTerm.trim()) {
+            setSearchResults([]);
+            return;
+        }
 
-    const online = friends
-        .filter((f: any) => f.online)
-        .filter((f: any) => f.name.toLowerCase().includes(lower));
-    const offline = friends
-        .filter((f: any) => !f.online)
-        .filter((f: any) => f.name.toLowerCase().includes(lower));
+        const lower = searchTerm.toLowerCase();
+        const matches = friends.filter((f) =>
+            f.name.toLowerCase().includes(lower)
+        );
+
+        setSearchResults(matches);
+    };
 
     const selectFriend = (id: number) => {
-        // open / create thread for this friend
+        setSelectedFriendsIds([id]);
+
+        // open / create thread for this friend in the messenger store
         if (getMessageThread && setActiveThreadId) {
             const thread = getMessageThread(id);
             if (thread) setActiveThreadId(thread.threadId);
         }
 
+        // switch Phone to Messages app
         onMessageFriend(id);
     };
 
-    const renderFriendRow = (friend: any) => (
-        <div
-            key={friend.id}
-            className="phone-friend-row"
-            onClick={() => selectFriend(friend.id)}
-        >
-            <div className="phone-friend-avatar">
-                {friend.figure && (
-                    <LayoutAvatarImageView
-                        figure={friend.figure}
-                        headOnly={true}
-                        direction={3}
-                    />
-                )}
-                <span
-                    className={
-                        "status-dot " + (friend.online ? "online" : "offline")
-                    }
-                />
-            </div>
-            <div className="phone-friend-main">
-                <div className="phone-friend-name">{friend.name}</div>
-                <div className="phone-friend-status">
-                    {friend.online ? "Online" : "Offline"}
-                </div>
-            </div>
-        </div>
-    );
+    const listToShow = tab === "list" ? friends : searchResults;
 
     return (
         <div className="phone-app phone-friends">
@@ -425,40 +457,51 @@ const ContactsApp: React.FC<ContactsAppProps> = ({
                 <span className="phone-subtitle">Contacts</span>
             </div>
 
+            <div className="phone-tabs">
+                <button
+                    className={tab === "list" ? "active" : ""}
+                    onClick={() => setTab("list")}
+                >
+                    All
+                </button>
+                <button
+                    className={tab === "search" ? "active" : ""}
+                    onClick={() => setTab("search")}
+                >
+                    Search
+                </button>
+            </div>
+
             <div className="phone-searchbar">
                 <input
                     type="text"
-                    placeholder="Search"
+                    placeholder={
+                        tab === "search"
+                            ? "Search by username…"
+                            : "Filter friends…"
+                    }
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) =>
+                        e.key === "Enter" ? handleSearch() : null
+                    }
                 />
+                <button onClick={handleSearch}>Go</button>
             </div>
 
             <div className="phone-list">
-                {online.length > 0 && (
-                    <>
-                        <div className="phone-section-header">
-                            <span>Online</span>
-                            <span>{online.length}</span>
-                        </div>
-                        {online.map(renderFriendRow)}
-                    </>
-                )}
-
-                {offline.length > 0 && (
-                    <>
-                        <div className="phone-section-header">
-                            <span>Offline</span>
-                            <span>{offline.length}</span>
-                        </div>
-                        {offline.map(renderFriendRow)}
-                    </>
-                )}
-
-                {!online.length && !offline.length && (
-                    <div className="phone-empty centered">
-                        No friends found.
+                {!listToShow.length && (
+                    <div className="phone-empty">
+                        {tab === "list" ? "No friends yet." : "No users found."}
                     </div>
+                )}
+
+                {!!listToShow.length && (
+                    <FriendsListGroupView
+                        list={listToShow}
+                        selectedFriendsIds={selectedFriendsIds}
+                        selectFriend={selectFriend}
+                    />
                 )}
             </div>
         </div>
@@ -467,7 +510,7 @@ const ContactsApp: React.FC<ContactsAppProps> = ({
 
 /* =========================================================================
 SETTINGS
-========================================================================= */
+======================================================================== */
 
 const SettingsApp: React.FC<{ onBack: () => void }> = ({ onBack }) => (
     <div className="phone-app phone-settings">

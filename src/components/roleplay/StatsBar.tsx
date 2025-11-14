@@ -46,12 +46,12 @@ export const StatsBar: FC = () => {
     // We keep the last server value and the moment we received it.
     const aggressionInitialMsRef = useRef(0); // how many ms were remaining when server last spoke
     const aggressionStartTsRef = useRef(0); // performance.now() timestamp of that packet
-    const [aggressionWindowMs, setAggressionWindowMs] = useState(30_000); // default window, can be overridden by server
+    const [aggressionWindowMs, setAggressionWindowMs] = useState(45_000); // default window, can be overridden by server
     const [inTurfRoom, setInTurfRoom] = useState(false);
     const [isAggressive, setAggressive] = useState(false);
 
     // A lightweight "clock" to force re-render ~60fps
-    const [now, setNow] = useState(() => performance.now());
+    const [now, setNow] = useState(() => performance.now())
     useEffect(() => {
         let raf: number;
         const tick = () => {
