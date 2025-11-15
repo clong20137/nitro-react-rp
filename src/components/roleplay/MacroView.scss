@@ -441,18 +441,19 @@ ADD MACRO MODAL (Wanted-style window)
 
 /* Align Add + Delete buttons in a tight row */
 .macro-actions {
-display: flex;
-gap: 8px;
-margin: 4px 0 10px 0;
+    display: flex;
+    gap: 8px;
+    margin: 4px 0 10px 0;
 }
 
 /* Smaller variation of the green Habbo button */
 .habbo-green-btn.small {
-padding: 4px 10px;
-font-size: 14px;
-line-height: 1;
-height: 30px;
+    padding: 4px 10px;
+    font-size: 14px;
+    line-height: 1;
+    height: 30px;
 }
+
 .capture {
     height: 38px;
     border-radius: 8px;

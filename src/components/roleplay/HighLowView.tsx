@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useState } from "react";
+import React, { FC, useEffect, useState, useRef } from "react";
 import { createRoot, Root } from "react-dom/client";
 import "./HighLowView.scss";
 
@@ -17,81 +17,192 @@ const accept = () => SendMessageComposer(new HighLowAcceptComposer());
 const decline = () => SendMessageComposer(new HighLowDeclineComposer());
 
 /* ---------- types ---------- */
+type HLMessage = { text: string; level: "info" | "warn" | "error" | string };
+
 type HLState = {
     state: "IDLE" | "INVITE" | "PLAYING" | "ENDED";
     turn: "PLAYER" | "DEALER";
     currentCard: string;
     canAct: boolean;
     bet: number;
-    messages?: Array<{ text: string; level: "info" | "warn" | "error" }>;
+    messages?: HLMessage[];
 };
 
 /* ---------- component ---------- */
 export const HighLowView: FC = () => {
     const [open, setOpen] = useState(false);
+    const [closing, setClosing] = useState(false);
     const [state, setState] = useState<HLState | null>(null);
     const [toasts, setToasts] = useState<
         Array<{ id: number; text: string; level: string }>
     >([]);
 
+    // confetti pieces
+    const [confetti, setConfetti] = useState<
+        Array<{ id: number; left: number; delay: number }>
+    >([]);
+
+    // draggable position
+    const [dragPos, setDragPos] = useState(() => {
+        if (typeof window === "undefined") return { x: 120, y: 120 };
+        const w = window.innerWidth || 800;
+        const h = window.innerHeight || 600;
+        const defaultWidth = 480;
+        const defaultHeight = 360;
+        return {
+            x: Math.max(8, (w - defaultWidth) / 2),
+            y: Math.max(8, (h - defaultHeight) / 2),
+        };
+    });
+    const [dragging, setDragging] = useState(false);
+    const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+    const rootRef = useRef<HTMLDivElement | null>(null);
+
+    // card animation key (forces re-mount to replay CSS animation)
+    const [cardKey, setCardKey] = useState(0);
+
+    // --- LISTENERS (highlow_state / highlow_module_result) ---
     useEffect(() => {
-        // One-time listeners — stored on window to avoid duplicates under StrictMode
         const W = window as any;
-        if (!W.__HL_LISTENERS__) {
-            const onModule = (e: Event) => {
-                // show the module; if we have no state yet, show a benign stub
-                setOpen(true);
-                setState(
-                    (prev) =>
-                        prev || {
-                            state: "IDLE",
-                            turn: "PLAYER",
-                            currentCard: "?",
-                            canAct: false,
-                            bet: 0,
-                        }
-                );
-            };
 
-            const onState = (e: Event) => {
-                const { detail } = e as CustomEvent;
-                const s = detail as HLState;
-                setState(s);
-                (s.messages || []).forEach((m) =>
-                    setToasts((ts) =>
-                        [
-                            { id: Math.random(), text: m.text, level: m.level },
-                            ...ts,
-                        ].slice(0, 6)
-                    )
-                );
-                setOpen(true);
-            };
+        // 🔒 Only allow ONE HighLowView to attach listeners
+        if (W.__HL_EVENTS_ATTACHED__) {
+            return;
+        }
+        W.__HL_EVENTS_ATTACHED__ = true;
 
-            W.__HL_LISTENERS__ = { onModule, onState };
-            window.addEventListener(
+        const onModule = (e: Event) => {
+            setClosing(false);
+            setOpen(true);
+            setState(
+                (prev) =>
+                    prev || {
+                        state: "IDLE",
+                        turn: "PLAYER",
+                        currentCard: "?",
+                        canAct: false,
+                        bet: 0,
+                    }
+            );
+        };
+
+        const onState = (e: Event) => {
+            const { detail } = e as CustomEvent;
+            const s = detail as HLState;
+
+            setClosing(false);
+            setOpen(true);
+            setState(s);
+            setCardKey((k) => k + 1);
+
+            const msgs = s.messages || [];
+            msgs.forEach((m) =>
+                setToasts((ts) =>
+                    [
+                        { id: Math.random(), text: m.text, level: m.level },
+                        ...ts,
+                    ].slice(0, 6)
+                )
+            );
+
+            const hasWin = msgs.some((m) =>
+                /win|won|victory|you.*won|you.*win/i.test(m.text || "")
+            );
+            if (hasWin) {
+                const pieces = Array.from({ length: 50 }).map((_, i) => ({
+                    id: Date.now() + i,
+                    left: Math.random() * 100,
+                    delay: Math.random() * 0.6,
+                }));
+                setConfetti(pieces);
+                setTimeout(() => setConfetti([]), 1800);
+            }
+        };
+
+        W.__HL_LISTENERS__ = { onModule, onState };
+
+        window.addEventListener(
+            "highlow_module_result",
+            onModule as EventListener
+        );
+        window.addEventListener("highlow_state", onState as EventListener);
+
+        return () => {
+            window.removeEventListener(
                 "highlow_module_result",
                 onModule as EventListener
             );
-            window.addEventListener("highlow_state", onState as EventListener);
-        }
-
-        return () => {
-            // keep listeners for future rounds; do not remove
+            window.removeEventListener(
+                "highlow_state",
+                onState as EventListener
+            );
+            W.__HL_EVENTS_ATTACHED__ = false;
         };
     }, []);
 
+    // --- DRAGGING EFFECT (MUST BE BEFORE ANY RETURN!) ---
+    useEffect(() => {
+        if (!dragging) return;
+
+        const onMove = (evt: MouseEvent | TouchEvent) => {
+            let clientX: number;
+            let clientY: number;
+
+            if (evt instanceof MouseEvent) {
+                clientX = evt.clientX;
+                clientY = evt.clientY;
+            } else {
+                const t = evt.touches[0];
+                if (!t) return;
+                clientX = t.clientX;
+                clientY = t.clientY;
+            }
+
+            const offset = dragOffsetRef.current;
+            const x = clientX - offset.x;
+            const y = clientY - offset.y;
+
+            const w = window.innerWidth || 800;
+            const h = window.innerHeight || 600;
+
+            const clampedX = Math.min(Math.max(4, x), w - 260);
+            const clampedY = Math.min(Math.max(4, y), h - 200);
+
+            setDragPos({ x: clampedX, y: clampedY });
+        };
+
+        const end = () => setDragging(false);
+
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", end);
+        window.addEventListener("touchmove", onMove, { passive: false });
+        window.addEventListener("touchend", end);
+
+        return () => {
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", end);
+            window.removeEventListener("touchmove", onMove as any);
+            window.removeEventListener("touchend", end);
+        };
+    }, [dragging]);
+
+    // ----- after this point we can early-return safely -----
     if (!open) return null;
 
     const playing = state?.state === "PLAYING";
     const inviting = state?.state === "INVITE";
     const myTurn = !!state?.canAct;
 
-    const close = () => {
-        setOpen(false);
+    const startClose = () => {
+        setClosing(true);
         try {
             leave();
         } catch {}
+        // let fade-out play before unmount
+        setTimeout(() => {
+            setOpen(false);
+            setClosing(false);
+        }, 180);
     };
 
     /* ------- minimal helpers to render a proper playing card ------- */
@@ -115,8 +226,7 @@ export const HighLowView: FC = () => {
         return String(r);
     };
 
-    // Deterministic suit (since server only sends rank). Keeps the same suit
-    // for a given rank so both viewers see the same thing.
+    // Deterministic suit (since server only sends rank).
     const suitForRank = (r: number | null): "♠" | "♥" | "♦" | "♣" => {
         const idx = (((r ?? 0) % 4) + 4) % 4;
         return ["♠", "♥", "♦", "♣"][idx] as any;
@@ -127,27 +237,72 @@ export const HighLowView: FC = () => {
     const rankTxt = rankSymbol(r);
     const isRed = suit === "♥" || suit === "♦";
 
+    /* ---------- dragging start handlers ---------- */
+    const beginDragMouse = (e: React.MouseEvent) => {
+        if (!rootRef.current) return;
+        const rect = rootRef.current.getBoundingClientRect();
+        dragOffsetRef.current = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+        };
+        setDragging(true);
+        e.preventDefault();
+    };
+
+    const beginDragTouch = (e: React.TouchEvent) => {
+        if (!rootRef.current) return;
+        const touch = e.touches[0];
+        if (!touch) return;
+        const rect = rootRef.current.getBoundingClientRect();
+        dragOffsetRef.current = {
+            x: touch.clientX - rect.left,
+            y: touch.clientY - rect.top,
+        };
+        setDragging(true);
+        e.preventDefault();
+    };
+
     return (
-        <div className="hl-root">
-            <div className="hl-header">
-                <span>High / Low</span>
+        <div
+            ref={rootRef}
+            className={`hl-root ${closing ? "hl-closing" : "hl-open"}`}
+            style={{ left: dragPos.x, top: dragPos.y }}
+        >
+            <div
+                className="hl-header"
+                onMouseDown={beginDragMouse}
+                onTouchStart={beginDragTouch}
+            >
+                <span className="hl-title">High / Low</span>
                 <div className="spacer" />
-                <button className="btn grey" onClick={close}>
+                <button className="btn grey hl-close-btn" onClick={startClose}>
                     ✕
                 </button>
             </div>
 
             <div className="hl-body">
+                {state?.state === "INVITE" && (
+                    <div className="invite-banner">
+                        {state.turn === "DEALER"
+                            ? "Someone invited you to play High / Low!"
+                            : "Waiting for the dealer to accept your invite..."}
+                    </div>
+                )}
+
                 {/* big centered card */}
                 <div className="card-stage">
-                    <div className={`card-big ${isRed ? "red" : ""}`}>
+                    <div
+                        key={cardKey}
+                        className={`card-big ${isRed ? "red" : ""} ${
+                            myTurn ? "my-turn" : ""
+                        }`}
+                    >
                         {/* top-left rank */}
                         <div className="pip rank top">{rankTxt}</div>
                         {/* big center suit */}
                         <div className="pip suit">{suit}</div>
-                        {/* bottom-right rank + small suit (rotated) */}
+                        {/* bottom-right rank */}
                         <div className="pip rank bottom">{rankTxt}</div>
-
                     </div>
                 </div>
 
@@ -208,6 +363,21 @@ export const HighLowView: FC = () => {
                         </div>
                     ))}
                 </div>
+
+                {confetti.length > 0 && (
+                    <div className="hl-confetti" aria-hidden="true">
+                        {confetti.map((p) => (
+                            <span
+                                key={p.id}
+                                className="piece"
+                                style={{
+                                    left: `${p.left}%`,
+                                    animationDelay: `${p.delay}s`,
+                                }}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -219,12 +389,12 @@ export default HighLowView;
 
 (() => {
     const W = window as any;
-    if (W.__HL_APP_MOUNTED__) return; // already mounted (even across hot reloads/StrictMode)
+    if (W.__HL_APP_MOUNTED__) return; // already mounted
     W.__HL_APP_MOUNTED__ = true;
 
     const MOUNT_ID = "olrp-highlow-root";
 
-    // remove any stray duplicates from previous code paths
+    // remove any stray duplicates
     const dupes = Array.from(
         document.querySelectorAll<HTMLElement>("#" + MOUNT_ID)
     );

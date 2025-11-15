@@ -1,708 +1,560 @@
 /* =========================
 BlackjackView.scss (FULL)
+High/Low-Style Upgrade
 ========================= */
 
 /* --- Root container --- */
 .bj-root {
-position: fixed;
-z-index: 1100;
-left: 50%;
-top: 55%;
-transform: translate(-50%, -50%);
-background: #dfdfdf;
-border: 2px solid #fff;
-border-radius: 10px;
-box-shadow: 0 0 rgba(0, 0, 0, .4), 0 0 rgba(0, 0, 0, .3), inset 0 -4px rgba(0, 0, 0, .2);
-user-select: none;
-display: flex;
-flex-direction: column;
-overflow: hidden;
-width: 680px;
+    position: fixed;
+    z-index: 1100;
+    left: 50%;
+    top: 55%;
+    transform: translate(-50%, -50%);
+    background: #dfdfdf;
+    border: 2px solid #fff;
+    border-radius: 10px;
+    box-shadow:
+        0 0 rgba(0, 0, 0, .4),
+        0 0 rgba(0, 0, 0, .3),
+        inset 0 -4px rgba(0, 0, 0, .2);
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: 680px;
+    pointer-events: auto;
 }
 
-/* --- Header (Habbo-style like wanted list) --- */
+/* Fade animations */
+.bj-root.bj-open {
+    animation: bj-fade-in 180ms cubic-bezier(.2, .9, .2, 1) both;
+}
+
+.bj-root.bj-closing {
+    animation: bj-fade-out 180ms cubic-bezier(.2, .9, .2, 1) both;
+}
+
+@keyframes bj-fade-in {
+    from {
+        transform: translate(-50%, -48%) scale(.96);
+        opacity: 0;
+    }
+
+    to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes bj-fade-out {
+    from {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+
+    to {
+        transform: translate(-50%, -52%) scale(.96);
+        opacity: 0;
+    }
+}
+
+/* --- Header (Habbo-style like WantedList) --- */
 .bj-header {
-position: relative;
-display: flex;
-align-items: center;
-gap: 8px;
-background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
-color: #fff;
-padding: 8px 10px;
-font-size: 18px;
-font-weight: 700;
-cursor: grab;
-user-select: none;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
+    color: #fff;
+    padding: 8px 10px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: grab;
+    user-select: none;
 
-span {
-text-shadow: 1px 1px 0 #000;
-}
+    span {
+        text-shadow: 1px 1px 0 #000;
+    }
 
-.spacer {
-flex: 1;
-}
+    .spacer {
+        flex: 1;
+    }
 }
 
 /* red Habbo close button */
 .bj-close {
-position: relative;
-width: 24px;
-height: 24px;
-border: 2px solid #921911;
-background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
-border-radius: 4px;
-box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
-cursor: pointer;
-padding: 0;
+    position: relative;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #921911;
+    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
+    border-radius: 4px;
+    box-shadow:
+        0 0 0 1.6px #fff,
+        0 2px 0 rgba(0, 0, 0, .22);
+    cursor: pointer;
+    padding: 0;
 
-&:before,
-&:after {
-content: "";
-position: absolute;
-left: 50%;
-top: 50%;
-width: 12px;
-height: 2px;
-background: #fff;
-border-radius: 1px;
-transform-origin: center;
-}
+    &:before,
+    &:after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 12px;
+        height: 2px;
+        background: #fff;
+        border-radius: 1px;
+        transform-origin: center;
+    }
 
-&:before {
-transform: translate(-50%, -50%) rotate(45deg);
-}
+    &:before {
+        transform: translate(-50%, -50%) rotate(45deg);
+    }
 
-&:after {
-transform: translate(-50%, -50%) rotate(-45deg);
-}
+    &:after {
+        transform: translate(-50%, -50%) rotate(-45deg);
+    }
 }
 
 /* --- Body --- */
 .bj-body {
-position: relative;
-padding: 14px 14px 18px;
-background: radial-gradient(ellipse at center, #146b2a 0%, #0f5a22 60%, #0b441a 100%);
-border-top: 2px solid #0a3013;
-min-height: 380px;
+    position: relative;
+    padding: 14px 14px 18px;
+    background: radial-gradient(ellipse at center,
+            #146b2a 0%,
+            #0f5a22 60%,
+            #0b441a 100%);
+    border-top: 2px solid #0a3013;
+    min-height: 380px;
 
-/* Invite banner */
-.invite-banner {
-color: #fff;
-font-weight: 800;
-background: rgba(0, 0, 0, .28);
-border: 1px solid rgba(0, 0, 0, .35);
-border-radius: 10px;
-padding: 8px 10px;
-text-align: center;
-margin-bottom: 10px;
-box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2);
+    /* Invite banner */
+    .invite-banner {
+        color: #fff;
+        font-weight: 800;
+        background: rgba(0, 0, 0, .28);
+        border: 1px solid rgba(0, 0, 0, .35);
+        border-radius: 10px;
+        padding: 8px 10px;
+        text-align: center;
+        margin-bottom: 10px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2);
 
-.invite-title {
-margin-bottom: 4px;
-text-shadow: 1px 1px 0 #000;
+        .invite-title {
+            margin-bottom: 4px;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        .waiting {
+            opacity: .9;
+        }
+
+        .act {
+            margin-top: 4px;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+    }
+
+    /* Dealer/Player table layout */
+    .table {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+
+        .row {
+            display: grid;
+            grid-template-columns: 90px 1fr 120px;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .label {
+            color: #fff;
+            font-weight: 800;
+            text-align: right;
+            padding-right: 6px;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        .hand {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0;
+
+            .card {
+                animation: bjDealIn 420ms ease-out both;
+            }
+
+            .card:nth-child(1) {
+                animation-delay: 0ms;
+            }
+
+            .card:nth-child(2) {
+                animation-delay: 100ms;
+            }
+
+            .card:nth-child(3) {
+                animation-delay: 200ms;
+            }
+
+            .card:nth-child(4) {
+                animation-delay: 300ms;
+            }
+
+            .card:nth-child(5) {
+                animation-delay: 400ms;
+            }
+
+            .card:nth-child(6) {
+                animation-delay: 500ms;
+            }
+        }
+
+        .total {
+            color: #ffd166;
+            font-weight: 900;
+            text-align: left;
+            text-shadow: 1px 1px 0 #000;
+        }
+    }
+
+    /* Controls */
+    .controls {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+
+        .act {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            align-items: stretch;
+        }
+    }
+
+    /* Insurance */
+    .insurance {
+        margin-top: 12px;
+        color: #fff;
+        font-weight: 700;
+        text-align: center;
+        text-shadow: 1px 1px 0 #000;
+
+        .act {
+            margin-top: 6px;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+    }
+
+    /* Meta */
+    .meta {
+        margin-top: 14px;
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+        color: #fff;
+        font-weight: 700;
+        text-shadow: 1px 1px 0 #000;
+    }
+
+    /* Toasts */
+    .toasts {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        max-width: 360px;
+        max-height: 30vh;
+        overflow: auto;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 6px;
+        box-shadow: 0 2px 0 rgba(0, 0, 0, .25);
+
+        .toast {
+            padding: 6px 8px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            background: #eef3ff;
+            border: 1px solid #cfe1ff;
+            font-weight: 700;
+
+            &.warn {
+                background: #fff7e6;
+                border-color: #ffe1a6;
+            }
+
+            &.error {
+                background: #fdeaea;
+                border-color: #f5bcbc;
+            }
+        }
+    }
 }
 
-.waiting {
-opacity: .9;
-}
-
-.act {
-margin-top: 4px;
-display: flex;
-justify-content: center;
-gap: 8px;
-}
-}
-
-/* Table (dealer row + player row) */
-.table {
-display: grid;
-grid-template-columns: 1fr;
-gap: 24px;
-
-.row {
-display: grid;
-grid-template-columns: 90px 1fr 120px;
-align-items: center;
-gap: 12px;
-}
-
-.label {
-color: #fff;
-font-weight: 800;
-text-align: right;
-padding-right: 6px;
-text-shadow: 1px 1px 0 #000;
-}
-
-.hand {
-display: flex;
-justify-content: center;
-align-items: center;
-gap: 0; // overlap via margin on .card
-
-.card {
-animation: bjDealIn 420ms ease-out both;
-}
-
-.card:nth-child(1) { animation-delay: 0ms; }
-.card:nth-child(2) { animation-delay: 100ms; }
-.card:nth-child(3) { animation-delay: 200ms; }
-.card:nth-child(4) { animation-delay: 300ms; }
-.card:nth-child(5) { animation-delay: 400ms; }
-.card:nth-child(6) { animation-delay: 500ms; }
-}
-
-.total {
-color: #ffd166;
-font-weight: 900;
-text-align: left;
-text-shadow: 1px 1px 0 #000;
-}
-}
-
-/* Controls */
-.controls {
-margin-top: 18px;
-display: grid;
-grid-template-columns: 1fr;
-gap: 10px;
-
-.act {
-display: flex;
-gap: 8px;
-justify-content: center;
-align-items: stretch;
-}
-}
-
-/* Insurance */
-.insurance {
-margin-top: 12px;
-color: #fff;
-font-weight: 700;
-text-align: center;
-text-shadow: 1px 1px 0 #000;
-
-.act {
-margin-top: 6px;
-display: flex;
-gap: 8px;
-justify-content: center;
-}
-}
-
-/* Meta line */
-.meta {
-margin-top: 14px;
-display: flex;
-justify-content: center;
-gap: 18px;
-color: #fff;
-font-weight: 700;
-text-shadow: 1px 1px 0 #000;
-}
-
-/* Toasts */
-.toasts {
-position: absolute;
-left: 12px;
-bottom: 12px;
-max-width: 360px;
-max-height: 30vh;
-overflow: auto;
-background: #fff;
-border: 1px solid #ddd;
-border-radius: 8px;
-padding: 6px;
-box-shadow: 0 2px 0 rgba(0, 0, 0, .25);
-
-.toast {
-padding: 6px 8px;
-border-radius: 6px;
-margin-bottom: 6px;
-background: #eef3ff;
-border: 1px solid #cfe1ff;
-font-weight: 700;
-
-&.warn {
-background: #fff7e6;
-border-color: #ffe1a6;
-}
-
-&.error {
-background: #fdeaea;
-border-color: #f5bcbc;
-}
-}
-}
-}
-
-/* --- Buttons --- */
+/* Buttons */
 .bj-root .btn {
-display: inline-block;
-padding: 6px 12px;
-border: 1px solid #000;
-border-bottom-width: 2px;
-border-radius: 4px;
-background: linear-gradient(180deg, #fff 0, #fff 50%, #ccc 50%, #ccc);
-cursor: pointer;
-font-weight: 700;
-font-size: 14px;
-text-shadow: 0 1px 0 rgba(0, 0, 0, .35);
+    display: inline-block;
+    padding: 6px 12px;
+    border: 1px solid #000;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #fff 0, #fff 50%, #ccc 50%, #ccc);
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .35);
 
-&.green {
-color: #fff;
-background: linear-gradient(180deg, #3aa900 0, #3aa900 50%, #2d7d00 50%, #2d7d00);
+    &.green {
+        color: #fff;
+        background: linear-gradient(180deg,
+                #3aa900 0,
+                #3aa900 50%,
+                #2d7d00 50%,
+                #2d7d00);
+    }
+
+    &.grey {
+        color: #fff;
+        background: linear-gradient(180deg,
+                #888 0,
+                #888 50%,
+                #606060 50%,
+                #606060);
+    }
+
+    &.yellow {
+        background: linear-gradient(180deg,
+                #ffd166 0,
+                #ffd166 50%,
+                #e0aa24 50%,
+                #e0aa24);
+    }
+
+    &:disabled {
+        opacity: .6;
+        pointer-events: none;
+    }
 }
 
-&.grey {
-color: #fff;
-background: linear-gradient(180deg, #888 0, #888 50%, #606060 50%, #606060);
-}
-
-&.yellow {
-background: linear-gradient(180deg, #ffd166 0, #ffd166 50%, #e0aa24 50%, #e0aa24);
-}
-
-&:disabled {
-opacity: .6;
-pointer-events: none;
-}
-}
-
-/* --- Playing cards (white, larger, horizontal overlap) --- */
+/* --- Playing Cards --- */
 .card {
-width: 78px;
-height: 110px;
-border-radius: 10px;
-background: #ffffff; /* default face */
-border: 1px solid #222;
-position: relative;
-box-shadow: 0 2px 0 rgba(0, 0, 0, .35);
-font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial;
-margin-left: -22px; /* overlap */
+    width: 78px;
+    height: 110px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #222;
+    position: relative;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, .35);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial;
+    margin-left: -22px;
 
-&:first-child {
-margin-left: 0;
+    &:first-child {
+        margin-left: 0;
+    }
+
+    &.red {
+        color: #ce2f2f;
+    }
+
+    &:not(.red) {
+        color: #111;
+    }
+
+    &.up {
+        background: #ffffff;
+    }
+
+    &.down {
+        background: #0b3a7e;
+        border-color: #021c3b;
+        overflow: hidden;
+
+        .back {
+            position: absolute;
+            inset: 3px;
+            border-radius: 8px;
+            background-image:
+                radial-gradient(#b5c8ff 18%, transparent 19%),
+                radial-gradient(#b5c8ff 18%, transparent 19%);
+            background-size: 12px 12px;
+            background-position: 0 0, 6px 6px;
+            opacity: .8;
+        }
+
+        .corner {
+            display: none;
+        }
+    }
+
+    .corner {
+        position: absolute;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 1;
+
+        &.tl {
+            top: 8px;
+            left: 8px;
+        }
+
+        &.br {
+            bottom: 8px;
+            right: 8px;
+            transform: rotate(180deg);
+        }
+
+        .rank {
+            font-weight: 900;
+            font-size: 20px;
+
+            &.ten {
+                font-size: 18px;
+                letter-spacing: -0.5px;
+            }
+        }
+
+        .suit {
+            font-size: 18px;
+        }
+    }
 }
 
-&.red {
-color: #ce2f2f;
-}
-
-&:not(.red) {
-color: #111;
-}
-
-&.up {
-background: #ffffff; /* ensure revealed cards stay white */
-}
-
-/* Face-down version (used when dealer hole card is hidden) */
-&.down {
-background: #0b3a7e;
-border-color: #021c3b;
-overflow: hidden;
-
-.back {
-position: absolute;
-inset: 3px;
-border-radius: 8px;
-background-image:
-radial-gradient(#b5c8ff 18%, transparent 19%),
-radial-gradient(#b5c8ff 18%, transparent 19%);
-background-size: 12px 12px;
-background-position: 0 0, 6px 6px;
-opacity: .8;
-}
-
-/* hide face elements when down */
-.corner {
-display: none;
-}
-}
-
-/* Card corners (rank + suit only) */
-.corner {
-position: absolute;
-display: flex;
-flex-direction: column;
-align-items: center;
-line-height: 1;
-
-&.tl {
-top: 8px;
-left: 8px;
-}
-
-&.br {
-bottom: 8px;
-right: 8px;
-transform: rotate(180deg);
-}
-
-.rank {
-font-weight: 900;
-font-size: 20px;
-
-&.ten {
-font-size: 18px;
-letter-spacing: -0.5px;
-}
-}
-
-.suit {
-font-size: 18px;
-}
-}
-
-&.fresh {
-animation: bjDrawIn 320ms ease-out both;
-}
-}
-
-/* --- Dealing / drawing animations --- */
-/* initial deal: slides from top-center-ish, with slight rotation */
+/* --- Deal Animations --- */
 @keyframes bjDealIn {
-0% {
-transform: translateY(-28px) translateX(-10px) scale(0.96) rotate(-5deg);
-opacity: 0;
+    0% {
+        transform: translateY(-28px) translateX(-10px) scale(0.96) rotate(-5deg);
+        opacity: 0;
+    }
+
+    60% {
+        transform: translateY(3px) translateX(1px) scale(1.01) rotate(-1deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(0) translateX(0) scale(1) rotate(0deg);
+        opacity: 1;
+    }
 }
 
-60% {
-transform: translateY(3px) translateX(1px) scale(1.01) rotate(-1deg);
-opacity: 1;
+/* --- Confetti like HighLow --- */
+.bj-confetti {
+    position: absolute;
+    pointer-events: none;
+    inset: 0;
+    overflow: hidden;
+
+    .piece {
+        position: absolute;
+        top: -12px;
+        width: 8px;
+        height: 12px;
+        border-radius: 2px;
+        background: linear-gradient(180deg,
+                #ffe066,
+                #ff8b8b,
+                #8be1ff,
+                #baffc9);
+        opacity: 0;
+        animation: bj-confetti-fall 1.8s ease-out forwards;
+    }
 }
 
-100% {
-transform: translateY(0) translateX(0) scale(1) rotate(0deg);
-opacity: 1;
-}
+@keyframes bj-confetti-fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(220%) rotate(520deg);
+        opacity: 0;
+    }
 }
 
-/* draw (hit) animation: quicker, gentle slide-up */
-@keyframes bjDrawIn {
-0% {
-transform: translateY(14px) scale(0.98);
-opacity: 0;
+/* quick table flash when blackjack */
+.bj-root.bj-flash .bj-body {
+    animation: bjFlash 600ms ease-out 1;
 }
 
-100% {
-transform: translateY(0) scale(1.00);
-opacity: 1;
+@keyframes bjFlash {
+    0% {
+        box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+    }
+
+    20% {
+        box-shadow: 0 0 30px rgba(255, 255, 255, .55), inset 0 0 18px rgba(255, 255, 255, .35);
+    }
+
+    100% {
+        box-shadow: 0 0 0 rgba(255, 255, 255, 0), inset 0 0 0 rgba(255, 255, 255, 0);
+    }
 }
+
+/* confetti */
+.bj-confetti {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
 }
+
+.bj-confetti .piece {
+    position: absolute;
+    top: -10px;
+    width: 8px;
+    height: 12px;
+    background: linear-gradient(180deg, #fff, #ccc);
+    transform: rotate(10deg);
+    animation: fall 1.6s linear forwards;
+    opacity: .95;
+}
+
+@keyframes fall {
+    0% {
+        transform: translateY(-12px) rotate(10deg);
+    }
+
+    100% {
+        transform: translateY(120%) rotate(380deg);
+    }
+}
+
 
 /* --- Responsive --- */
 @media (max-width: 700px) {
-.bj-root {
-width: min(680px, 94vw);
-}
+    .bj-root {
+        width: min(680px, 94vw);
+    }
 
-.bj-body .table .row {
-grid-template-columns: 70px 1fr 90px;
-}
+    .bj-body .table .row {
+        grid-template-columns: 70px 1fr 90px;
+    }
 
-.card {
-width: 72px;
-height: 102px;
-border-radius: 9px;
-margin-left: -20px;
+    .card {
+        width: 72px;
+        height: 102px;
+        border-radius: 9px;
+        margin-left: -20px;
 
-.corner .rank {
-font-size: 19px;
-}
+        .corner .rank {
+            font-size: 19px;
+        }
 
-.corner .suit {
-font-size: 17px;
-}
-}
-}
-
-/* ==========================================================
-Wanted list styles (unchanged, kept in same file for theme)
-========================================================== */
-
-$bg: #dedede;
-$border: #222;
-$header-grad: linear-gradient(180deg, #426e8f, #426e8f 50%, #5682a2 0, #5682a2);
-$shadow: 0 0 10px rgba(0, 0, 0, 0.4);
-
-/* ===== Container ===== */
-.wanted-list-view {
-position: absolute;
-z-index: 1100;
-background:#dfdfdf;
-border: 2px solid #FFF;
-border-radius: 10px;
-box-shadow: $shadow;
-overflow: hidden;
-transform-origin: bottom right;
-box-shadow: 0 0 rgba(0, 0, 0, .4), 0 0 rgba(0, 0, 0, .3), inset 0 -4px rgba(0, 0, 0, .2);
-}
-
-/* slide IN from bottom-right */
-.wanted-list-view.enter-br {
-animation: slideInBR 300ms cubic-bezier(.2, .9, .2, 1) both;
-}
-
-/* slide OUT toward bottom-right */
-.wanted-list-view.exit-br {
-animation: slideOutBR 220ms cubic-bezier(.2, .9, .2, 1) both;
-}
-
-@keyframes slideInBR {
-from {
-transform: translate(24px, 24px) scale(.98);
-opacity: 0;
-}
-
-to {
-transform: translate(0, 0) scale(1);
-opacity: 1;
-}
-}
-
-@keyframes slideOutBR {
-from {
-transform: translate(0, 0) scale(1);
-opacity: 1;
-}
-
-to {
-transform: translate(24px, 24px) scale(.98);
-opacity: 0;
-}
-}
-
-/* ===== Header / Close ===== */
-.wanted-header {
-display: flex;
-align-items: center;
-justify-content: space-between;
-background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
-color: #fff;
-padding: 8px 10px;
-font-size: 20px;
-cursor: grab;
-user-select: none;
-}
-
-/* updated close button */
-.close-button {
-position: absolute;
-top: 6px;
-right: 8px;
-width: 24px;
-height: 24px;
-border: 2px solid #921911;
-background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
-border-radius: 4px;
-box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
-cursor: pointer;
-padding: 0;
-
-&:before,
-&:after {
-content: "";
-position: absolute;
-left: 50%;
-top: 50%;
-width: 12px;
-height: 2px;
-background: #fff;
-border-radius: 1px;
-transform-origin: center;
-}
-}
-
-/* ===== Content ===== */
-.wanted-content {
-height: calc(100% - 42px);
-overflow: auto;
-padding: 10px;
-color: #000;
-}
-
-/* Empty state centered exactly */
-.empty-state {
-height: 100%;
-min-height: 280px;
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-gap: 12px;
-text-align: center;
-
-.empty-icon {
-width: 84px;
-height: 84px;
-border-radius: 50%;
-background: #ffd766;
-box-shadow: inset 0 2px 0 rgba(255, 255, 255, .65),
-inset 0 -4px 0 rgba(0, 0, 0, .15),
-0 0 0 4px #d5a321;
-display: grid;
-place-items: center;
-overflow: hidden;
-
-img {
-width: 64px;
-height: 64px;
-object-fit: contain;
-image-rendering: pixelated;
-}
-}
-
-.empty-title {
-font-weight: 800;
-letter-spacing: .3px;
-color: #000000;
-}
-
-.empty-sub {
-color: #000000;
-font-size: 14px;
-}
-}
-
-/* ===== List rows ===== */
-.wanted-entry {
-position: relative;
-display: flex;
-align-items: center;
-padding: 10px 10px;
-gap: 10px;
-border-radius: 8px;
-background: rgba(255, 255, 255, .55);
-transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
-
-&.colorized::before {
-content: "";
-position: absolute;
-left: 4px;
-top: 6px;
-bottom: 6px;
-width: 4px;
-border-radius: 3px;
-background: var(--accent, #d26);
-}
-
-&:hover {
-transform: translateY(-1px);
-box-shadow: 0 1px 0 rgba(0, 0, 0, .2), 0 2px 0 rgba(0, 0, 0, .12);
-background: rgba(255, 255, 255, .8);
-}
-}
-
-.avatar img {
-width: 40px;
-height: 40px;
-border: 1px solid #999;
-background: #eee;
-border-radius: 6px;
-}
-
-.wanted-info {
-display: flex;
-flex-direction: column;
-}
-
-.username {
-font-weight: bold;
-margin-bottom: 4px;
-color: #000;
-}
-
-.charges {
-color: #444;
-font-size: 13px;
-margin-bottom: 4px;
-}
-
-/* image stars */
-.wanted-stars {
-display: flex;
-align-items: center;
-gap: 2px;
-
-.star {
-width: 22px;
-height: 22px;
-image-rendering: pixelated;
-user-select: none;
-pointer-events: none;
-transition: transform .12s ease, filter .12s ease;
-}
-
-.star {
-filter: drop-shadow(0 0 0 transparent);
-}
-
-.star.filled {
-/* tweak glow on hover below if desired */
-}
-}
-
-.wanted-entry:hover .wanted-stars .star {
-transform: translateY(-1px) rotate(-2deg);
-filter: drop-shadow(0 0 2px rgba(255, 190, 0, .35));
-}
-
-/* ===== Resize handle ===== */
-.resize-handle {
-position: absolute;
-right: 0;
-bottom: 0;
-width: 16px;
-height: 16px;
-cursor: nwse-resize;
-background:
-linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, .25) 50%) no-repeat,
-linear-gradient(135deg, transparent 60%, rgba(0, 0, 0, .45) 60%) no-repeat;
-background-size: 100% 100%, 10px 10px;
-background-position: 0 0, right bottom;
-pointer-events: auto;
-}
-
-/* ===== Mobile ===== */
-@media (max-width: 480px) {
-.wanted-list-view {
-width: 90% !important;
-left: 50% !important;
-transform: translateX(-50%);
-font-size: 14px;
-}
-
-.wanted-content {
-max-height: 60vh;
-padding: 8px;
-}
-
-.wanted-entry {
-flex-direction: column;
-align-items: flex-start;
-gap: 6px;
-padding: 8px;
-}
-
-.avatar img {
-width: 36px;
-height: 36px;
-}
-
-.username {
-font-size: 14px;
-}
-
-.charges {
-font-size: 12px;
-}
-
-.wanted-stars .star {
-width: 18px;
-height: 18px;
-}
+        .corner .suit {
+            font-size: 17px;
+        }
+    }
 }

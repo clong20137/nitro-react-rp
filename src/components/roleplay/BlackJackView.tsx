@@ -2,7 +2,7 @@ import React, { FC, useEffect, useRef, useState } from "react";
 import { createRoot, Root } from "react-dom/client";
 import "./BlackjackView.scss";
 
-/* ----- composers ----- */
+/* ----- composers (unchanged) ----- */
 import { SendMessageComposer } from "../../api";
 import { BlackjackLeaveComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackjackLeaveComposer";
 import { BlackjackAcceptComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackjackAcceptComposer";
@@ -26,30 +26,26 @@ const insuranceYes = () =>
 const insuranceNo = () =>
     SendMessageComposer(new BlackjackInsuranceComposer(false));
 
-/* ---------- types (matches parser) ---------- */
+/* ---------- types (matches your parser) ---------- */
 type BJPhase = "INVITE" | "PLAYING" | "ENDED";
 type BJMsg = { text: string; level: "info" | "warn" | "error" };
 
 type BJState = {
-    phase?: BJPhase;
-    state?: BJPhase;
-
+    phase?: BJPhase; // optional alias sent by server
+    state?: BJPhase; // same as above
     dealerReveal: boolean;
     dealerCards: string[];
     dealerTotal: number;
-
     playerHand: string[];
     playerTotal: number;
     playerTurn: boolean;
-
     canDouble: boolean;
     canSplit: boolean;
     insuranceOffered: boolean;
-
     bet: number;
     messages: BJMsg[];
-
-    isDealer?: boolean; // <-- from server
+    /** Optional; if you wire it server-side we’ll use it. */
+    isDealer?: boolean;
 };
 
 /* ---------- card helpers ---------- */
@@ -73,7 +69,6 @@ const RANK: Record<string, string> = {
 function parseCard(code: string) {
     if (!code || code === "?" || code === "HID" || code === "??")
         return { rank: "?", suit: "•", red: false, ten: false, hidden: true };
-
     const up = code.toUpperCase().trim();
     const rank = RANK[up[0]] || "?";
     const suit = SUIT[up[1]] || "•";
@@ -123,7 +118,7 @@ const PlayingCard: FC<{
     );
 };
 
-/* ---------- draggable ---------- */
+/* ---------- small drag hook using header as handle ---------- */
 function useDrag(ref: React.RefObject<HTMLElement>) {
     useEffect(() => {
         const node = ref.current;
@@ -137,22 +132,32 @@ function useDrag(ref: React.RefObject<HTMLElement>) {
             by = 0,
             dragging = false;
 
-        const down = (e: MouseEvent) => {
+        const down = (e: MouseEvent | TouchEvent) => {
+            const point = (e as TouchEvent).touches
+                ? (e as TouchEvent).touches[0]
+                : (e as MouseEvent);
             dragging = true;
-            sx = e.clientX;
-            sy = e.clientY;
-            const rect = node.getBoundingClientRect();
-            bx = rect.left;
-            by = rect.top;
+            sx = point.clientX;
+            sy = point.clientY;
+            const r = node.getBoundingClientRect();
+            bx = r.left;
+            by = r.top;
             document.addEventListener("mousemove", move);
             document.addEventListener("mouseup", up);
-            e.preventDefault();
+            document.addEventListener("touchmove", move, { passive: false });
+            document.addEventListener("touchend", up);
+            e.preventDefault?.();
         };
 
-        const move = (e: MouseEvent) => {
+        const move = (e: MouseEvent | TouchEvent) => {
             if (!dragging) return;
-            node.style.left = `${bx + (e.clientX - sx)}px`;
-            node.style.top = `${by + (e.clientY - sy)}px`;
+            const point = (e as TouchEvent).touches
+                ? (e as TouchEvent).touches[0]
+                : (e as MouseEvent);
+            const nx = bx + (point.clientX - sx);
+            const ny = by + (point.clientY - sy);
+            node.style.left = `${nx}px`;
+            node.style.top = `${ny}px`;
             node.style.transform = "translate(0,0)";
         };
 
@@ -160,10 +165,16 @@ function useDrag(ref: React.RefObject<HTMLElement>) {
             dragging = false;
             document.removeEventListener("mousemove", move);
             document.removeEventListener("mouseup", up);
+            document.removeEventListener("touchmove", move as any);
+            document.removeEventListener("touchend", up);
         };
 
-        handle.addEventListener("mousedown", down);
-        return () => handle.removeEventListener("mousedown", down);
+        handle.addEventListener("mousedown", down as any);
+        handle.addEventListener("touchstart", down as any);
+        return () => {
+            handle.removeEventListener("mousedown", down as any);
+            handle.removeEventListener("touchstart", down as any);
+        };
     }, [ref]);
 }
 
@@ -173,129 +184,156 @@ type VCard = { id: number; code: string };
 export const BlackjackView: FC = () => {
     const [open, setOpen] = useState(false);
     const [st, setSt] = useState<BJState | null>(null);
+
     const [toasts, setToasts] = useState<
         Array<{ id: number; text: string; level: string }>
     >([]);
-
-    // staged visible cards with stable IDs
     const [visDealer, setVisDealer] = useState<VCard[]>([]);
     const [visPlayer, setVisPlayer] = useState<VCard[]>([]);
+    const [confetti, setConfetti] = useState<
+        Array<{ id: number; left: number; delay: number }>
+    >([]);
+    const [tableFlash, setTableFlash] = useState(false);
+
     const idSeq = useRef(1);
     const lastPhaseRef = useRef<BJPhase | null>(null);
+    const lastRevealRef = useRef<boolean>(false);
 
     const rootRef = useRef<HTMLDivElement>(null);
     useDrag(rootRef);
 
+    /* Mount listeners once */
     useEffect(() => {
         const W = window as any;
-        if (!W.__BJ_LISTENERS__) {
-            const onModule = (e: Event) => {
-                const detail = (e as CustomEvent).detail || {};
-                setOpen(true);
-                setSt(
-                    (prev) =>
-                        prev || {
-                            phase: "INVITE",
-                            dealerReveal: false,
-                            dealerCards: [],
-                            dealerTotal: 0,
-                            playerHand: [],
-                            playerTotal: 0,
-                            playerTurn: false,
-                            canDouble: false,
-                            canSplit: false,
-                            insuranceOffered: false,
-                            bet: detail.bet ?? 0,
-                            messages: [],
-                            isDealer: detail.isDealer ?? false,
-                        }
+        if (W.__BJ_LISTENERS__) return;
+
+        const onModule = (e: Event) => {
+            const detail = (e as CustomEvent).detail || {};
+            setOpen(true);
+            setSt(
+                (prev) =>
+                    prev || {
+                        phase: "INVITE",
+                        dealerReveal: false,
+                        dealerCards: [],
+                        dealerTotal: 0,
+                        playerHand: [],
+                        playerTotal: 0,
+                        playerTurn: false,
+                        canDouble: false,
+                        canSplit: false,
+                        insuranceOffered: false,
+                        bet: detail.bet ?? 0,
+                        messages: [],
+                        isDealer: detail.isDealer ?? false,
+                    }
+            );
+            // clear stage for a fresh invite screen
+            setVisDealer([]);
+            setVisPlayer([]);
+            idSeq.current = 1;
+            lastPhaseRef.current = "INVITE";
+            lastRevealRef.current = false;
+        };
+
+        const onState = (e: Event) => {
+            const incoming = (e as CustomEvent).detail as BJState;
+            const phase: BJPhase = (incoming.phase ||
+                incoming.state ||
+                "INVITE") as BJPhase;
+
+            const safe: BJState = {
+                phase,
+                state: incoming.state,
+                dealerReveal: !!incoming?.dealerReveal,
+                dealerCards: Array.isArray(incoming?.dealerCards)
+                    ? incoming.dealerCards
+                    : [],
+                dealerTotal: Number.isFinite((incoming as any)?.dealerTotal)
+                    ? (incoming as any).dealerTotal
+                    : 0,
+                playerHand: Array.isArray(incoming?.playerHand)
+                    ? incoming.playerHand
+                    : [],
+                playerTotal: Number.isFinite((incoming as any)?.playerTotal)
+                    ? (incoming as any).playerTotal
+                    : 0,
+                playerTurn: !!incoming?.playerTurn,
+                canDouble: !!incoming?.canDouble,
+                canSplit: !!incoming?.canSplit,
+                insuranceOffered: !!incoming?.insuranceOffered,
+                bet: Number.isFinite((incoming as any)?.bet)
+                    ? (incoming as any).bet
+                    : 0,
+                messages: Array.isArray(incoming?.messages)
+                    ? incoming.messages
+                    : [],
+                isDealer: !!incoming.isDealer,
+            };
+
+            setSt(safe);
+
+            // toasts
+            if (safe.messages.length) {
+                setToasts((ts) =>
+                    [
+                        {
+                            id: Math.random(),
+                            text: safe.messages[0].text,
+                            level: safe.messages[0].level,
+                        },
+                        ...ts,
+                    ].slice(0, 6)
                 );
-                // brand-new mount: clear stage
+            }
+
+            // celebrate natural blackjack (you) or a toast that mentions it
+            const naturalBJ =
+                safe.playerHand.length === 2 && safe.playerTotal === 21;
+            const toastBJ = safe.messages.some((m) =>
+                /blackjack/i.test(m.text)
+            );
+            if (naturalBJ || toastBJ) {
+                setTableFlash(true);
+                const pieces = Array.from({ length: 60 }).map((_, i) => ({
+                    id: Date.now() + i,
+                    left: Math.random() * 100,
+                    delay: Math.random() * 0.6,
+                }));
+                setConfetti(pieces);
+                setTimeout(() => setConfetti([]), 1800);
+                setTimeout(() => setTableFlash(false), 600);
+            }
+
+            const prevPhase = lastPhaseRef.current;
+            const prevReveal = lastRevealRef.current;
+            lastPhaseRef.current = phase;
+            lastRevealRef.current = !!safe.dealerReveal;
+
+            // reset if new invite / cards removed / previous ended
+            const resetNeeded =
+                phase === "INVITE" ||
+                safe.playerHand.length < visPlayer.length ||
+                safe.dealerCards.length < visDealer.length ||
+                prevPhase === "ENDED";
+
+            if (resetNeeded) {
                 setVisDealer([]);
                 setVisPlayer([]);
                 idSeq.current = 1;
-                lastPhaseRef.current = "INVITE";
-            };
+            }
 
-            const onState = (e: Event) => {
-                const incoming = (e as CustomEvent).detail as BJState;
-
-                const phase: BJPhase = (incoming.phase ||
-                    incoming.state ||
-                    "INVITE") as BJPhase;
-
-                const safe: BJState = {
-                    phase,
-                    state: incoming.state,
-                    dealerReveal: !!incoming?.dealerReveal,
-                    dealerCards: Array.isArray(incoming?.dealerCards)
-                        ? incoming.dealerCards
-                        : [],
-                    dealerTotal: Number.isFinite((incoming as any)?.dealerTotal)
-                        ? (incoming as any).dealerTotal
-                        : 0,
-                    playerHand: Array.isArray(incoming?.playerHand)
-                        ? incoming.playerHand
-                        : [],
-                    playerTotal: Number.isFinite((incoming as any)?.playerTotal)
-                        ? (incoming as any).playerTotal
-                        : 0,
-                    playerTurn: !!incoming?.playerTurn,
-                    canDouble: !!incoming?.canDouble,
-                    canSplit: !!incoming?.canSplit,
-                    insuranceOffered: !!incoming?.insuranceOffered,
-                    bet: Number.isFinite((incoming as any)?.bet)
-                        ? (incoming as any).bet
-                        : 0,
-                    messages: Array.isArray(incoming?.messages)
-                        ? incoming.messages
-                        : [],
-                    isDealer: !!incoming.isDealer,
-                };
-
-                setSt(safe);
-
-                // toasts
-                if (safe.messages.length) {
-                    setToasts((ts) =>
-                        [
-                            {
-                                id: Math.random(),
-                                text: safe.messages[0].text,
-                                level: safe.messages[0].level,
-                            },
-                            ...ts,
-                        ].slice(0, 6)
-                    );
-                }
-
-                const prevPhase = lastPhaseRef.current;
-                lastPhaseRef.current = phase;
-
-                const resetNeeded =
-                    phase === "INVITE" ||
-                    safe.playerHand.length < visPlayer.length ||
-                    safe.dealerCards.length < visDealer.length;
-
-                if (resetNeeded || prevPhase === "ENDED") {
-                    setVisDealer([]);
-                    setVisPlayer([]);
-                    idSeq.current = 1;
-                }
-
-                // player – append only new
-                setVisPlayer((cur) => {
-                    const next = [...cur];
-                    for (let i = cur.length; i < safe.playerHand.length; i++) {
-                        next.push({
-                            id: idSeq.current++,
-                            code: safe.playerHand[i],
-                        });
-                    }
-                    return next;
-                });
-
-                // dealer – append only new (face-down is handled at render time)
+            // dealer hand staging:
+            // when dealerReveal flips false->true, rebuild fully to replace "??" with real code
+            const justRevealed = !prevReveal && !!safe.dealerReveal;
+            if (justRevealed) {
+                setVisDealer(
+                    safe.dealerCards.map((code) => ({
+                        id: idSeq.current++,
+                        code,
+                    }))
+                );
+            } else {
                 setVisDealer((cur) => {
                     const next = [...cur];
                     for (let i = cur.length; i < safe.dealerCards.length; i++) {
@@ -306,20 +344,41 @@ export const BlackjackView: FC = () => {
                     }
                     return next;
                 });
+            }
 
-                setOpen(true);
-            };
+            // player hand: append only new cards
+            setVisPlayer((cur) => {
+                const next = [...cur];
+                for (let i = cur.length; i < safe.playerHand.length; i++) {
+                    next.push({
+                        id: idSeq.current++,
+                        code: safe.playerHand[i],
+                    });
+                }
+                return next;
+            });
 
-            W.__BJ_LISTENERS__ = { onModule, onState };
-            window.addEventListener(
+            setOpen(true);
+        };
+
+        W.__BJ_LISTENERS__ = { onModule, onState };
+        window.addEventListener(
+            "blackjack_module_result",
+            onModule as EventListener
+        );
+        window.addEventListener("blackjack_state", onState as EventListener);
+
+        return () => {
+            window.removeEventListener(
                 "blackjack_module_result",
                 onModule as EventListener
             );
-            window.addEventListener(
+            window.removeEventListener(
                 "blackjack_state",
                 onState as EventListener
             );
-        }
+            W.__BJ_LISTENERS__ = null;
+        };
     }, [visDealer.length, visPlayer.length]);
 
     if (!open) return null;
@@ -328,9 +387,7 @@ export const BlackjackView: FC = () => {
     const inviting = phase === "INVITE";
     const playing = phase === "PLAYING";
     const myTurn = !!st?.playerTurn;
-
-    // TRUST the flag from server only
-    const isDealer = !!st?.isDealer;
+    const isDealer = !!st?.isDealer; // if you wire it, UI will use it
 
     const close = () => {
         setOpen(false);
@@ -340,7 +397,10 @@ export const BlackjackView: FC = () => {
     };
 
     return (
-        <div className="bj-root" ref={rootRef}>
+        <div
+            className={`bj-root ${tableFlash ? "bj-flash" : ""}`}
+            ref={rootRef}
+        >
             <div className="bj-header" title="Drag me">
                 <span>Blackjack</span>
                 <div className="spacer" />
@@ -386,7 +446,6 @@ export const BlackjackView: FC = () => {
                                 <PlayingCard
                                     key={d.id}
                                     code={d.code}
-                                    // only the 2nd card is ever face-down, flips when dealerReveal becomes true
                                     faceDown={!st?.dealerReveal && idx === 1}
                                     className="deal-in"
                                 />
@@ -434,7 +493,7 @@ export const BlackjackView: FC = () => {
                     </div>
                 )}
 
-                {/* CONTROLS — player only, never dealer */}
+                {/* CONTROLS — player only */}
                 {playing && !isDealer && (
                     <div className="controls">
                         <div className="act">
@@ -498,6 +557,22 @@ export const BlackjackView: FC = () => {
                         </div>
                     ))}
                 </div>
+
+                {/* Confetti */}
+                {confetti.length > 0 && (
+                    <div className="bj-confetti" aria-hidden="true">
+                        {confetti.map((p) => (
+                            <span
+                                key={p.id}
+                                className="piece"
+                                style={{
+                                    left: `${p.left}%`,
+                                    animationDelay: `${p.delay}s`,
+                                }}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -513,10 +588,10 @@ export default BlackjackView;
 
     const MOUNT_ID = "olrp-blackjack-root";
 
-    const dupes = Array.from(
-        document.querySelectorAll<HTMLElement>("#" + MOUNT_ID)
-    );
-    dupes.slice(1).forEach((n) => n.remove());
+    // remove stray dupes
+    Array.from(document.querySelectorAll<HTMLElement>("#" + MOUNT_ID))
+        .slice(1)
+        .forEach((n) => n.remove());
 
     let host = document.getElementById(MOUNT_ID) as HTMLElement | null;
     if (!host) {
@@ -525,6 +600,7 @@ export default BlackjackView;
         document.body.appendChild(host);
     }
 
+    // unmount any previous root bound here
     try {
         if (
             W.__BJ_ROOT__ &&
@@ -537,6 +613,7 @@ export default BlackjackView;
     root.render(<BlackjackView />);
     W.__BJ_ROOT__ = root;
 
+    // convenience opener
     W.OLRP_OPEN_BJ = (detail?: any) => {
         window.dispatchEvent(
             new CustomEvent("blackjack_module_result", { detail: detail || {} })
