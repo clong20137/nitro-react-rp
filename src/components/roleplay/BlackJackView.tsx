@@ -2,7 +2,7 @@ import React, { FC, useEffect, useRef, useState } from "react";
 import { createRoot, Root } from "react-dom/client";
 import "./BlackjackView.scss";
 
-/* ----- composers (unchanged) ----- */
+/* ----- composers ----- */
 import { SendMessageComposer } from "../../api";
 import { BlackjackLeaveComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackjackLeaveComposer";
 import { BlackjackAcceptComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/BlackjackAcceptComposer";
@@ -31,20 +31,25 @@ type BJPhase = "INVITE" | "PLAYING" | "ENDED";
 type BJMsg = { text: string; level: "info" | "warn" | "error" };
 
 type BJState = {
-    phase?: BJPhase; // optional alias sent by server
-    state?: BJPhase; // same as above
+    phase?: BJPhase;
+    state?: BJPhase;
+
     dealerReveal: boolean;
     dealerCards: string[];
     dealerTotal: number;
+
     playerHand: string[];
     playerTotal: number;
     playerTurn: boolean;
+
     canDouble: boolean;
     canSplit: boolean;
     insuranceOffered: boolean;
+
     bet: number;
     messages: BJMsg[];
-    /** Optional; if you wire it server-side we’ll use it. */
+
+    /** Optional; if server wires it we’ll use it. */
     isDealer?: boolean;
 };
 
@@ -118,73 +123,12 @@ const PlayingCard: FC<{
     );
 };
 
-/* ---------- small drag hook using header as handle ---------- */
-function useDrag(ref: React.RefObject<HTMLElement>) {
-    useEffect(() => {
-        const node = ref.current;
-        if (!node) return;
-        const handle =
-            (node.querySelector(".bj-header") as HTMLElement) || node;
-
-        let sx = 0,
-            sy = 0,
-            bx = 0,
-            by = 0,
-            dragging = false;
-
-        const down = (e: MouseEvent | TouchEvent) => {
-            const point = (e as TouchEvent).touches
-                ? (e as TouchEvent).touches[0]
-                : (e as MouseEvent);
-            dragging = true;
-            sx = point.clientX;
-            sy = point.clientY;
-            const r = node.getBoundingClientRect();
-            bx = r.left;
-            by = r.top;
-            document.addEventListener("mousemove", move);
-            document.addEventListener("mouseup", up);
-            document.addEventListener("touchmove", move, { passive: false });
-            document.addEventListener("touchend", up);
-            e.preventDefault?.();
-        };
-
-        const move = (e: MouseEvent | TouchEvent) => {
-            if (!dragging) return;
-            const point = (e as TouchEvent).touches
-                ? (e as TouchEvent).touches[0]
-                : (e as MouseEvent);
-            const nx = bx + (point.clientX - sx);
-            const ny = by + (point.clientY - sy);
-            node.style.left = `${nx}px`;
-            node.style.top = `${ny}px`;
-            node.style.transform = "translate(0,0)";
-        };
-
-        const up = () => {
-            dragging = false;
-            document.removeEventListener("mousemove", move);
-            document.removeEventListener("mouseup", up);
-            document.removeEventListener("touchmove", move as any);
-            document.removeEventListener("touchend", up);
-        };
-
-        handle.addEventListener("mousedown", down as any);
-        handle.addEventListener("touchstart", down as any);
-        return () => {
-            handle.removeEventListener("mousedown", down as any);
-            handle.removeEventListener("touchstart", down as any);
-        };
-    }, [ref]);
-}
-
 /* ---------- main view ---------- */
 type VCard = { id: number; code: string };
 
 export const BlackjackView: FC = () => {
     const [open, setOpen] = useState(false);
     const [st, setSt] = useState<BJState | null>(null);
-
     const [toasts, setToasts] = useState<
         Array<{ id: number; text: string; level: string }>
     >([]);
@@ -195,14 +139,95 @@ export const BlackjackView: FC = () => {
     >([]);
     const [tableFlash, setTableFlash] = useState(false);
 
+    // draggable position (High/Low style)
+    const [dragPos, setDragPos] = useState(() => {
+        const w = typeof window !== "undefined" ? window.innerWidth : 800;
+        const h = typeof window !== "undefined" ? window.innerHeight : 600;
+        const defaultWidth = 680,
+            defaultHeight = 420;
+        return {
+            x: Math.max(8, (w - defaultWidth) / 2),
+            y: Math.max(8, (h - defaultHeight) / 2),
+        };
+    });
+    const [dragging, setDragging] = useState(false);
+    const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
     const idSeq = useRef(1);
     const lastPhaseRef = useRef<BJPhase | null>(null);
     const lastRevealRef = useRef<boolean>(false);
 
     const rootRef = useRef<HTMLDivElement>(null);
-    useDrag(rootRef);
 
-    /* Mount listeners once */
+    // Global listeners while dragging (mouse + touch)
+    useEffect(() => {
+        if (!dragging) return;
+
+        const onMove = (evt: MouseEvent | TouchEvent) => {
+            let cx = 0,
+                cy = 0;
+            if (evt instanceof MouseEvent) {
+                cx = evt.clientX;
+                cy = evt.clientY;
+            } else if (
+                (evt as TouchEvent).touches &&
+                (evt as TouchEvent).touches[0]
+            ) {
+                cx = (evt as TouchEvent).touches[0].clientX;
+                cy = (evt as TouchEvent).touches[0].clientY;
+            }
+            const { x, y } = dragOffsetRef.current;
+            const nx = cx - x;
+            const ny = cy - y;
+
+            // clamp a bit inside viewport
+            const w = window.innerWidth || 800;
+            const h = window.innerHeight || 600;
+            const clampedX = Math.min(Math.max(4, nx), w - 260);
+            const clampedY = Math.min(Math.max(4, ny), h - 200);
+            setDragPos({ x: clampedX, y: clampedY });
+        };
+
+        const end = () => setDragging(false);
+
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", end);
+        window.addEventListener("touchmove", onMove, { passive: false });
+        window.addEventListener("touchend", end);
+
+        return () => {
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", end);
+            window.removeEventListener("touchmove", onMove as any);
+            window.removeEventListener("touchend", end);
+        };
+    }, [dragging]);
+
+    const beginDragMouse = (e: React.MouseEvent) => {
+        if (!rootRef.current) return;
+        const rect = rootRef.current.getBoundingClientRect();
+        dragOffsetRef.current = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+        };
+        setDragging(true);
+        e.preventDefault();
+    };
+
+    const beginDragTouch = (e: React.TouchEvent) => {
+        if (!rootRef.current) return;
+        const t = e.touches[0];
+        if (!t) return;
+        const rect = rootRef.current.getBoundingClientRect();
+        dragOffsetRef.current = {
+            x: t.clientX - rect.left,
+            y: t.clientY - rect.top,
+        };
+        setDragging(true);
+        e.preventDefault();
+    };
+
+    /* Mount listeners once (singleton) */
     useEffect(() => {
         const W = window as any;
         if (W.__BJ_LISTENERS__) return;
@@ -225,10 +250,10 @@ export const BlackjackView: FC = () => {
                         insuranceOffered: false,
                         bet: detail.bet ?? 0,
                         messages: [],
-                        isDealer: detail.isDealer ?? false,
+                        isDealer: !!detail.isDealer, // if server/bridge sends it
                     }
             );
-            // clear stage for a fresh invite screen
+            // clear stage for fresh invite
             setVisDealer([]);
             setVisPlayer([]);
             idSeq.current = 1;
@@ -268,7 +293,7 @@ export const BlackjackView: FC = () => {
                 messages: Array.isArray(incoming?.messages)
                     ? incoming.messages
                     : [],
-                isDealer: !!incoming.isDealer,
+                isDealer: !!incoming.isDealer, // respected if provided
             };
 
             setSt(safe);
@@ -287,7 +312,7 @@ export const BlackjackView: FC = () => {
                 );
             }
 
-            // celebrate natural blackjack (you) or a toast that mentions it
+            // celebration for blackjack
             const naturalBJ =
                 safe.playerHand.length === 2 && safe.playerTotal === 21;
             const toastBJ = safe.messages.some((m) =>
@@ -323,8 +348,7 @@ export const BlackjackView: FC = () => {
                 idSeq.current = 1;
             }
 
-            // dealer hand staging:
-            // when dealerReveal flips false->true, rebuild fully to replace "??" with real code
+            // dealer hand staging: rebuild on first reveal so "??" gets replaced immediately
             const justRevealed = !prevReveal && !!safe.dealerReveal;
             if (justRevealed) {
                 setVisDealer(
@@ -346,7 +370,7 @@ export const BlackjackView: FC = () => {
                 });
             }
 
-            // player hand: append only new cards
+            // player hand: append only new
             setVisPlayer((cur) => {
                 const next = [...cur];
                 for (let i = cur.length; i < safe.playerHand.length; i++) {
@@ -387,7 +411,7 @@ export const BlackjackView: FC = () => {
     const inviting = phase === "INVITE";
     const playing = phase === "PLAYING";
     const myTurn = !!st?.playerTurn;
-    const isDealer = !!st?.isDealer; // if you wire it, UI will use it
+    const isDealer = !!st?.isDealer; // UI respects server flag
 
     const close = () => {
         setOpen(false);
@@ -398,10 +422,16 @@ export const BlackjackView: FC = () => {
 
     return (
         <div
-            className={`bj-root ${tableFlash ? "bj-flash" : ""}`}
+            className={`bj-root ${tableFlash ? "bj-flash" : "bj-open"}`}
             ref={rootRef}
+            style={{ left: dragPos.x, top: dragPos.y }}
         >
-            <div className="bj-header" title="Drag me">
+            <div
+                className="bj-header"
+                title="Drag me"
+                onMouseDown={beginDragMouse}
+                onTouchStart={beginDragTouch}
+            >
                 <span>Blackjack</span>
                 <div className="spacer" />
                 <button className="bj-close" onClick={close} />

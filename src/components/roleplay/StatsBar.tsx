@@ -1,4 +1,11 @@
-import { FC, useEffect, useRef, useState, useLayoutEffect } from "react";
+import {
+    FC,
+    useEffect,
+    useRef,
+    useState,
+    useLayoutEffect,
+    useMemo,
+} from "react";
 import { GetSessionDataManager, SendMessageComposer } from "../../api";
 import "./StatsBar.scss";
 import { XPGainPopup } from "./XPGainPopup";
@@ -43,15 +50,14 @@ export const StatsBar: FC = () => {
     const [maxHunger, setMaxHunger] = useState(100);
 
     // --- Aggression (animated) ---
-    // We keep the last server value and the moment we received it.
-    const aggressionInitialMsRef = useRef(0); // how many ms were remaining when server last spoke
-    const aggressionStartTsRef = useRef(0); // performance.now() timestamp of that packet
-    const [aggressionWindowMs, setAggressionWindowMs] = useState(45_000); // default window, can be overridden by server
+    const aggressionInitialMsRef = useRef(0);
+    const aggressionStartTsRef = useRef(0);
+    const [aggressionWindowMs, setAggressionWindowMs] = useState(45_000);
     const [inTurfRoom, setInTurfRoom] = useState(false);
     const [isAggressive, setAggressive] = useState(false);
 
-    // A lightweight "clock" to force re-render ~60fps
-    const [now, setNow] = useState(() => performance.now())
+    // lightweight 60fps clock
+    const [now, setNow] = useState(() => performance.now());
     useEffect(() => {
         let raf: number;
         const tick = () => {
@@ -115,11 +121,14 @@ export const StatsBar: FC = () => {
     const [lastXp, setLastXp] = useState(xp);
     const [xpGained, setXpGained] = useState<number | null>(null);
     const [showXPTooltip, setShowXPTooltip] = useState(false);
-    const [showProfile, setShowProfile] = useState(false);
     const [healthlevel, setHealthLevel] = useState(0);
     const [cooldown, setCooldown] = useState(0);
     const [showCallInput, setShowCallInput] = useState(false);
     const [callMessage, setCallMessage] = useState("");
+
+    // central profile state (me OR opponent)
+    const [profileStats, setProfileStats] = useState<any | null>(null);
+    const [showProfile, setShowProfile] = useState(false);
 
     const containerRef = useRef<HTMLDivElement | null>(null);
     useOnboardingAnchor("stats", containerRef);
@@ -159,7 +168,6 @@ export const StatsBar: FC = () => {
             setHunger(stats.hunger);
             setMaxHunger(stats.maxHunger);
 
-            // Aggression: accept aggressionMs | aggression_ms | aggression
             const incomingMs =
                 typeof stats.aggressionMs === "number"
                     ? stats.aggressionMs
@@ -213,7 +221,6 @@ export const StatsBar: FC = () => {
             const t = String(e?.detail?.type || "").toLowerCase();
             const isTurf = t.includes("turf");
             setInTurfRoom(isTurf);
-            // Optionally “pin” to full immediately on entry
             if (isTurf) {
                 aggressionInitialMsRef.current = Math.max(
                     aggressionInitialMsRef.current,
@@ -262,12 +269,80 @@ export const StatsBar: FC = () => {
             ? 0
             : Math.max(0, Math.min(100, Math.round((value / max) * 100)));
 
-    // Compute aggression remaining every render from refs + clock.
     const elapsed = Math.max(0, now - aggressionStartTsRef.current);
     const remainingMs = inTurfRoom
         ? aggressionWindowMs
         : Math.max(0, aggressionInitialMsRef.current - elapsed);
     const aggressionPercent = percent(remainingMs, aggressionWindowMs);
+
+    // Build self profile payload
+    const buildSelfProfile = () => ({
+        kills,
+        deaths,
+        punches: punches_thrown,
+        damageGiven: damage_inflicted,
+        damageReceived: damage_received,
+        strength,
+        stamina,
+        xp,
+        maxXP,
+        level,
+        points,
+        defense,
+        hungerLevel: hunger_level,
+        gathering,
+        username,
+        figure,
+        healthlevel,
+        gangName,
+        gangId,
+        gangIconKey,
+        gangPrimaryColor,
+        gangSecondaryColor,
+        motto,
+        jobTitle,
+        corporationName,
+        corporationIconUrl,
+        isOnline,
+    });
+
+    // Listen for opponent avatar click → open profile
+    useEffect(() => {
+        const onOpenOppProfile = (e: Event) => {
+            const { detail } = e as CustomEvent<any>;
+            if (!detail) return;
+
+            setProfileStats({
+                // sensible defaults (opponent payload may be sparse)
+                kills: 0,
+                deaths: 0,
+                punches: 0,
+                damageGiven: 0,
+                damageReceived: 0,
+                strength: 0,
+                stamina: 0,
+                xp: 0,
+                maxXP: 1,
+                level: 0,
+                points: 0,
+                defense: 0,
+                hungerLevel: 0,
+                gathering: 0,
+                ...detail,
+            });
+            setShowProfile(true);
+        };
+
+        window.addEventListener(
+            "open_profile_from_inspect",
+            onOpenOppProfile as EventListener
+        );
+        return () =>
+            window.removeEventListener(
+                "open_profile_from_inspect",
+                onOpenOppProfile as EventListener
+            );
+    }, []);
 
     return (
         <div ref={containerRef} className="stats-bar-container">
@@ -299,7 +374,10 @@ export const StatsBar: FC = () => {
 
                         <div
                             className="avatar-tooltip-wrapper"
-                            onClick={() => setShowProfile((p) => !p)}
+                            onClick={() => {
+                                setProfileStats(buildSelfProfile());
+                                setShowProfile(true);
+                            }}
                             onMouseEnter={() => setShowXPTooltip(true)}
                             onMouseLeave={() => setShowXPTooltip(false)}
                         >
@@ -324,6 +402,7 @@ export const StatsBar: FC = () => {
                     <div className="avatar-level">Level: {level}</div>
                 </div>
             </div>
+
             <div className="stats-right">
                 <div className="stat">
                     <div className="icons heart" />
@@ -358,7 +437,7 @@ export const StatsBar: FC = () => {
                     </div>
                 </div>
 
-                {/* Aggression bar: animates continuously; full if in Turf */}
+                {/* Aggression bar */}
                 <div className="aggression-bar-wrapper">
                     <div
                         className="aggression-fill"
@@ -366,50 +445,21 @@ export const StatsBar: FC = () => {
                     />
                 </div>
             </div>
-            {showProfile && (
+
+            {showProfile && profileStats && (
                 <MyProfileView
                     onClose={() => setShowProfile(false)}
-                    isOnline={isOnline}
-                    stats={{
-                        kills,
-                        deaths,
-                        punches: punches_thrown,
-                        damageGiven: damage_inflicted,
-                        damageReceived: damage_received,
-                        strength,
-                        stamina,
-                        energy: 2,
-                        hunger: 0,
-                        xp,
-                        maxXP,
-                        level,
-                        points,
-                        defense,
-                        hungerLevel: hunger_level,
-                        gathering,
-                        username,
-                        figure,
-                        healthlevel,
-                        gangName,
-                        gangId,
-                        gangIconKey: gangIconKey,
-                        gangPrimaryColor,
-                        gangSecondaryColor,
-                        motto,
-                        jobTitle,
-                        corporationName,
-                        corporationIconUrl,
-                        isOnline,
-                    }}
+                    isOnline={profileStats.isOnline ?? true}
+                    stats={profileStats}
                     onUpgrade={(stat) => console.log("Upgrade stat:", stat)}
                 />
             )}
+
             <OpponentStatsOverlay
                 onClose={() =>
                     window.dispatchEvent(new CustomEvent("user_inspect_clear"))
                 }
             />
-            
         </div>
     );
 };

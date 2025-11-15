@@ -42,21 +42,21 @@
         <base href="./" />
         <title>Nitro</title>
         <link href="./static/css/vendors.34eda13e.chunk.css" rel="stylesheet" />
-        <link href="./static/css/main.46b45d97.chunk.css" rel="stylesheet" />
+        <link href="./static/css/main.031df4c0.chunk.css" rel="stylesheet" />
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
         <div id="root" class="w-100 h-100"></div>
         <script>
             const NitroConfig = {
-                "config.urls": ["./renderer-config.json", "./ui-config.json"],
+                "config.urls": ["./renderer-config.json", "/ui-config.json"],
                 "sso.ticket":
                     new URLSearchParams(window.location.search).get("sso") ||
                     null,
                 "forward.type": new URLSearchParams(window.location.search).get(
                     "room"
                 )
-                    ? 2
+                    ? 2.
                     : -1,
                 "forward.id":
                     new URLSearchParams(window.location.search).get("room") ||
@@ -175,6 +175,6 @@
         </script>
         <script src="./static/js/renderer.4ae160d4.chunk.js"></script>
         <script src="./static/js/vendors.d7e4a909.chunk.js"></script>
-        <script src="./static/js/main.d76ed2e3.chunk.js"></script>
+        <script src="./static/js/main.d7636c23.chunk.js"></script>
     </body>
 </html>

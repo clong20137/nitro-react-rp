@@ -2,7 +2,6 @@ import { FC, useEffect, useMemo, useRef, useState } from "react";
 import "./StatsBar.scss";
 import { SendMessageComposer } from "../../api";
 import { SetTargetComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/SetTargetComposer";
-// NEW: start/stop inspect (watch without locking)
 import { StartInspectComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/StartInspectComposer";
 
 type OpponentStats = {
@@ -15,7 +14,7 @@ type OpponentStats = {
     maxEnergy: number;
     hunger: number;
     maxHunger: number;
-    aggression?: number; // 0–100 (percent)
+    aggression?: number; // 0–100
     level?: number;
 };
 
@@ -23,11 +22,8 @@ type Props = { onClose: () => void };
 
 export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     const [stats, setStats] = useState<OpponentStats | null>(null);
-
-    // keep last userId we told the server we're watching (to avoid dup sends)
     const lastWatchedIdRef = useRef<number | 0>(0);
 
-    // merge helper to always trigger re-render
     const mergeUpdate = (payload: OpponentStats) => {
         setStats((prev) => {
             if (!prev) return { ...payload };
@@ -36,7 +32,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
         });
     };
 
-    // send watch/unwatch safely
     const sendWatch = (targetId: number) => {
         if (lastWatchedIdRef.current === targetId) return;
         lastWatchedIdRef.current = targetId;
@@ -45,32 +40,27 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
         } catch {}
     };
 
-    // primary listeners: any of these should both update UI AND start watching
     useEffect(() => {
         const onStats = (e: Event) => {
             const payload = (e as CustomEvent<OpponentStats>).detail;
             if (!payload?.userId) return;
             mergeUpdate(payload);
-            sendWatch(payload.userId); // ensure we’re subscribed server-side
+            sendWatch(payload.userId);
         };
 
-        // From your bridge
         window.addEventListener("user_inspect_stats", onStats as EventListener);
         window.addEventListener(
             "opponent_stats_update",
             onStats as EventListener
         );
-
-        // Also honor the bridge’s “open-opponent-stats” bootstrap event
         window.addEventListener(
             "open-opponent-stats",
             onStats as EventListener
         );
 
-        // Clear handler: hides UI and stops watching
         const onClear = () => {
             setStats(null);
-            sendWatch(0); // unsubscribe
+            sendWatch(0);
         };
         window.addEventListener("user_inspect_clear", onClear as EventListener);
 
@@ -91,17 +81,12 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                 "user_inspect_clear",
                 onClear as EventListener
             );
-
-            // safety: unwatch on unmount
             sendWatch(0);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // if some other UI path sets stats first, ensure we begin watching that userId
     useEffect(() => {
         if (stats?.userId) sendWatch(stats.userId);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stats?.userId]);
 
     const percent = (v: number, m: number) =>
@@ -109,14 +94,13 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
 
     const figureUrl = useMemo(() => {
         if (!stats?.figure) return "";
-        // Face LEFT (toward your bar)
+        // face LEFT (toward the bar)
         return `https://www.habbo.com/habbo-imaging/avatarimage?figure=${stats.figure}&direction=4&head_direction=4&gesture=sml`;
     }, [stats?.figure]);
 
     if (!stats) return null;
 
     const handleClose = () => {
-        // stop watching server-side, then bubble up
         sendWatch(0);
         window.dispatchEvent(new CustomEvent("user_inspect_clear"));
         onClose?.();
@@ -125,7 +109,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     return (
         <div className="opponent-anchor">
             <div className="stats-bar-container opponent">
-                {/* Bars column FIRST, avatar column LAST -> avatar sits on RIGHT */}
+                {/* Bars column */}
                 <div className="stats-right">
                     <div className="stat">
                         <div className="icons heart" />
@@ -190,13 +174,53 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                     </div>
                 </div>
 
-                {/* Avatar column on the RIGHT, facing LEFT */}
+                {/* Avatar column on the RIGHT, clickable to open profile */}
                 <div className="avatar-column" style={{ marginLeft: 10 }}>
                     <div
                         className="greek-circle"
                         title={`${stats.username}${
                             stats.level ? ` — Lv ${stats.level}` : ""
                         }`}
+                        onClick={() => {
+                            // Tell StatsBar to open a Profile using this payload
+                            window.dispatchEvent(
+                                new CustomEvent("open_profile_from_inspect", {
+                                    detail: {
+                                        username: stats.username,
+                                        figure: stats.figure,
+                                        level: stats.level ?? 0,
+
+                                        // Defaults (can be enriched later by a server packet)
+                                        kills: 0,
+                                        deaths: 0,
+                                        punches: 0,
+                                        damageGiven: 0,
+                                        damageReceived: 0,
+                                        strength: 0,
+                                        stamina: 0,
+                                        defense: 0,
+                                        healthlevel: 0,
+                                        hungerLevel: 0,
+                                        gathering: 0,
+                                        xp: 0,
+                                        maxXP: 1,
+                                        points: 0,
+
+                                        gangName: undefined,
+                                        gangId: undefined,
+                                        gangIconKey: undefined,
+                                        gangPrimaryColor: undefined,
+                                        gangSecondaryColor: undefined,
+                                        motto: undefined,
+                                        jobTitle: undefined,
+                                        corporationName: undefined,
+                                        corporationIconUrl: undefined,
+                                        isOnline: true,
+                                    },
+                                })
+                            );
+                        }}
+                        style={{ cursor: "pointer" }}
                     >
                         <img
                             className="avatar-head"
@@ -215,7 +239,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                     </div>
                 </div>
 
-                {/* Close + lock buttons sit just to the right edge */}
+                {/* Close + lock */}
                 <button
                     className="close-button_right"
                     onClick={handleClose}
@@ -230,7 +254,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
 const TargetLock: FC<{ userId: number }> = ({ userId }) => {
     const [locked, setLocked] = useState(false);
 
-    useEffect(() => setLocked(false), [userId]); // reset when switching target
+    useEffect(() => setLocked(false), [userId]);
 
     const toggle = () => {
         const next = !locked;

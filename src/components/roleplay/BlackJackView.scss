@@ -1,15 +1,20 @@
 /* =========================
 BlackjackView.scss (FULL)
-High/Low-Style Upgrade
+High/Low-Style Upgrade (DRAGGABLE)
 ========================= */
 
 /* --- Root container --- */
 .bj-root {
     position: fixed;
     z-index: 1100;
-    left: 50%;
-    top: 55%;
-    transform: translate(-50%, -50%);
+
+    /* Start position; React updates via inline style left/top */
+    left: 120px;
+    top: 120px;
+
+    /* IMPORTANT: no centering transform — it breaks dragging */
+    /* transform: translate(-50%, -50%); */
+
     background: #dfdfdf;
     border: 2px solid #fff;
     border-radius: 10px;
@@ -36,24 +41,24 @@ High/Low-Style Upgrade
 
 @keyframes bj-fade-in {
     from {
-        transform: translate(-50%, -48%) scale(.96);
+        transform: translateY(2%) scale(.96);
         opacity: 0;
     }
 
     to {
-        transform: translate(-50%, -50%) scale(1);
+        transform: translateY(0) scale(1);
         opacity: 1;
     }
 }
 
 @keyframes bj-fade-out {
     from {
-        transform: translate(-50%, -50%) scale(1);
+        transform: translateY(0) scale(1);
         opacity: 1;
     }
 
     to {
-        transform: translate(-50%, -52%) scale(.96);
+        transform: translateY(2%) scale(.96);
         opacity: 0;
     }
 }
@@ -71,6 +76,9 @@ High/Low-Style Upgrade
     font-weight: 700;
     cursor: grab;
     user-select: none;
+
+    /* Critical for touch dragging */
+    touch-action: none;
 
     span {
         text-shadow: 1px 1px 0 #000;
@@ -121,10 +129,7 @@ High/Low-Style Upgrade
 .bj-body {
     position: relative;
     padding: 14px 14px 18px;
-    background: radial-gradient(ellipse at center,
-            #146b2a 0%,
-            #0f5a22 60%,
-            #0b441a 100%);
+    background: radial-gradient(ellipse at center, #146b2a 0%, #0f5a22 60%, #0b441a 100%);
     border-top: 2px solid #0a3013;
     min-height: 380px;
 
@@ -313,28 +318,16 @@ High/Low-Style Upgrade
 
     &.green {
         color: #fff;
-        background: linear-gradient(180deg,
-                #3aa900 0,
-                #3aa900 50%,
-                #2d7d00 50%,
-                #2d7d00);
+        background: linear-gradient(180deg, #3aa900 0, #3aa900 50%, #2d7d00 50%, #2d7d00);
     }
 
     &.grey {
         color: #fff;
-        background: linear-gradient(180deg,
-                #888 0,
-                #888 50%,
-                #606060 50%,
-                #606060);
+        background: linear-gradient(180deg, #888 0, #888 50%, #606060 50%, #606060);
     }
 
     &.yellow {
-        background: linear-gradient(180deg,
-                #ffd166 0,
-                #ffd166 50%,
-                #e0aa24 50%,
-                #e0aa24);
+        background: linear-gradient(180deg, #ffd166 0, #ffd166 50%, #e0aa24 50%, #e0aa24);
     }
 
     &:disabled {
@@ -458,11 +451,7 @@ High/Low-Style Upgrade
         width: 8px;
         height: 12px;
         border-radius: 2px;
-        background: linear-gradient(180deg,
-                #ffe066,
-                #ff8b8b,
-                #8be1ff,
-                #baffc9);
+        background: linear-gradient(180deg, #ffe066, #ff8b8b, #8be1ff, #baffc9);
         opacity: 0;
         animation: bj-confetti-fall 1.8s ease-out forwards;
     }
@@ -502,36 +491,6 @@ High/Low-Style Upgrade
         box-shadow: 0 0 0 rgba(255, 255, 255, 0), inset 0 0 0 rgba(255, 255, 255, 0);
     }
 }
-
-/* confetti */
-.bj-confetti {
-    pointer-events: none;
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-}
-
-.bj-confetti .piece {
-    position: absolute;
-    top: -10px;
-    width: 8px;
-    height: 12px;
-    background: linear-gradient(180deg, #fff, #ccc);
-    transform: rotate(10deg);
-    animation: fall 1.6s linear forwards;
-    opacity: .95;
-}
-
-@keyframes fall {
-    0% {
-        transform: translateY(-12px) rotate(10deg);
-    }
-
-    100% {
-        transform: translateY(120%) rotate(380deg);
-    }
-}
-
 
 /* --- Responsive --- */
 @media (max-width: 700px) {

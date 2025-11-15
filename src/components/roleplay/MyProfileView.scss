@@ -1,3 +1,7 @@
+/* ==============================
+MyProfileView.scss (PATCHED)
+============================== */
+
 .profile-container {
     position: fixed !important;
     top: 60px;
@@ -5,27 +9,31 @@
     transform: translateX(-50%);
     width: 750px;
     box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
-    border: solid 2px #ffffff;
+    border: 2px solid #fff;
     background: #dfdfdf;
-    color: #ffffff;
+    color: #000;
     z-index: 9999;
     border-radius: 8px;
+    user-select: none;
 }
 
-/* ---------- Header ---------- */
+/* Header */
 .profile-header {
     background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
     color: #fff;
     display: flex;
-    justify-content: space-between;
     align-items: center;
     padding: 8px 12px;
-    font-weight: bold;
-    font-size: 20px;
+    font-weight: 700;
+    font-size: 18px;
     border-radius: 8px 8px 0 0;
+    cursor: grab;
+
+    .title {
+        text-shadow: 1px 1px 0 #000;
+    }
 }
 
-.close-btn,
 .close-button {
     position: absolute;
     top: 6px;
@@ -51,213 +59,219 @@
         border-radius: 1px;
         transform-origin: center;
     }
+
+    &:before {
+        transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &:after {
+        transform: translate(-50%, -50%) rotate(-45deg);
+    }
 }
 
-/* ---------- Body layout ---------- */
+/* Body: fixed left column like Habbo profile */
 .profile-body {
-    display: flex;
-    gap: 20px;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 14px;
     padding: 12px;
 }
 
-.profile-left,
+.profile-left {
+    width: 260px;
+}
+
 .profile-right {
-    flex: 1;
+    min-width: 0;
 }
 
-/* ===================== AVATAR / LEFT COLUMN ===================== */
-
+/* Left column */
 .avatar-section {
-    padding: 1vw;
     background: #cdcdcd;
     border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-
-    .avatar-frame {
-        position: relative;
-        padding: 4px;
-        border-radius: 8px;
-
-        .profile-avatar {
-            display: block;
-            width: 86px;
-            height: 110px;
-            background: rgb(134 134 134 / 25%);
-            border-radius: 6px;
-        }
-
-        .presence-badge {
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            width: 32px;
-            height: 16px;
-        }
-
-        .gang-badge {
-            position: absolute;
-            right: -6px;
-            bottom: -6px;
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            background: #fff;
-        }
-    }
-
-    .username {
-        font-weight: 700;
-        color: #FFF;
-    }
-
-    .motto {
-        font-style: italic;
-        color: #666;
-        font-size: 12px;
-        text-align: center;
-        max-width: 160px;
-    }
+    padding: 10px;
 }
 
-/* card stack under avatar */
-.info-section {
+.avatar-frame {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-avatar {
+    width: 86px;
+    height: 110px;
+    border-radius: 6px;
+    background: #bdbdbd33;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+.avatar-meta {
     display: grid;
-    gap: 6px;
-    margin-top: 10px;
-    font-size: 13px;
-    background: #cdcdcd;
-    border-radius: 8px;
-    padding: 6px;
+    gap: 4px;
+    align-content: start;
 }
 
-.work-status {
-    font-weight: 700;
-    text-align: center;
-
-    &.green {
-        color: #27ae60;
-    }
-
-    &.red {
-        color: #c0392b;
-    }
+.username {
+    font-weight: 800;
+    color: #000;
 }
 
-.corp-card {
-    display: flex;
+.online-pill {
+    display: inline-flex;
     align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 12px;
+    border: 1px solid rgba(0, 0, 0, .15);
+
+    &.on {
+        background: #e9f7ef;
+        color: #1d7c35;
+    }
+
+    &.off {
+        background: #f7e9e9;
+        color: #9b2c2c;
+    }
+}
+
+.motto {
+    font-style: italic;
+    color: #555;
+    font-size: 12px;
+}
+
+/* gang pill next to name */
+.gang-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, .2);
+    background: #fff;
+}
+
+.gang-color-split {
+    position: relative;
+    width: 22px;
+    height: 14px;
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, .25);
+
+    .half {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 50%;
+    }
+
+    .left {
+        left: 0;
+    }
+
+    .right {
+        right: 0;
+    }
+}
+
+.gang-icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* Stack under avatar */
+.info-section {
+    margin-top: 10px;
+    display: grid;
     gap: 8px;
+}
+
+/* RENAMED to avoid collisions with existing .card styles */
+.info-card {
     background: #dfdfdf;
     border-radius: 6px;
-    padding: 10px;
-    margin: 10px;
-
-    img {
-        width: 22px;
-        height: 22px;
-        border-radius: 4px;
-    }
-
-    .corp-lines {
-        .corp-title {
-            font-weight: 700;
-            color:#000;
-        }
-
-        .corp-sub {
-            font-size: 12px;
-            color: #666;
-        }
-    }
+    padding: 8px 10px;
+    border: 1px solid #ffffff;
+    width: 100%;
+    /* ensure full width (fix tiny boxes) */
+    box-sizing: border-box;
 }
 
-/* gang line + split color pill like you asked */
-.gang-line {
+.info-card h5 {
+    margin: 0 0 6px 0;
+    font-size: 13px;
+    font-weight: 800;
+    color: #000;
+}
+
+/* relationships */
+.rel-grid {
+    display: grid;
+    gap: 6px;
+}
+
+.rel-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 10px;
+    justify-content: space-between;
+    padding: 6px;
+    border-radius: 6px;
+    background: #f6f7fb;
+    border: 1px solid #e5e7f0;
 
-    .muted {
-        color: #888;
+    .label {
+        font-weight: 700;
     }
 
-    .gang-color-split-box {
-        position: relative;
-        width: 34px;
-        height: 20px;
+    .cta {
+        font-weight: 700;
+        font-size: 12px;
+        background: #fff;
+        border: 1px solid #cdd7ef;
         border-radius: 4px;
-        overflow: hidden;
-        border: 1px solid rgba(0, 0, 0, .25);
-        display: inline-block;
-
-        .color-half {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 50%;
-        }
-
-        .left {
-            left: 0;
-        }
-
-        .right {
-            right: 0;
-        }
-
-        .gang-icon {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 16px;
-            height: 16px;
-        }
+        padding: 2px 6px;
+        cursor: pointer;
     }
 }
 
-/* ===================== RIGHT COLUMN ===================== */
-
-/* Tabs like the Navigator (centered) */
+/* Right column */
 .profile-tabs {
     display: flex;
     justify-content: center;
     gap: 6px;
-    background:#2478b7;
-
+    background: #2478b7;
 
     .tab-btn {
         min-width: 120px;
         padding: 10px 16px;
-        border: 2px solid #ffffff;
+        border: 2px solid #fff;
         border-bottom: none;
         background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
-        color: #FFF;
+        color: #fff;
         font-weight: 700;
-        text-align: center;
         border-radius: 8px 8px 0 0;
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6);
-        cursor: pointer;
 
         &.active {
-
             background: #cdcdcd;
-            color: #000000;
+            color: #000;
         }
     }
 }
 
 .tab-content {
     background: #dfdfdf;
-    border-radius: 0 0px 8px 8px;
+    border-radius: 0 0 8px 8px;
     padding: 10px;
 }
 
-/* Level & XP */
 .level-xp {
     font-size: 14px;
     background: #cdcdcd;
@@ -269,21 +283,21 @@
         height: 20px;
         margin: 6px 0;
         border-radius: 4px;
-        border: solid 1px #FFF;
+        border: 1px solid #fff;
         overflow: hidden;
 
         .xp-fill {
             height: 100%;
             background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
-            border-radius: 2px;
         }
     }
 
     .points-left {
         background: rgba(24, 24, 24, .88);
+        color: #fff;
         text-align: center;
         padding: 5px;
-        border: solid 1px #FFF;
+        border: 1px solid #fff;
         font-weight: 700;
         width: 110px;
         margin-top: 10px;
@@ -291,12 +305,11 @@
     }
 }
 
-/* Skills */
 .skills {
     margin-top: 10px;
     font-size: 14px;
     padding: 8px;
-    background:#cdcdcd;
+    background: #cdcdcd;
     border-radius: 8px;
 }
 
@@ -310,7 +323,7 @@
 .skill-name {
     width: 150px;
     font-weight: 700;
-    color: #000000;
+    color: #000;
 }
 
 .skill-bar-wrapper {
@@ -328,7 +341,7 @@
         justify-content: center;
         transition: width .3s ease;
         border-radius: 4px;
-        border: solid 1px #FFF;
+        border: 1px solid #fff;
 
         .skill-bar-text {
             font-size: 10px;
@@ -349,7 +362,6 @@
     cursor: pointer;
 }
 
-/* Totals */
 .stats-breakdown {
     margin-top: 15px;
     font-size: 13px;
@@ -363,17 +375,16 @@
         padding: 3px;
         font-size: 12px;
         font-weight: 600;
-        color: #000000;
+        color: #000;
     }
 }
 
-/* ===================== ACHIEVEMENTS TAB ===================== */
-
+/* Achievements */
 .achievements-panel {
     background: #cdcdcd;
     border-radius: 8px;
     padding: 8px;
-    color:#000;
+    color: #000;
 }
 
 .achievements-list {
@@ -386,7 +397,6 @@
     display: grid;
     grid-template-columns: 42px 1fr;
     grid-template-rows: auto auto;
-    /* title/reward + progress */
     column-gap: 10px;
     row-gap: 4px;
     align-items: center;
@@ -441,216 +451,17 @@
     }
 }
 
-/* ===================== MISC / RESPONSIVE ===================== */
-
+/* Responsive */
 @media (max-width: 860px) {
     .profile-container {
         width: 92vw;
     }
 
     .profile-body {
-        flex-direction: column;
-    }
-}
-
-/* iPhone 16 Pro / Pro Max portrait (logical 430 x 932) */
-@media only screen and (max-width: 430px) and (max-height: 932px) {
-    .profile-container {
-        top: calc(env(safe-area-inset-top, 0px) + 12px);
-        left: 50%;
-        transform: translateX(-50%);
-        width: 94vw;
-        border-radius: 6px;
+        grid-template-columns: 1fr;
     }
 
-    .profile-header {
-        font-size: 16px;
-        padding: 8px 10px;
-    }
-
-    .close-btn,
-    .close-button {
-        font-size: 16px;
-        padding: 2px 8px;
-    }
-
-    .profile-body {
-        flex-direction: column;
-        gap: 12px;
-        padding: 10px;
-    }
-
-    .avatar-section {
-        gap: 6px;
-        padding: 10px;
-    }
-
-    .avatar-section .avatar-frame .profile-avatar {
-        width: 64px;
-        height: 82px;
-        border-radius: 6px;
-    }
-
-    .avatar-section .avatar-frame .presence-badge {
-        width: 24px;
-        height: 12px;
-        top: -4px;
-        right: -4px;
-    }
-
-    .avatar-section .avatar-frame .gang-badge {
-        width: 22px;
-        height: 22px;
-        right: -4px;
-        bottom: -4px;
-    }
-
-    .avatar-section .motto {
-        max-width: 70vw;
-        font-size: 11px;
-    }
-
-    .info-section {
-        padding: 6px;
-        gap: 6px;
-        font-size: 12px;
-    }
-
-    .corp-card {
-        margin: 8px 6px;
-        padding: 8px;
-    }
-
-    .corp-card img {
-        width: 20px;
-        height: 20px;
-    }
-
-    .gang-line {
-        padding: 8px;
-    }
-
-    .gang-line .gang-color-split-box {
-        width: 30px;
-        height: 18px;
-    }
-
-    .gang-line .gang-color-split-box .gang-icon {
-        width: 14px;
-        height: 14px;
-    }
-
-    /* Tabs */
-    .profile-tabs {
-        gap: 4px;
-        padding: 0 6px;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .profile-tabs .tab-btn {
-        min-width: 110px;
-        padding: 8px 12px;
-        font-size: 14px;
-    }
-
-    .tab-content {
-        padding: 8px;
-        border-radius: 0 6px 6px 6px;
-    }
-
-    /* Level / XP */
-    .level-xp {
-        padding: 8px;
-        font-size: 13px;
-    }
-
-    .level-xp .xp-bar {
-        height: 16px;
-        margin: 6px 0;
-    }
-
-    .level-xp .points-left {
+    .profile-left {
         width: auto;
-        padding: 4px 8px;
-        font-size: 12px;
-    }
-
-    /* Skills */
-    .skills {
-        padding: 8px;
-        font-size: 13px;
-    }
-
-    .skill-row {
-        gap: 8px;
-        margin-bottom: 8px;
-    }
-
-    .skill-name {
-        width: 120px;
-        font-size: 13px;
-    }
-
-    .skill-bar-wrapper {
-        height: 18px;
-    }
-
-    .skill-bar-wrapper .skill-bar-fill .skill-bar-text {
-        font-size: 9px;
-    }
-
-    .upgrade-btn {
-        padding: 2px 6px;
-        font-size: 12px;
-    }
-
-    /* Totals */
-    .stats-breakdown {
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
-    }
-
-    .stats-breakdown .stat-badge {
-        font-size: 11px;
-        padding: 4px;
-    }
-
-    /* Achievements */
-    .achievements-panel {
-        padding: 8px;
-    }
-
-    .ach-row {
-        column-gap: 8px;
-        padding: 8px;
-    }
-
-    .ach-row .ach-icon {
-        width: 36px;
-        height: 36px;
-    }
-
-    .ach-row .ach-progress .ach-bar {
-        height: 14px;
-    }
-
-    .ach-row .ach-line .ach-reward {
-        font-size: 11px;
-    }
-
-    .ach-row .ach-progress .ach-text {
-        font-size: 10px;
-    }
-}
-
-/* Tiny phones fallback (just in case 390–414 widths are used) */
-@media only screen and (max-width: 400px) {
-    .profile-container {
-        width: 96vw;
-    }
-
-    .profile-tabs .tab-btn {
-        min-width: 100px;
     }
 }

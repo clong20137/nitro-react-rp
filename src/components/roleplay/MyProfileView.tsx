@@ -6,41 +6,58 @@ import { setRPStats } from "./rpStatsCache";
 
 /* --------------------------------- Types --------------------------------- */
 
+interface RelationshipCounts {
+    love?: number;
+    like?: number;
+    hate?: number;
+}
+
 interface StatsProps {
     kills: number;
     deaths: number;
     punches: number;
     damageGiven: number;
     damageReceived: number;
+    energy: number;
+    hunger:number;
+
     strength: number;
     stamina: number;
-    energy: number;
-    hunger: number;
-    xp: number;
-    maxXP: number;
-    level: number;
-    points: number;
     defense: number;
-    hungerLevel: number;
     gathering: number;
-    username: string;
-    figure: string;
 
     /** Server can send either casing; we normalize below */
     healthlevel?: number;
     healthLevel?: number;
 
-    // Optional extras
+    xp: number;
+    maxXP: number;
+    level: number;
+    points: number;
+
+    username: string;
+    figure: string;
+    motto?: string;
+
+    // Employment/corp
+    jobTitle?: string;
+    corporationName?: string;
+    corporationIconUrl?: string;
+
+    // Presence
+    isOnline?: boolean;
+
+    // Gang visuals
     gangName?: string;
     gangId?: number;
     gangIconKey?: string;
-    gangPrimaryColor?: string;
-    gangSecondaryColor?: string;
-    motto?: string;
-    jobTitle?: string;
-    corporationName?: string;
-    isOnline?: boolean;
-    corporationIconUrl?: string;
+    gangPrimaryColor?: string; // "FF0000" or "#FF0000"
+    gangSecondaryColor?: string; // "00FF00" or "#00FF00"
+
+    // Extras for left column
+    createdAt?: string; // e.g., "10-11-2025"
+    lastLogin?: string; // e.g., "3 minutes ago"
+    relationships?: RelationshipCounts;
 }
 
 type UpgradeableStat =
@@ -52,22 +69,20 @@ type UpgradeableStat =
 
 export interface AchievementRow {
     id: number;
-    key: string; // e.g. "punch_50"
-    name: string; // e.g. "Throw 50 Punches"
-    current: number; // user progress
-    target: number; // how much is needed
-    xpReward: number; // XP upon completion
-    badgeUrl: string; // /icons/badges/XXX.gif|png
-    description?: string; // optional description (shown if provided)
+    key: string;
+    name: string;
+    current: number;
+    target: number;
+    xpReward: number;
+    badgeUrl: string;
+    description?: string;
 }
 
 interface MyProfileViewProps {
     onClose: () => void;
     stats: StatsProps;
     onUpgrade: (stat: UpgradeableStat) => void;
-    isOnline?: boolean;
-
-    /** Optional: supply achievements from caller; otherwise we’ll render an empty state. */
+    isOnline?: boolean; // optional override
     achievements?: AchievementRow[];
 }
 
@@ -77,17 +92,17 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
     onClose,
     stats,
     onUpgrade,
-    isOnline = true,
+    isOnline = stats.isOnline ?? true,
     achievements = [],
 }) => {
-    // normalize health level (fix: always read either casing)
+    // normalize health level (read either casing)
     const resolvedHealthlevel: number = Number.isFinite(
         stats.healthlevel as number
     )
         ? Number(stats.healthlevel)
         : Number(stats.healthLevel ?? 0);
 
-    // window position (same behavior you had)
+    // initial window position (persisted)
     const [position] = useState<{ x: number; y: number }>(() => {
         const stored = localStorage.getItem("profilePos");
         return stored ? JSON.parse(stored) : { x: 100, y: 100 };
@@ -103,7 +118,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
     // tabs
     const [tab, setTab] = useState<"general" | "achievements">("general");
 
-    // gang visual state
+    // gang visual state (updates live from gang_status_result)
     const [gangName, setGangName] = useState<string>(stats.gangName ?? "");
     const [gangId, setGangId] = useState<number | undefined>(stats.gangId);
     const [gangIconKey, setGangIconKey] = useState<string>(
@@ -124,8 +139,8 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
             : "#000000"
     );
 
+    // keep small cache in sync for other overlays
     useEffect(() => {
-        // keep global cache in sync
         setRPStats({
             gathering: stats.gathering ?? 1,
             level: stats.level ?? 1,
@@ -216,7 +231,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
         onUpgrade(stat);
     };
 
-    // helpers
+    // helper readers
     const valueFor = (name: UpgradeableStat) =>
         name === "healthlevel"
             ? resolvedHealthlevel
@@ -239,16 +254,15 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
             }}
         >
             <div className="profile-header" onMouseDown={startDrag}>
-                <div className="title">Profile</div>
+                <div className="title">User Profile</div>
                 <button
                     className="close-button"
                     onClick={onClose}
                     aria-label="Close"
-                >
-                </button>
+                />
             </div>
 
-            {/* ------- TABS (centered, navigator style; uses .tab-btn from SCSS) ------- */}
+            {/* Tabs (Navigator look) */}
             <div className="profile-tabs">
                 <button
                     className={`tab-btn ${tab === "general" ? "active" : ""}`}
@@ -266,10 +280,9 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                 </button>
             </div>
 
-            {/* ---------------------------- TAB CONTENTS ---------------------------- */}
             {tab === "general" ? (
                 <div className="profile-body">
-                    {/* LEFT */}
+                    {/* LEFT COLUMN */}
                     <div className="profile-left">
                         <div className="avatar-section">
                             <div className="avatar-frame">
@@ -279,84 +292,169 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                     alt="avatar"
                                     draggable={false}
                                 />
-                                <img
-                                    className="presence-badge"
-                                    src={
-                                        isOnline
-                                            ? "/icons/user_online.gif"
-                                            : "/icons/user_offline.gif"
-                                    }
-                                    alt={isOnline ? "online" : "offline"}
-                                    draggable={false}
-                                />
-                                {gangIconSrc && (
-                                    <img
-                                        className="gang-badge"
-                                        src={gangIconSrc}
-                                        alt="gang"
-                                        draggable={false}
-                                    />
-                                )}
+                                <div className="avatar-meta">
+                                    <div className="username">
+                                        {stats.username}
+                                    </div>
+
+                                    <div
+                                        className={`online-pill ${
+                                            isOnline ? "on" : "off"
+                                        }`}
+                                    >
+                                        <span
+                                            style={{
+                                                width: 8,
+                                                height: 8,
+                                                borderRadius: 999,
+                                                background: isOnline
+                                                    ? "#22c55e"
+                                                    : "#ef4444",
+                                                display: "inline-block",
+                                            }}
+                                        />
+                                        {isOnline ? "Online" : "Offline"}
+                                    </div>
+
+                                    {!!stats.motto && (
+                                        <div className="motto">
+                                            “{stats.motto}”
+                                        </div>
+                                    )}
+
+                                    {/* Gang pill (split color box + icon + name) */}
+                                    <div
+                                        className="gang-pill"
+                                        style={{ marginTop: 2 }}
+                                    >
+                                        <span className="gang-color-split">
+                                            <span
+                                                className="half left"
+                                                style={{
+                                                    backgroundColor:
+                                                        primaryColor,
+                                                }}
+                                            />
+                                            <span
+                                                className="half right"
+                                                style={{
+                                                    backgroundColor:
+                                                        secondaryColor,
+                                                }}
+                                            />
+                                        </span>
+                                        {gangIconSrc && (
+                                            <img
+                                                className="gang-icon"
+                                                src={gangIconSrc}
+                                                alt="gang"
+                                                draggable={false}
+                                            />
+                                        )}
+                                        <span>{gangName || "No gang"}</span>
+                                        {typeof gangId === "number" && (
+                                            <span style={{ opacity: 0.6 }}>
+                                                (#{gangId})
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="username">{stats.username}</div>
-                            {!!stats.motto && (
-                                <div className="motto">“{stats.motto}”</div>
-                            )}
                         </div>
 
+                        {/* left-side cards stack */}
                         <div className="info-section">
-                            <div className="corp-card">
-                                {stats.corporationIconUrl && (
-                                    <img
-                                        src={stats.corporationIconUrl}
-                                        alt="corp"
-                                    />
-                                )}
-                                <div className="corp-lines">
-                                    <div className="corp-title">
-                                        {stats.jobTitle || "Unemployed"}
+                            {/* Account */}
+                            <div className="info-card">
+                                <h5>Account</h5>
+                                <div>
+                                    Created:{" "}
+                                    <b>{stats.createdAt ?? "Unknown"}</b>
+                                </div>
+                                <div>
+                                    Last login:{" "}
+                                    <b>{stats.lastLogin ?? "Unknown"}</b>
+                                </div>
+                            </div>
+
+                            {/* Relationship Status */}
+                            <div className="info-card">
+                                <h5>Relationship Status</h5>
+                                <div className="rel-grid">
+                                    <div className="rel-row">
+                                        <span className="label">❤ Love</span>
+                                        <span>
+                                            <b>
+                                                {stats.relationships?.love ?? 0}
+                                            </b>{" "}
+                                            <span className="cta">
+                                                Add friends
+                                            </span>
+                                        </span>
                                     </div>
-                                    <div className="corp-sub">
-                                        {stats.corporationName ||
-                                            "No corporation"}
+                                    <div className="rel-row">
+                                        <span className="label">🙂 Like</span>
+                                        <span>
+                                            <b>
+                                                {stats.relationships?.like ?? 0}
+                                            </b>{" "}
+                                            <span className="cta">
+                                                Add friends
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <div className="rel-row">
+                                        <span className="label">☹ Hate</span>
+                                        <span>
+                                            <b>
+                                                {stats.relationships?.hate ?? 0}
+                                            </b>{" "}
+                                            <span className="cta">
+                                                Add friends
+                                            </span>
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="work-status red">Not working</div>
-
-                            <div className="gang-line">
-                                <div className="gang-color-split-box">
-                                    <div
-                                        className="color-half left"
-                                        style={{
-                                            backgroundColor: primaryColor,
-                                        }}
-                                    />
-                                    <div
-                                        className="color-half right"
-                                        style={{
-                                            backgroundColor: secondaryColor,
-                                        }}
-                                    />
-                                    {gangIconKey && (
+                            {/* Employment */}
+                            <div className="info-card">
+                                <h5>Employment</h5>
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                    }}
+                                >
+                                    {stats.corporationIconUrl && (
                                         <img
-                                            className="gang-icon"
-                                            src={`/icons/badges/${gangIconKey}.gif`}
-                                            alt="gang icon"
-                                            draggable={false}
+                                            src={stats.corporationIconUrl}
+                                            alt="corp"
+                                            width={22}
+                                            height={22}
                                         />
                                     )}
+                                    <div>
+                                        <div style={{ fontWeight: 700 }}>
+                                            {stats.jobTitle || "Unemployed"}
+                                        </div>
+                                        <div
+                                            style={{
+                                                fontSize: 12,
+                                                opacity: 0.7,
+                                            }}
+                                        >
+                                            {stats.corporationName ||
+                                                "No corporation"}
+                                        </div>
+                                    </div>
                                 </div>
-                                <span>{gangName || "No gang"}</span>
-                                {typeof gangId === "number" && (
-                                    <span className="muted">(#${gangId})</span>
-                                )}
                             </div>
                         </div>
                     </div>
 
-                    {/* RIGHT */}
+                    {/* RIGHT COLUMN */}
                     <div className="profile-right">
                         {/* Level / XP */}
                         <div className="level-xp">
@@ -382,7 +480,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                             </div>
                         </div>
 
-                        {/* Skills (includes fixed Health Level) */}
+                        {/* Skills */}
                         <div className="skills">
                             {(
                                 [
@@ -479,14 +577,14 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                             </div>
                                         </div>
 
-                                        {/* description (optional) */}
+                                        {/* optional description */}
                                         {a.description && (
                                             <div className="ach-text">
                                                 {a.description}
                                             </div>
                                         )}
 
-                                        {/* progress bar */}
+                                        {/* progress */}
                                         <div className="ach-progress">
                                             <div className="ach-bar">
                                                 <div
