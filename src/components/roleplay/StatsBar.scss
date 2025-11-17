@@ -1,14 +1,15 @@
 /* ===========================
-StatsBar.scss (fixed)
+StatsBar.scss (full, updated)
 =========================== */
 
+/* Root container for your HUD (self) */
 .stats-bar-container {
     display: flex;
     align-items: center;
     padding: 4px;
     border-radius: 6px;
     position: absolute;
-    top: 20px;
+    top: 5px;
     left: 5px;
     animation: fadeIn 0.8s;
     z-index: 100;
@@ -26,10 +27,17 @@ StatsBar.scss (fixed)
     left: calc(100% + 8px);
     /* 8px gap to the right of your bar */
     top: 0;
-    /* no vertical offset */
+    /* hard align to your top */
+    z-index: 2000;
 }
 
-/* ========= Quick actions (police / passive / etc) ========= */
+/* make sure both containers render above world */
+.stats-bar-container,
+.opponent-anchor {
+    z-index: 2000;
+}
+
+/* ===== Quick actions (police / passive / etc) ===== */
 
 .quick-actions {
     display: flex;
@@ -47,7 +55,7 @@ StatsBar.scss (fixed)
     border-radius: 6px;
     cursor: pointer;
     background: #d8d5cb;
-    /* matches your neutral panel shade */
+    /* neutral panel shade */
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -80,7 +88,7 @@ StatsBar.scss (fixed)
     box-shadow: 0 0 0 2px rgba(0, 128, 0, .25) inset;
 }
 
-/* mode icon: show swords for aggressive OR shield for passive */
+/* mode icon swap */
 .qa-btn.mode .icon-aggressive {
     display: block;
 }
@@ -97,7 +105,7 @@ StatsBar.scss (fixed)
     display: block;
 }
 
-/* call button badge/cooldown */
+/* call button with cooldown ring */
 .qa-call-wrap {
     position: relative;
 }
@@ -135,7 +143,7 @@ StatsBar.scss (fixed)
     }
 }
 
-/* popover reused from your existing call-police-input-box, but positioned to the left of buttons */
+/* mini popover (used by call police), positioned left of buttons */
 .qa-pop {
     position: absolute;
     right: 44px;
@@ -172,17 +180,12 @@ StatsBar.scss (fixed)
     }
 }
 
-.stats-bar-container,
-.opponent-anchor {
-    z-index: 2000;
-}
-
 .avatar-tooltip-wrapper {
     position: relative;
     display: inline-block;
 }
 
-/* ========= Work toggle ========= */
+/* ===== Work toggle ===== */
 
 .work-toggle-wrapper {
     margin-top: 6px;
@@ -206,155 +209,87 @@ StatsBar.scss (fixed)
 
     &.stop {
         background-color: #aa1c1c;
-        border-color: #5a0000
+        border-color: #5a0000;
     }
 
     &:disabled {
         background-color: #444;
         cursor: not-allowed;
-        opacity: 0.6;
+        opacity: .6;
     }
 }
 
-/* ========= Opponent stats overlay ========= */
+/* =======================
+Opponent styling block
+======================= */
 
-.opponent-stats-bar {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background: rgba(0, 0, 0, 0.75);
-    padding: 10px 12px;
-    border-radius: 8px;
-    color: white;
-    width: 240px;
-    z-index: 99;
-    box-shadow:
-        0 4px 10px rgba(0, 0, 0, .45),
-        inset 0 -2px 0 rgba(0, 0, 0, .6);
-}
-
-/* corner action buttons: lock + close */
-.opponent-stats-bar .corner-actions {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.opponent-stats-bar .corner-btn {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    border: 2px solid #000;
-    background: linear-gradient(180deg, #f5f2e7, #d8d5cb);
-    display: flex;
+/* Opponent container variant */
+.stats-bar-container.opponent {
+    /* ensure perfect vertical alignment and no stray margins */
+    top: 0;
+    left: auto;
+    animation: none;
+    /* we handle fade separately below */
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-    box-shadow: 0 1px 0 #fff, 0 2px 0 rgba(0, 0, 0, .4);
-    transition: transform .08s ease, box-shadow .12s ease;
-    font-size: 12px;
-    line-height: 1;
 }
 
-.opponent-stats-bar .corner-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, .2), 0 2px 0 rgba(0, 0, 0, .5);
+/* Fade helpers for opponent mount/unmount */
+.fade-in {
+    animation: fadeIn .18s ease-out both;
 }
 
-.opponent-stats-bar .corner-btn.close {
-    color: #bd2a2a;
+.fade-out {
+    animation: fadeOut .18s ease-in forwards;
 }
 
-.opponent-stats-bar .corner-btn.lock {
-    color: #2b7a0b;
-}
-
-/* locked state accent */
-.opponent-stats-bar .corner-btn.lock.locked {
-    background: linear-gradient(180deg, #8fe08a, #3c8f34);
-}
-
-.opponent-stats-bar .stats-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: bold;
-    margin-bottom: 6px;
-}
-
-.opponent-stats-bar .stat-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 5px;
-}
-
-.opponent-stats-bar .stat-row .stat-label {
-    width: 60px;
-    font-size: 12px;
-}
-
-.opponent-stats-bar .stat-row .stat-bar {
-    flex-grow: 1;
-    height: 8px;
-    border-radius: 2px;
-    background: #444;
-    margin: 0 6px;
-    overflow: hidden;
-
-    .fill {
-        height: 100%;
-        transition: width 0.3s ease;
-        box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 #000;
-    }
-
-    &.health .fill {
-        background: linear-gradient(180deg, #b82626, #b82626 50%, #ca3333 0, #ca3333);
-        box-shadow: inset 0 3px 0 #d86e68, inset 0 -1px 0 #000;
-    }
-
-    &.energy .fill {
-        background: linear-gradient(180deg, #f1c40f, #f1c40f 50%, #f5d65a 0, #f5d65a);
-    }
-
-    &.hunger .fill {
-        background: linear-gradient(180deg, #13affe, #13affe 50%, #4bc1fe 0, #4bc1fe);
-    }
-
-    &.aggression .fill {
-        background: white;
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        transform: translateY(-6px);
     }
 }
 
-.opponent-stats-bar .stat-row .stat-value {
-    width: 60px;
-    font-size: 12px;
-    text-align: right;
+/* High-contrast name/level for opponent */
+.opponent .avatar-name,
+.opponent .avatar-level,
+.opponent-name {
+    color: #fff;
+    text-shadow: 0 2px 2px rgba(0, 0, 0, .85);
 }
 
-/* drop the old gif-based buttons */
+/* Gang color square next to opponent name */
+.gang-square {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #fff;
+    border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .6);
+    margin-left: 6px;
+    vertical-align: -2px;
+}
+
+/* Hide any legacy gif-based controls for opponent */
 .opponent .close-button_right,
 .opponent .target-btn {
-    display: none;
+    display: none !important;
 }
 
-/* ========= XP tooltip ========= */
-
+/* =========================
+XP tooltip (shared)
+========================= */
 .xp-tooltip {
     position: absolute;
     bottom: -28px;
     left: 50%;
     transform: translateX(-50%);
     background-color: #2b2b2b;
-    color: #ffffff;
+    color: #fff;
     font-size: 11px;
     padding: 4px 8px;
     border-radius: 4px;
     white-space: nowrap;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .4);
     z-index: 9999;
 
     &::after {
@@ -371,7 +306,7 @@ StatsBar.scss (fixed)
     }
 }
 
-/* ========= Left column: avatar + XP ring ========= */
+/* ===== Left column: avatar + XP ring ===== */
 
 .stats-left {
     display: flex;
@@ -445,7 +380,7 @@ StatsBar.scss (fixed)
     stroke: #0067b3;
     stroke-width: 3;
     stroke-linecap: round;
-    transition: stroke-dasharray 0.8s ease;
+    transition: stroke-dasharray .8s ease;
 }
 
 .stats-left .greek-circle .avatar-head {
@@ -459,6 +394,7 @@ StatsBar.scss (fixed)
     cursor: pointer;
 }
 
+/* Default (self) level badge bottom-right */
 .stats-left .greek-circle .level-badge {
     position: absolute;
     bottom: -4px;
@@ -474,11 +410,94 @@ StatsBar.scss (fixed)
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 2px rgba(0, 0, 0, .4);
     z-index: 3;
 }
 
-/* ========= Right column: bars + aggression ========= */
+/* Opponent: move level badge to bottom-left */
+.opponent .greek-circle .level-badge {
+    left: -4px;
+    right: auto;
+}
+
+/* Inventory-style close for opponent (smaller, top-right of circle) */
+.greek-circle {
+    position: relative;
+}
+
+.circle-close {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #921911;
+    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
+    border-radius: 4px;
+    box-shadow: 0 0 0 1.4px #fff, 0 2px 0 rgba(0, 0, 0, .22);
+    cursor: pointer;
+    padding: 0;
+    z-index: 4;
+
+    &:before,
+    &:after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 10px;
+        height: 2px;
+        background: #fff;
+        border-radius: 1px;
+        transform-origin: center;
+    }
+
+    &:before {
+        transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &:after {
+        transform: translate(-50%, -50%) rotate(-45deg);
+    }
+}
+
+/* Lock/Unlock badge on bottom-right of circle */
+.circle-lock {
+    position: absolute;
+    bottom: -6px;
+    right: -6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #f5f2e7, #d8d5cb);
+    border: 2px solid #000;
+    box-shadow: 0 1px 0 #fff, 0 2px 0 rgba(0, 0, 0, .4);
+    display: grid;
+    place-items: center;
+    padding: 0;
+    cursor: pointer;
+    z-index: 4;
+
+    .lock-icon {
+        width: 13px;
+        height: 17px;
+        image-rendering: pixelated;
+        pointer-events: none;
+    }
+
+    &.is-locked {
+        background: linear-gradient(180deg, #9fe39a, #3c8f34);
+        border-color: #0b3104;
+    }
+}
+
+/* ensure avatar image stays below action buttons */
+.greek-circle .avatar-head {
+    position: relative;
+    z-index: 2;
+}
+
+/* ===== Right column: bars + aggression ===== */
 
 .stats-right {
     display: flex;
@@ -505,7 +524,7 @@ StatsBar.scss (fixed)
 
 .fill {
     height: 100%;
-    transition: width 0.3s ease;
+    transition: width .3s ease;
     border-radius: 2px;
 
     &.health {
@@ -560,10 +579,8 @@ StatsBar.scss (fixed)
     border: 1px solid rgba(255, 255, 255, .2);
     border-radius: 4px;
     overflow: hidden;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, .05),
-        0 2px 4px rgba(0, 0, 0, .25);
-    transition: all 0.3s ease;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 2px 4px rgba(0, 0, 0, .25);
+    transition: all .3s ease;
     position: relative;
 }
 
@@ -574,13 +591,22 @@ StatsBar.scss (fixed)
     height: 100%;
     width: var(--aggression-width, 0%);
     background: #ff6200;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, .25),
-        0 1px 2px rgba(0, 0, 0, .35);
-    transition: width 0.15s ease;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 1px 2px rgba(0, 0, 0, .35);
+    transition: width .15s ease;
 }
 
-/* ========= Misc ========= */
+/* ===== Alignment guards (opponent) ===== */
+/* Kill stray margins so both bars sit on same baseline */
+.stats-bar-container.opponent .stats-left,
+.stats-bar-container.opponent .stats-right {
+    margin: 0;
+}
+
+.stats-bar-container.opponent {
+    align-items: center;
+}
+
+/* ===== Misc ===== */
 
 .call-police-wrapper {
     position: relative;
@@ -606,9 +632,9 @@ StatsBar.scss (fixed)
     }
 }
 
-/* ========= Responsive tweaks ========= */
+/* ===== Responsive tweaks ===== */
 
-/* 📱 Tablets (<= 1024px): shrink widths a bit */
+/* Tablets (<= 1024px) */
 @media (max-width: 1024px) {
     .stats-bar-container {
         top: 10px;
@@ -618,10 +644,7 @@ StatsBar.scss (fixed)
         border-radius: 6px;
     }
 
-    .bar {
-        width: 160px;
-    }
-
+    .bar,
     .aggression-bar-wrapper {
         width: 160px;
     }
@@ -632,7 +655,7 @@ StatsBar.scss (fixed)
     }
 }
 
-/* 📱 Small tablets / large phones (<= 768px): stack columns vertically */
+/* Small tablets / large phones (<= 768px) */
 @media (max-width: 768px) {
     .stats-bar-container {
         flex-direction: column;
@@ -684,10 +707,7 @@ StatsBar.scss (fixed)
         align-items: center !important;
         width: auto !important;
         max-width: none !important;
-        box-shadow:
-            0 6px 16px rgba(0, 0, 0, .20),
-            0 2px 0 rgba(0, 0, 0, .22),
-            inset 0 -3px rgba(0, 0, 0, .10);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, .20), 0 2px 0 rgba(0, 0, 0, .22), inset 0 -3px rgba(0, 0, 0, .10);
     }
 
     .opponent-anchor {

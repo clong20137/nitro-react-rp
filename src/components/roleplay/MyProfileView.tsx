@@ -19,14 +19,14 @@ interface StatsProps {
     damageGiven: number;
     damageReceived: number;
     energy: number;
-    hunger:number;
+    hunger: number;
 
     strength: number;
     stamina: number;
     defense: number;
     gathering: number;
 
-    /** Server can send either casing; we normalize below */
+    /** Server can send either casing; we normalize */
     healthlevel?: number;
     healthLevel?: number;
 
@@ -95,12 +95,78 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
     isOnline = stats.isOnline ?? true,
     achievements = [],
 }) => {
-    // normalize health level (read either casing)
-    const resolvedHealthlevel: number = Number.isFinite(
-        stats.healthlevel as number
-    )
-        ? Number(stats.healthlevel)
-        : Number(stats.healthLevel ?? 0);
+    // ----- local optimistic state (drives the bars immediately) -----
+    const [uiStats, setUiStats] = useState(() => ({
+        strength: stats.strength ?? 0,
+        stamina: stats.stamina ?? 0,
+        defense: stats.defense ?? 0,
+        gathering: stats.gathering ?? 0,
+        healthlevel: Number.isFinite(stats.healthlevel as number)
+            ? Number(stats.healthlevel)
+            : Number(stats.healthLevel ?? 0),
+        points: stats.points ?? 0,
+        xp: stats.xp ?? 0,
+        maxXP: stats.maxXP ?? 100,
+        level: stats.level ?? 1,
+    }));
+
+    // when server/parent props change, reconcile into optimistic state
+    useEffect(() => {
+        setUiStats((s) => ({
+            ...s,
+            strength: stats.strength ?? s.strength,
+            stamina: stats.stamina ?? s.stamina,
+            defense: stats.defense ?? s.defense,
+            gathering: stats.gathering ?? s.gathering,
+            healthlevel: Number.isFinite(stats.healthlevel as number)
+                ? Number(stats.healthlevel)
+                : Number(stats.healthLevel ?? s.healthlevel),
+            points: stats.points ?? s.points,
+            xp: stats.xp ?? s.xp,
+            maxXP: stats.maxXP ?? s.maxXP,
+            level: stats.level ?? s.level,
+        }));
+    }, [
+        stats.strength,
+        stats.stamina,
+        stats.defense,
+        stats.gathering,
+        stats.healthlevel,
+        stats.healthLevel,
+        stats.points,
+        stats.xp,
+        stats.maxXP,
+        stats.level,
+    ]);
+
+    // OPTIONAL: listen for a live RP stats event (map its payload to uiStats)
+    useEffect(() => {
+        const onRpStats = (ev: any) => {
+            const d = ev.detail || {};
+            setUiStats((s) => ({
+                ...s,
+                strength: d.strength ?? s.strength,
+                stamina: d.stamina ?? s.stamina,
+                defense: d.defense ?? s.defense,
+                gathering: d.gathering ?? s.gathering,
+                healthlevel: d.healthlevel ?? d.healthLevel ?? s.healthlevel,
+                points: d.points ?? s.points,
+                xp: d.xp ?? s.xp,
+                maxXP: d.maxXP ?? s.maxXP,
+                level: d.level ?? s.level,
+            }));
+        };
+        window.addEventListener("rp_stats_update", onRpStats);
+        return () => window.removeEventListener("rp_stats_update", onRpStats);
+    }, []);
+
+    // keep small cache in sync for other overlays
+    useEffect(() => {
+        setRPStats({
+            gathering: uiStats.gathering ?? 1,
+            level: uiStats.level ?? 1,
+        });
+    }, [uiStats.gathering, uiStats.level]);
 
     // initial window position (persisted)
     const [position] = useState<{ x: number; y: number }>(() => {
@@ -138,14 +204,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
             ? `#${stats.gangSecondaryColor}`
             : "#000000"
     );
-
-    // keep small cache in sync for other overlays
-    useEffect(() => {
-        setRPStats({
-            gathering: stats.gathering ?? 1,
-            level: stats.level ?? 1,
-        });
-    }, [stats.gathering, stats.level]);
 
     useEffect(() => {
         const onGangStatus = (ev: any) => {
@@ -208,35 +266,32 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
 
     /* ------------------------------ Upgrade action ----------------------------- */
 
+    const valueFor = (name: UpgradeableStat) =>
+        name === "healthlevel"
+            ? uiStats.healthlevel
+            : (uiStats as any)[name] ?? 0;
+
     const handleUpgrade = (stat: UpgradeableStat) => {
-        if (stats.points <= 0) return;
+        if (uiStats.points <= 0) return;
 
-        const capped = [
-            "strength",
-            "stamina",
-            "defense",
-            "healthlevel",
-            "gathering",
-        ] as const;
+        const currentVal = valueFor(stat);
+        const isCapped = currentVal >= 12; // healthlevel uses same 0..12 scale
 
-        const currentVal =
-            stat === "healthlevel"
-                ? resolvedHealthlevel
-                : (stats as any)[stat] ?? 0;
+        if (isCapped) return;
 
-        if ((capped as readonly string[]).includes(stat) && currentVal >= 12)
-            return;
+        // optimistic bump (instant bar/points update)
+        setUiStats((s) => ({
+            ...s,
+            [stat]: currentVal + 1,
+            points: Math.max(0, s.points - 1),
+        }));
 
+        // send packet + notify parent
         GetCommunication().connection.send(new UpgradeStatComposer(stat));
         onUpgrade(stat);
     };
 
-    // helper readers
-    const valueFor = (name: UpgradeableStat) =>
-        name === "healthlevel"
-            ? resolvedHealthlevel
-            : (stats as any)[name] ?? 0;
-
+    // helpers
     const pct = (n: number, d: number) =>
         d <= 0 ? 0 : Math.min(100, Math.max(0, (n / d) * 100));
 
@@ -377,46 +432,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                 </div>
                             </div>
 
-                            {/* Relationship Status */}
-                            <div className="info-card">
-                                <h5>Relationship Status</h5>
-                                <div className="rel-grid">
-                                    <div className="rel-row">
-                                        <span className="label">❤ Love</span>
-                                        <span>
-                                            <b>
-                                                {stats.relationships?.love ?? 0}
-                                            </b>{" "}
-                                            <span className="cta">
-                                                Add friends
-                                            </span>
-                                        </span>
-                                    </div>
-                                    <div className="rel-row">
-                                        <span className="label">🙂 Like</span>
-                                        <span>
-                                            <b>
-                                                {stats.relationships?.like ?? 0}
-                                            </b>{" "}
-                                            <span className="cta">
-                                                Add friends
-                                            </span>
-                                        </span>
-                                    </div>
-                                    <div className="rel-row">
-                                        <span className="label">☹ Hate</span>
-                                        <span>
-                                            <b>
-                                                {stats.relationships?.hate ?? 0}
-                                            </b>{" "}
-                                            <span className="cta">
-                                                Add friends
-                                            </span>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
                             {/* Employment */}
                             <div className="info-card">
                                 <h5>Employment</h5>
@@ -458,25 +473,25 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                     <div className="profile-right">
                         {/* Level / XP */}
                         <div className="level-xp">
-                            <div>Level: {stats.level}</div>
+                            <div>Level: {uiStats.level}</div>
                             <div className="xp-bar">
                                 <div
                                     className="xp-fill"
                                     style={{
                                         width: `${Math.min(
                                             100,
-                                            (stats.xp /
-                                                Math.max(1, stats.maxXP)) *
+                                            (uiStats.xp /
+                                                Math.max(1, uiStats.maxXP)) *
                                                 100
                                         )}%`,
                                     }}
                                 />
                             </div>
                             <div className="xp-text">
-                                {stats.xp} / {stats.maxXP} XP
+                                {uiStats.xp} / {uiStats.maxXP} XP
                             </div>
                             <div className="points-left">
-                                Points: {stats.points}
+                                Points: {uiStats.points}
                             </div>
                         </div>
 
@@ -511,7 +526,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                                 </span>
                                             </div>
                                         </div>
-                                        {stats.points > 0 && (
+                                        {uiStats.points > 0 && (
                                             <button
                                                 onClick={() =>
                                                     handleUpgrade(stat)

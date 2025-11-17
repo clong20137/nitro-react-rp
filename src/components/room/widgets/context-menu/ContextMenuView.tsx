@@ -24,7 +24,9 @@ import {
 import { Base, BaseProps } from "../../../../common";
 import { ContextMenuCaretView } from "./ContextMenuCaretView";
 import { InspectUserStatsComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/InspectUserStatsComposer";
-import { GetSessionDataManager } from "../../../../api";
+
+/* If you’re no longer using this anywhere else, you can delete this import */
+// import { GetSessionDataManager } from "../../../../api";
 
 interface ContextMenuViewProps extends BaseProps<HTMLDivElement> {
     objectId: number;
@@ -148,10 +150,22 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
     const userData =
         GetRoomSession().userDataManager.getUserDataByIndex(objectId);
 
-    const toggleStats = () => {
+    // Only trigger stats explicitly (on click) — no more auto on hover
+    const toggleStats = useCallback(() => {
         if (objectId <= 0 || !userData) return;
+
+        // Ask server for latest stats
         SendMessageComposer(new InspectUserStatsComposer(userData.webID));
-    };
+
+        // Fire client-side event so the overlay opens
+        window.dispatchEvent(
+            new CustomEvent("user_inspect_stats", {
+                detail: {
+                    userId: userData.webID, // use webID (actual userId), not room index
+                },
+            })
+        );
+    }, [objectId, userData]);
 
     const [opacity, setOpacity] = useState(1);
     const [isFading, setIsFading] = useState(false);
@@ -288,16 +302,17 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         FADE_TIME = 1;
     }, []);
 
-    // Auto-fire inspect for other users only (blocked when click-through is on)
-    useEffect(() => {
-        if (ctEnabled) return; // do not auto-open when click-through is enabled
-        if (userType !== RoomObjectType.USER) return;
-
-        const currentUserId = GetSessionDataManager().userId;
-        if (!userData || userData.webID === currentUserId) return;
-
-        toggleStats();
-    }, [objectId, userType, userData, ctEnabled]);
+    // 🔥 REMOVED: the auto-fire inspect effect so it DOES NOT trigger on hover
+    //
+    // useEffect(() => {
+    // if (ctEnabled) return; // do not auto-open when click-through is enabled
+    // if (userType !== RoomObjectType.USER) return;
+    //
+    // const currentUserId = GetSessionDataManager().userId;
+    // if (!userData || userData.webID === currentUserId) return;
+    //
+    // toggleStats();
+    // }, [objectId, userType, userData, ctEnabled, toggleStats]);
 
     /* ---------------- render ---------------- */
 
@@ -316,13 +331,8 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
                     <div
                         className="context-menu-option"
                         onClick={() => {
-                            window.dispatchEvent(
-                                new CustomEvent("user_inspect_stats", {
-                                    detail: {
-                                        userId: objectId,
-                                    },
-                                })
-                            );
+                            // Explicitly open stats ONLY when this is clicked
+                            toggleStats();
                             setIsCollapsed(true);
                         }}
                     />
