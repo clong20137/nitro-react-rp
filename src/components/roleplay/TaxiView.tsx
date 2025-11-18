@@ -267,7 +267,7 @@ export const TaxiView: React.FC = () => {
                             ▦
                         </button>
                         <button
-                            className={`toggle ${!grid ? "active" : ""}`}
+                            className={`toggle {!grid ? "active" : ""}`}
                             title="List view"
                             aria-pressed={!grid}
                             onClick={() => setGrid(false)}
@@ -325,7 +325,8 @@ export const TaxiView: React.FC = () => {
                                         role="listitem"
                                         key={`${d.roomId}:${d.virtualRoomId}:${idx}`}
                                         className={`tile${here ? " here" : ""}`}
-                                        title={`${d.name} — Room ${d.roomId}`}
+                                        // ⬇ Tooltip now shows virtual room id
+                                        title={`${d.name} — v${d.virtualRoomId}`}
                                         onClick={() => onPick(d)}
                                     >
                                         {here && (
@@ -367,10 +368,11 @@ export const TaxiView: React.FC = () => {
                                                 {d.name}
                                             </span>
                                             <span className="meta">
+                                                {/* ⬇ Show virtual room id instead of physical room id */}
                                                 {d.roomName
                                                     ? d.roomName
-                                                    : "Room"}{" "}
-                                                {d.roomId}
+                                                    : ""}{" "}
+                                                v{d.virtualRoomId}
                                             </span>
                                         </div>
                                     </button>
@@ -388,7 +390,8 @@ export const TaxiView: React.FC = () => {
                                             here ? " here" : ""
                                         }`}
                                         onClick={() => onPick(d)}
-                                        title={`${d.name} — Room ${d.roomId}`}
+                                        // ⬇ Tooltip uses virtual room id
+                                        title={`${d.name} — v${d.virtualRoomId}`}
                                     >
                                         <div className="row-left">
                                             <div className="name">
@@ -400,10 +403,11 @@ export const TaxiView: React.FC = () => {
                                                 )}
                                             </div>
                                             <div className="meta">
+                                                {/* ⬇ Meta line shows VRID */}
                                                 {d.roomName
                                                     ? d.roomName
-                                                    : "Room"}{" "}
-                                                {d.roomId}
+                                                    : "Zone"}{" "}
+                                                v{d.virtualRoomId}
                                                 {typeof d.occupants ===
                                                     "number" && (
                                                     <> • {d.occupants} online</>

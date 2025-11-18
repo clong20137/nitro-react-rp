@@ -35,6 +35,7 @@ import { RoomUnitWalkComposer } from "@nitrots/nitro-renderer/src/nitro/communic
 // We'll listen for tile mouse events as well
 import { RoomObjectTileMouseEvent } from "@nitrots/nitro-renderer/src/nitro/room/events/RoomObjectTileMouseEvent";
 import { BottomRightDockView } from "../roleplay/BottomRightDockView";
+import { ArenaQueueView } from "../roleplay/ArenaQueueView";
 
 /* -----------------------------------------------------------
 Click-through helpers
@@ -212,9 +213,11 @@ Render
                     <TaxiView />
                     <JukeboxView />
                     <ATMView></ATMView>
-                    <CommandsListView
-                    />
+                    <CommandsListView />
                     <BottomRightDockView></BottomRightDockView>
+                    {/*
+                    <ArenaQueueView visible={true}></ArenaQueueView>
+                    */}
 
                     {roomSession.isSpectator && <RoomSpectatorView />}
                 </>
