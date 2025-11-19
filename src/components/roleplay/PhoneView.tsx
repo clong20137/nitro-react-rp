@@ -8,6 +8,12 @@ import { FriendsMessengerThreadView } from "../friends/views/messenger/messenger
 import { useMessenger, useFriends } from "../../hooks";
 import { GetSessionDataManager } from "../../api";
 
+// ---- DoorDash types / composers ----
+import { SendMessageComposer } from "../../api";
+import { DoorDashOrderComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/DoorDashComposer";
+import { AcceptDoorDashOrderComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/AcceptDoorDashOrderComposer";
+import { DoorDashOrderData } from "@nitrots/nitro-renderer/src/nitro/communication/messages/parser/DoorDashOrdersParser";
+
 export type PhoneApp =
     | "home"
     | "friends"
@@ -138,7 +144,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
                             <PhoneAppIcon
                                 label="DoorDash"
                                 icon="🍕"
-                                onClick={() => {}}
+                                onClick={() => setActiveApp("doordash")}
                             />
                         </div>
                     </div>
@@ -158,8 +164,9 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
                 {activeApp === "settings" && (
                     <SettingsApp onBack={() => setActiveApp("home")} />
                 )}
+
                 {activeApp === "doordash" && (
-                    <DoorDashApp onBack={() => setActiveApp("doordash")} />
+                    <DoorDashApp onBack={() => setActiveApp("home")} />
                 )}
             </div>
         </div>
@@ -189,12 +196,32 @@ const PhoneAppIcon: React.FC<PhoneAppIconProps> = ({
         <span className="phone-app-icon-label">{label}</span>
     </button>
 );
-import { SendMessageComposer } from "../../api";
-import { DoorDashOrderComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/DoorDashComposer";
+
+/* =========================================================================
+DOORDASH APP – customer order + driver order list
+========================================================================= */
 
 const DoorDashApp: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [isOrdering, setIsOrdering] = useState(false);
     const [status, setStatus] = useState<string | null>(null);
+
+    // active open orders for drivers (from bridge)
+    const [orders, setOrders] = useState<DoorDashOrderData[]>([]);
+
+    // listen to bridge events from Nitro (like ATM)
+    useEffect(() => {
+        const handler = (event: Event) => {
+            const custom = event as CustomEvent<DoorDashOrderData[]>;
+            const list = custom.detail || [];
+            setOrders(list);
+        };
+
+        window.addEventListener("doordash_orders", handler);
+
+        return () => {
+            window.removeEventListener("doordash_orders", handler);
+        };
+    }, []);
 
     const handlePizzaOrder = () => {
         if (isOrdering) return;
@@ -213,6 +240,17 @@ const DoorDashApp: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         }
     };
 
+    const handleAcceptOrder = (orderId: number) => {
+        try {
+            SendMessageComposer(new AcceptDoorDashOrderComposer(orderId));
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const minutesAgo = (ageSeconds: number) =>
+        Math.floor(Math.max(0, ageSeconds || 0) / 60);
+
     return (
         <div className="phone-app phone-doordash">
             <div className="phone-subheader">
@@ -223,6 +261,7 @@ const DoorDashApp: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </div>
 
             <div className="phone-list">
+                {/* CUSTOMER SIDE – place pizza order */}
                 <div className="phone-card">
                     <div className="phone-card-title">Pizza Delivery</div>
                     <div className="phone-card-body">
@@ -242,6 +281,54 @@ const DoorDashApp: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         </button>
                         {status && (
                             <div className="phone-status-text">{status}</div>
+                        )}
+                    </div>
+                </div>
+
+                {/* DRIVER SIDE – list of orders */}
+                <div className="phone-card">
+                    <div className="phone-card-title">
+                        Active Orders (Driver)
+                    </div>
+                    <div className="phone-card-body">
+                        {!orders.length && (
+                            <p className="hint">
+                                No active orders right now. Stay clocked in as a
+                                delivery driver to receive new jobs.
+                            </p>
+                        )}
+
+                        {!!orders.length && (
+                            <div className="dd-order-list">
+                                {orders.map((o) => (
+                                    <div
+                                        key={o.orderId}
+                                        className="dd-order-row"
+                                    >
+                                        <div className="dd-order-main">
+                                            <div className="dd-order-customer">
+                                                {o.username}
+                                            </div>
+                                            <div className="dd-order-location">
+                                                {o.virtualRoomName ||
+                                                    `vRoom ${o.virtualRoomId}`}
+                                            </div>
+                                            <div className="dd-order-meta">
+                                                {minutesAgo(o.ageSeconds)} min
+                                                ago • #{o.orderId}
+                                            </div>
+                                        </div>
+                                        <button
+                                            className="dd-order-accept-btn"
+                                            onClick={() =>
+                                                handleAcceptOrder(o.orderId)
+                                            }
+                                        >
+                                            Accept
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
                         )}
                     </div>
                 </div>
