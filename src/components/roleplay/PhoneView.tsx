@@ -8,7 +8,12 @@ import { FriendsMessengerThreadView } from "../friends/views/messenger/messenger
 import { useMessenger, useFriends } from "../../hooks";
 import { GetSessionDataManager } from "../../api";
 
-export type PhoneApp = "home" | "friends" | "messages" | "settings";
+export type PhoneApp =
+    | "home"
+    | "friends"
+    | "messages"
+    | "settings"
+    | "doordash";
 
 interface PhoneViewProps {
     onClose: () => void;
@@ -32,8 +37,6 @@ export interface ConversationEntry {
 
 export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
     const [activeApp, setActiveApp] = useState<PhoneApp>("home");
-
-    
 
     // REAL FRIEND DATA FROM STORE
     const { friends = [] } = useFriends(); // MessengerFriend[]
@@ -73,8 +76,6 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
             y: e.clientY - rect.top,
         });
     };
-
-    
 
     // Called by FriendsApp when user taps a friend
     const handleMessageFriendFromFriendsApp = (friendId: number) => {
@@ -133,6 +134,12 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
                                 icon="▶️"
                                 onClick={() => {}}
                             />
+
+                            <PhoneAppIcon
+                                label="DoorDash"
+                                icon="🍕"
+                                onClick={() => {}}
+                            />
                         </div>
                     </div>
                 )}
@@ -144,13 +151,15 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
                         onMessageFriend={handleMessageFriendFromFriendsApp}
                     />
                 )}
-
                 {activeApp === "messages" && (
                     <MessagesApp onBack={() => setActiveApp("home")} />
                 )}
 
                 {activeApp === "settings" && (
                     <SettingsApp onBack={() => setActiveApp("home")} />
+                )}
+                {activeApp === "doordash" && (
+                    <DoorDashApp onBack={() => setActiveApp("doordash")} />
                 )}
             </div>
         </div>
@@ -180,6 +189,66 @@ const PhoneAppIcon: React.FC<PhoneAppIconProps> = ({
         <span className="phone-app-icon-label">{label}</span>
     </button>
 );
+import { SendMessageComposer } from "../../api";
+import { DoorDashOrderComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/DoorDashComposer";
+
+const DoorDashApp: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+    const [isOrdering, setIsOrdering] = useState(false);
+    const [status, setStatus] = useState<string | null>(null);
+
+    const handlePizzaOrder = () => {
+        if (isOrdering) return;
+
+        setIsOrdering(true);
+        setStatus("Placing your pizza order…");
+
+        try {
+            // 1 = pizza delivery (you can add more types later)
+            SendMessageComposer(new DoorDashOrderComposer(1));
+            setStatus("Order sent! Waiting for a delivery driver…");
+        } catch (e) {
+            console.error(e);
+            setStatus("Something went wrong sending your order.");
+            setIsOrdering(false);
+        }
+    };
+
+    return (
+        <div className="phone-app phone-doordash">
+            <div className="phone-subheader">
+                <button onClick={onBack} className="phone-back-btn">
+                    ‹ Home
+                </button>
+                <span className="phone-subtitle">DoorDash</span>
+            </div>
+
+            <div className="phone-list">
+                <div className="phone-card">
+                    <div className="phone-card-title">Pizza Delivery</div>
+                    <div className="phone-card-body">
+                        <p>
+                            Get a hot pizza delivered to your current location.
+                        </p>
+                        <p className="hint">
+                            Base price: <b>3 credits</b> + <b>1 credit</b> per
+                            room of travel.
+                        </p>
+                        <button
+                            className="phone-primary-btn"
+                            disabled={isOrdering}
+                            onClick={handlePizzaOrder}
+                        >
+                            {isOrdering ? "Ordering…" : "Order Pizza"}
+                        </button>
+                        {status && (
+                            <div className="phone-status-text">{status}</div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 /* =========================================================================
 MESSAGES APP – list + chat views (clean UI, using MessengerThread.groups)
