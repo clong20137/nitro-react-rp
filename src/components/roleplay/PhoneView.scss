@@ -702,3 +702,414 @@ Messages
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.18);
 }
+
+/* =========================================================================
+DoorDash App
+========================================================================= */
+
+.phone-app.phone-doordash {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Generic card used in DoorDash app */
+.phone-card {
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: 16px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.phone-card-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+    text-shadow: 0 1px 0 #000;
+}
+
+.phone-card-body {
+    font-size: 11px;
+    color: #ddd;
+
+    p {
+        margin: 0 0 4px;
+    }
+
+    .hint {
+        font-size: 10px;
+        color: #f3c858;
+        text-shadow: 0 1px 0 #000;
+        margin-bottom: 6px;
+    }
+}
+
+/* Primary “Order Pizza” button */
+.phone-primary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 999px;
+    border: 0;
+    cursor: pointer;
+    background: linear-gradient(145deg, #f9d365, #f3c858 50%, #e6b436 0, #e6b436);
+    color: #222;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+        0 2px 0 rgba(0, 0, 0, 0.6);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+    transition: transform 80ms ease-out, box-shadow 80ms ease-out, filter 80ms ease-out;
+
+    &:hover {
+        filter: brightness(1.05);
+        transform: translateY(-1px);
+        box-shadow:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+            0 3px 0 rgba(0, 0, 0, 0.7);
+    }
+
+    &:active {
+        transform: translateY(1px);
+        box-shadow:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.3),
+            0 1px 0 rgba(0, 0, 0, 0.6);
+    }
+
+    &:disabled {
+        cursor: default;
+        opacity: 0.6;
+        filter: grayscale(0.2);
+    }
+}
+
+/* Status text under Order button */
+.phone-status-text {
+    margin-top: 4px;
+    font-size: 10px;
+    color: #fff;
+    opacity: 0.9;
+}
+
+/* =======================
+Driver orders list
+======================= */
+
+.dd-order-list {
+    margin-top: 4px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.dd-order-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 5px 6px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.45);
+    margin-bottom: 4px;
+    transition: background 120ms ease-out;
+}
+
+.dd-order-row:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.dd-order-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.dd-order-customer {
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.dd-order-location {
+    font-size: 10px;
+    color: #f3c858;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.dd-order-meta {
+    font-size: 9px;
+    color: #bbb;
+}
+
+/* “Accept” button for drivers */
+.dd-order-accept-btn {
+    border: none;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    background: linear-gradient(145deg, #4caf50, #3f9143);
+    color: #f5f5f5;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+        0 2px 0 rgba(0, 0, 0, 0.6);
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+    transition: transform 80ms ease-out, box-shadow 80ms ease-out, filter 80ms ease-out;
+
+    &:hover {
+        filter: brightness(1.05);
+        transform: translateY(-1px);
+        box-shadow:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+            0 3px 0 rgba(0, 0, 0, 0.7);
+    }
+
+    &:active {
+        transform: translateY(1px);
+        box-shadow:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.3),
+            0 1px 0 rgba(0, 0, 0, 0.6);
+    }
+}
+
+/* ---------- Phone shake when new order ---------- */
+
+.phone-shake {
+    animation: phone-shake 0.5s ease-in-out;
+}
+
+@keyframes phone-shake {
+    0% {
+        transform: translateX(0);
+    }
+
+    15% {
+        transform: translateX(-3px);
+    }
+
+    30% {
+        transform: translateX(3px);
+    }
+
+    45% {
+        transform: translateX(-3px);
+    }
+
+    60% {
+        transform: translateX(3px);
+    }
+
+    75% {
+        transform: translateX(-2px);
+    }
+
+    90% {
+        transform: translateX(2px);
+    }
+
+    100% {
+        transform: translateX(0);
+    }
+}
+
+/* =========================================================================
+DoorDash styling – red brand look
+========================================================================= */
+
+.phone-app.phone-doordash {
+    display: flex;
+    flex-direction: column;
+}
+
+/* header strip with DoorDash red */
+.dd-header {
+    background: linear-gradient(135deg, #ff3b30, #e32719);
+    border-radius: 18px 18px 0 0;
+    padding: 6px 8px;
+    margin: 0 6px 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.dd-back {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.dd-title {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 11px;
+}
+
+/* scroll area */
+.dd-scroll {
+    padding: 4px 6px 8px;
+}
+
+/* generic phone cards tuned for DoorDash */
+
+.phone-card {
+    border-radius: 14px;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+
+.dd-card {
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(4px);
+}
+
+.dd-card-customer {
+    border-left: 3px solid #ff3b30;
+}
+
+.dd-card-driver {
+    border-left: 3px solid #ff9500;
+}
+
+.phone-card-title {
+    padding: 6px 10px;
+}
+
+.dd-card-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.phone-card-body {
+    padding: 6px 10px 8px;
+}
+
+.dd-card-body {
+    font-size: 11px;
+    color: #f5f5f5;
+}
+
+.dd-card-text-main {
+    margin-bottom: 4px;
+}
+
+.dd-pricing {
+    font-size: 10px;
+    opacity: 0.9;
+    margin-bottom: 6px;
+}
+
+/* primary DoorDash-style call-to-action */
+.dd-primary-btn {
+    width: 100%;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ff3b30, #ff5e3a);
+    border: none;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 3px 0 #a31616, 0 4px 10px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    margin-top: 2px;
+}
+
+.dd-primary-btn:disabled {
+    opacity: 0.7;
+    cursor: default;
+    box-shadow: 0 2px 0 #7f1010, 0 3px 8px rgba(0, 0, 0, 0.45);
+}
+
+.dd-status {
+    margin-top: 6px;
+    font-size: 10px;
+    color: #ffd9d6;
+}
+
+/* empty driver text */
+.dd-empty {
+    font-size: 10px;
+    opacity: 0.9;
+}
+
+/* orders list */
+.dd-order-list {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dd-order-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 6px;
+    border-radius: 10px;
+    background: rgba(20, 20, 20, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dd-order-main {
+    flex: 1;
+    min-width: 0;
+    margin-right: 6px;
+}
+
+.dd-order-customer {
+    font-size: 11px;
+    font-weight: 600;
+    color: #ffffff;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.dd-order-location {
+    font-size: 10px;
+    color: #ffcc80;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.dd-order-meta {
+    font-size: 9px;
+    color: #bbbbbb;
+}
+
+/* Accept button – smaller, red pill */
+.dd-order-accept-btn {
+    border-radius: 999px;
+    border: none;
+    font-size: 10px;
+    padding: 4px 10px;
+    cursor: pointer;
+    background: linear-gradient(135deg, #ff3b30, #ff5e3a);
+    color: #fff;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    box-shadow: 0 2px 0 #a31616;
+    flex-shrink: 0;
+}
+
+.dd-order-accept-btn:hover {
+    filter: brightness(1.05);
+}

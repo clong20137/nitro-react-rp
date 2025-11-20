@@ -12,6 +12,7 @@ import { GetSessionDataManager } from "../../api";
 import { SendMessageComposer } from "../../api";
 import { DoorDashOrderComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/DoorDashComposer";
 import { AcceptDoorDashOrderComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/AcceptDoorDashOrderComposer";
+import { DoorDashOrdersRequestComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/DoorDashOrdersRequestComposer";
 import { DoorDashOrderData } from "@nitrots/nitro-renderer/src/nitro/communication/messages/parser/DoorDashOrdersParser";
 
 export type PhoneApp =
@@ -53,10 +54,16 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [position, setPosition] = useState({ x: 50, y: 80 }); // starting pos (px)
 
+    // 🔔 phone shake state
+    const [shake, setShake] = useState(false);
+
+    // 🔔 DoorDash notification badge count
+    const [doorDashCount, setDoorDashCount] = useState(0);
+
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (!dragging) return;
-            setPosition((prev) => ({
+            setPosition(() => ({
                 x: e.clientX - dragOffset.x,
                 y: e.clientY - dragOffset.y,
             }));
@@ -83,6 +90,30 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
         });
     };
 
+    // 🔔 listen for shake requests from DoorDashApp
+    useEffect(() => {
+        const handler = () => {
+            setShake(true);
+
+            // try to vibrate (if supported)
+            try {
+                if (
+                    typeof navigator !== "undefined" &&
+                    "vibrate" in navigator
+                ) {
+                    (navigator as any).vibrate([120, 80, 120]);
+                }
+            } catch {
+                // ignore
+            }
+
+            setTimeout(() => setShake(false), 500);
+        };
+
+        window.addEventListener("phone_shake", handler);
+        return () => window.removeEventListener("phone_shake", handler);
+    }, []);
+
     // Called by FriendsApp when user taps a friend
     const handleMessageFriendFromFriendsApp = (friendId: number) => {
         setActiveApp("messages");
@@ -92,7 +123,9 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
         <div className="phone-root">
             <div
                 ref={phoneRef}
-                className="phone-frame phone-enter"
+                className={`phone-frame phone-enter${
+                    shake ? " phone-shake" : ""
+                }`}
                 style={{
                     left: position.x,
                     top: position.y,
@@ -144,6 +177,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
                             <PhoneAppIcon
                                 label="DoorDash"
                                 icon="🍕"
+                                badge={doorDashCount}
                                 onClick={() => setActiveApp("doordash")}
                             />
                         </div>
@@ -166,7 +200,10 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
                 )}
 
                 {activeApp === "doordash" && (
-                    <DoorDashApp onBack={() => setActiveApp("home")} />
+                    <DoorDashApp
+                        onBack={() => setActiveApp("home")}
+                        onOrdersCountChange={setDoorDashCount}
+                    />
                 )}
             </div>
         </div>
@@ -201,19 +238,51 @@ const PhoneAppIcon: React.FC<PhoneAppIconProps> = ({
 DOORDASH APP – customer order + driver order list
 ========================================================================= */
 
-const DoorDashApp: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+const DoorDashApp: React.FC<{
+    onBack: () => void;
+    onOrdersCountChange: (count: number) => void;
+}> = ({ onBack, onOrdersCountChange }) => {
     const [isOrdering, setIsOrdering] = useState(false);
     const [status, setStatus] = useState<string | null>(null);
 
     // active open orders for drivers (from bridge)
     const [orders, setOrders] = useState<DoorDashOrderData[]>([]);
 
+    // ✅ request current orders whenever DoorDash app opens
+    useEffect(() => {
+        try {
+            SendMessageComposer(new DoorDashOrdersRequestComposer());
+            console.log("[📥] DoorDashOrdersRequestComposer sent");
+        } catch (e) {
+            console.error("Failed to send DoorDashOrdersRequestComposer", e);
+        }
+    }, []);
+
     // listen to bridge events from Nitro (like ATM)
     useEffect(() => {
         const handler = (event: Event) => {
             const custom = event as CustomEvent<DoorDashOrderData[]>;
             const list = custom.detail || [];
-            setOrders(list);
+
+            setOrders((prev) => {
+                // detect if any *new* order ids appeared
+                const prevIds = new Set(prev.map((o) => o.orderId));
+                const hasNew = list.some((o) => !prevIds.has(o.orderId));
+
+                if (hasNew) {
+                    // ask the phone to shake & vibrate
+                    window.dispatchEvent(new CustomEvent("phone_shake"));
+                }
+
+                // update badge count based on current list
+                try {
+                    onOrdersCountChange(list.length);
+                } catch {
+                    // ignore
+                }
+
+                return list;
+            });
         };
 
         window.addEventListener("doordash_orders", handler);
@@ -221,7 +290,7 @@ const DoorDashApp: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         return () => {
             window.removeEventListener("doordash_orders", handler);
         };
-    }, []);
+    }, [onOrdersCountChange]);
 
     const handlePizzaOrder = () => {
         if (isOrdering) return;
@@ -262,37 +331,39 @@ const DoorDashApp: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
             <div className="phone-list">
                 {/* CUSTOMER SIDE – place pizza order */}
-                <div className="phone-card">
+                <div className="phone-card dd-card-customer">
                     <div className="phone-card-title">Pizza Delivery</div>
                     <div className="phone-card-body">
-                        <p>
+                        <p className="dd-card-text-main">
                             Get a hot pizza delivered to your current location.
                         </p>
-                        <p className="hint">
+                        <p className="hint dd-pricing">
                             Base price: <b>3 credits</b> + <b>1 credit</b> per
                             room of travel.
                         </p>
                         <button
-                            className="phone-primary-btn"
+                            className="phone-primary-btn dd-primary-btn"
                             disabled={isOrdering}
                             onClick={handlePizzaOrder}
                         >
                             {isOrdering ? "Ordering…" : "Order Pizza"}
                         </button>
                         {status && (
-                            <div className="phone-status-text">{status}</div>
+                            <div className="phone-status-text dd-status">
+                                {status}
+                            </div>
                         )}
                     </div>
                 </div>
 
                 {/* DRIVER SIDE – list of orders */}
-                <div className="phone-card">
+                <div className="phone-card dd-card-driver">
                     <div className="phone-card-title">
                         Active Orders (Driver)
                     </div>
                     <div className="phone-card-body">
                         {!orders.length && (
-                            <p className="hint">
+                            <p className="hint dd-empty">
                                 No active orders right now. Stay clocked in as a
                                 delivery driver to receive new jobs.
                             </p>

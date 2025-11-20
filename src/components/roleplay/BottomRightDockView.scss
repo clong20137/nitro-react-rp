@@ -24,12 +24,12 @@
     padding: 0;
     outline: none;
     cursor: pointer;
+    position: relative; // needed for badge positioning
 }
 
 /* PHONE ICON FROM SCSS */
 .phone-tile {
     background-image: url("../../icons/phone.png");
-    /* <-- your image */
     background-size: 32px 47px;
     background-repeat: no-repeat;
 
@@ -39,6 +39,57 @@
 
     &:active {
         transform: translateY(1px);
+    }
+}
+
+/* Little red badge in the top-right corner of the tile */
+.dock-notification-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #e53935;
+    color: #fff;
+    font-size: 10px;
+    line-height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 2px #0067b3;
+    font-weight: 700;
+}
+
+/* Shake animation for the phone tile when new orders arrive */
+.dock-shake {
+    animation: dock-shake 0.4s ease;
+}
+
+@keyframes dock-shake {
+    0% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(-2px);
+    }
+
+    40% {
+        transform: translateX(2px);
+    }
+
+    60% {
+        transform: translateX(-2px);
+    }
+
+    80% {
+        transform: translateX(2px);
+    }
+
+    100% {
+        transform: translateX(0);
     }
 }
 
