@@ -207,7 +207,7 @@ Render
                     <GangInviteContainer />
                     <ItemOfferPopupManager />
                     <SellModuleView />
-
+                    <RoomWidgetsView />
                     <GatheringProgressBar />
                     <GangClaimView />
                     <TaxiView />
