@@ -8,7 +8,7 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 .wanted-list-view {
     position: absolute;
     z-index: 1100;
-    background:#dfdfdf;
+    background: #dfdfdf;
     border: 2px solid #FFF;
     border-radius: 10px;
     box-shadow: $shadow;
@@ -53,15 +53,20 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 
 /* ===== Header / Close ===== */
 .wanted-header {
+    background: #1e7295;
+    color: #fff;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
-    color: #fff;
-    padding: 8px 10px;
-    font-size: 20px;
+    justify-content: center;
+    padding: 8px 12px;
+    font-weight: 700;
+    font-size: 18px;
+    border-radius: 8px 8px 0 0;
     cursor: grab;
-    user-select: none;
+    position: relative;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    Filter: drop-shadow(0 0 1px black);
+    box-shadow: 0 0 #0000001a, 0 0 #0000001a, inset 0 -3px #00000017;
 }
 
 /* updated close button */

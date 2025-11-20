@@ -57,8 +57,8 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
     // 🔔 phone shake state
     const [shake, setShake] = useState(false);
 
-    // 🔔 DoorDash notification badge count
-    const [doorDashCount, setDoorDashCount] = useState(0);
+    // 🔔 DoorDash badge (notification) state
+    const [doorDashBadge, setDoorDashBadge] = useState(0);
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
@@ -119,6 +119,18 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
         setActiveApp("messages");
     };
 
+    // 🔔 Called by DoorDashApp whenever the full orders list is updated
+    const handleDoorDashOrdersUpdated = (orders: DoorDashOrderData[]) => {
+        // show count of active orders as badge
+        setDoorDashBadge(orders.length);
+    };
+
+    // 🔔 Called when driver accepts / picks up an order
+    const handleDoorDashOrderAccepted = (orders: DoorDashOrderData[]) => {
+        // If you want to fully clear, use 0; if you want remaining-count, use orders.length
+        setDoorDashBadge(orders.length);
+    };
+
     return (
         <div className="phone-root">
             <div
@@ -177,7 +189,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
                             <PhoneAppIcon
                                 label="DoorDash"
                                 icon="🍕"
-                                badge={doorDashCount}
+                                badge={doorDashBadge} // 🔔 show active orders
                                 onClick={() => setActiveApp("doordash")}
                             />
                         </div>
@@ -202,7 +214,8 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
                 {activeApp === "doordash" && (
                     <DoorDashApp
                         onBack={() => setActiveApp("home")}
-                        onOrdersCountChange={setDoorDashCount}
+                        onOrdersUpdated={handleDoorDashOrdersUpdated}
+                        onOrderAccepted={handleDoorDashOrderAccepted}
                     />
                 )}
             </div>
@@ -238,25 +251,22 @@ const PhoneAppIcon: React.FC<PhoneAppIconProps> = ({
 DOORDASH APP – customer order + driver order list
 ========================================================================= */
 
-const DoorDashApp: React.FC<{
+type DoorDashAppProps = {
     onBack: () => void;
-    onOrdersCountChange: (count: number) => void;
-}> = ({ onBack, onOrdersCountChange }) => {
+    onOrdersUpdated?: (orders: DoorDashOrderData[]) => void;
+    onOrderAccepted?: (orders: DoorDashOrderData[]) => void;
+};
+
+const DoorDashApp: React.FC<DoorDashAppProps> = ({
+    onBack,
+    onOrdersUpdated,
+    onOrderAccepted,
+}) => {
     const [isOrdering, setIsOrdering] = useState(false);
     const [status, setStatus] = useState<string | null>(null);
 
     // active open orders for drivers (from bridge)
     const [orders, setOrders] = useState<DoorDashOrderData[]>([]);
-
-    // ✅ request current orders whenever DoorDash app opens
-    useEffect(() => {
-        try {
-            SendMessageComposer(new DoorDashOrdersRequestComposer());
-            console.log("[📥] DoorDashOrdersRequestComposer sent");
-        } catch (e) {
-            console.error("Failed to send DoorDashOrdersRequestComposer", e);
-        }
-    }, []);
 
     // listen to bridge events from Nitro (like ATM)
     useEffect(() => {
@@ -274,12 +284,8 @@ const DoorDashApp: React.FC<{
                     window.dispatchEvent(new CustomEvent("phone_shake"));
                 }
 
-                // update badge count based on current list
-                try {
-                    onOrdersCountChange(list.length);
-                } catch {
-                    // ignore
-                }
+                // notify PhoneView so badge can update
+                if (onOrdersUpdated) onOrdersUpdated(list);
 
                 return list;
             });
@@ -290,7 +296,7 @@ const DoorDashApp: React.FC<{
         return () => {
             window.removeEventListener("doordash_orders", handler);
         };
-    }, [onOrdersCountChange]);
+    }, [onOrdersUpdated]);
 
     const handlePizzaOrder = () => {
         if (isOrdering) return;
@@ -312,6 +318,16 @@ const DoorDashApp: React.FC<{
     const handleAcceptOrder = (orderId: number) => {
         try {
             SendMessageComposer(new AcceptDoorDashOrderComposer(orderId));
+
+            // optimistic local update so badge clears immediately
+            setOrders((prev) => {
+                const next = prev.filter((o) => o.orderId !== orderId);
+
+                if (onOrderAccepted) onOrderAccepted(next);
+                else if (onOrdersUpdated) onOrdersUpdated(next);
+
+                return next;
+            });
         } catch (e) {
             console.error(e);
         }

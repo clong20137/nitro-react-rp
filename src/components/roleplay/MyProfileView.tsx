@@ -1,7 +1,8 @@
-import React, { FC, useEffect, useRef, useState } from "react";
+import React, { FC, useEffect, useRef, useState, useMemo } from "react";
 import "./MyProfileView.scss";
 import { GetCommunication } from "../../api/nitro/GetCommunication";
 import { UpgradeStatComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/UpgradeStatComposer";
+import { ProfileAchievementsRequestComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ProfileAchievementsRequestComposer";
 import { setRPStats } from "./rpStatsCache";
 
 /* --------------------------------- Types --------------------------------- */
@@ -76,6 +77,11 @@ export interface AchievementRow {
     xpReward: number;
     badgeUrl: string;
     description?: string;
+
+    // grouping + ordering from server
+    groupKey: string;
+    groupOrder: number;
+    levelOrder: number;
 }
 
 interface MyProfileViewProps {
@@ -83,7 +89,7 @@ interface MyProfileViewProps {
     stats: StatsProps;
     onUpgrade: (stat: UpgradeableStat) => void;
     isOnline?: boolean; // optional override
-    achievements?: AchievementRow[];
+    achievements?: AchievementRow[]; // kept in props for future, but NOT used to overwrite state
 }
 
 /* ------------------------------- Component -------------------------------- */
@@ -93,7 +99,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
     stats,
     onUpgrade,
     isOnline = stats.isOnline ?? true,
-    achievements = [],
+    achievements, // currently unused for state, but left for future
 }) => {
     // ----- local optimistic state (drives the bars immediately) -----
     const [uiStats, setUiStats] = useState(() => ({
@@ -110,7 +116,30 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
         level: stats.level ?? 1,
     }));
 
-    // when server/parent props change, reconcile into optimistic state
+    // 🔹 local achievements state (what the UI will render)
+    const [achRows, setAchRows] = useState<AchievementRow[]>([]);
+
+    // 🔹 which group is expanded (accordion: one at a time)
+    const [openGroup, setOpenGroup] = useState<string | null>(null);
+
+    // 🔹 Listen for achievements from the parser bridge
+    useEffect(() => {
+        const onAchievements = (ev: any) => {
+            const rows = ev.detail?.achievements || [];
+            console.log("[Profile] achievements update (view):", rows);
+            setAchRows(rows);
+        };
+
+        window.addEventListener("profile_achievements_update", onAchievements);
+
+        return () =>
+            window.removeEventListener(
+                "profile_achievements_update",
+                onAchievements
+            );
+    }, []);
+
+    // when server/parent stats props change, reconcile into optimistic state
     useEffect(() => {
         setUiStats((s) => ({
             ...s,
@@ -295,6 +324,57 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
     const pct = (n: number, d: number) =>
         d <= 0 ? 0 : Math.min(100, Math.max(0, (n / d) * 100));
 
+    /* -------------------- Group achievements by type (UI) -------------------- */
+
+    const groupedAchievements = useMemo<
+        Record<string, { order: number; rows: AchievementRow[] }>
+    >(() => {
+        const groups: Record<
+            string,
+            { order: number; rows: AchievementRow[] }
+        > = {};
+
+        for (const row of achRows) {
+            const key = row.groupKey || "other";
+
+            if (!groups[key]) {
+                groups[key] = {
+                    order: row.groupOrder ?? 0,
+                    rows: [],
+                };
+            }
+
+            groups[key].rows.push(row);
+        }
+
+        // sort rows inside each group by levelOrder
+        Object.values(groups).forEach((g) => {
+            g.rows.sort((a, b) => (a.levelOrder ?? 0) - (b.levelOrder ?? 0));
+        });
+
+        return groups;
+    }, [achRows]);
+
+    const sortedGroupNames = useMemo<string[]>(
+        () =>
+            Object.entries(groupedAchievements)
+                .sort(([, ga], [, gb]) => (ga.order ?? 0) - (gb.order ?? 0))
+                .map(([key]) => key),
+        [groupedAchievements]
+    );
+
+    // when achievements / groups update, auto-open the first group if none is open
+    useEffect(() => {
+        if (sortedGroupNames.length && !openGroup) {
+            setOpenGroup(sortedGroupNames[0]);
+        }
+    }, [sortedGroupNames, openGroup]);
+
+    const handleToggleGroup = (groupName: string) => {
+        // accordion behavior: only one open at a time
+        setOpenGroup((prev) => (prev === groupName ? null : groupName));
+    };
+
     /* ----------------------------------- UI ----------------------------------- */
 
     return (
@@ -329,7 +409,21 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                     className={`tab-btn ${
                         tab === "achievements" ? "active" : ""
                     }`}
-                    onClick={() => setTab("achievements")}
+                    onClick={() => {
+                        setTab("achievements");
+
+                        // request achievements from server
+                        try {
+                            GetCommunication().connection.send(
+                                new ProfileAchievementsRequestComposer()
+                            );
+                        } catch (e) {
+                            console.error(
+                                "Failed to send ProfileAchievementsRequestComposer",
+                                e
+                            );
+                        }
+                    }}
                 >
                     Achievements
                 </button>
@@ -451,7 +545,11 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                         />
                                     )}
                                     <div>
-                                        <div style={{ fontWeight: 700 }}>
+                                        <div
+                                            style={{
+                                                fontWeight: 700,
+                                            }}
+                                        >
                                             {stats.jobTitle || "Unemployed"}
                                         </div>
                                         <div
@@ -478,11 +576,9 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                 <div
                                     className="xp-fill"
                                     style={{
-                                        width: `${Math.min(
-                                            100,
-                                            (uiStats.xp /
-                                                Math.max(1, uiStats.maxXP)) *
-                                                100
+                                        width: `${pct(
+                                            uiStats.xp,
+                                            Math.max(1, uiStats.maxXP)
                                         )}%`,
                                     }}
                                 />
@@ -568,56 +664,130 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                 /* --------------------------- ACHIEVEMENTS TAB --------------------------- */
                 <div className="tab-content">
                     <div className="achievements-panel">
-                        {achievements.length === 0 ? (
+                        {achRows.length === 0 ? (
                             <div className="achievements-empty">
                                 No achievements to show yet.
                             </div>
                         ) : (
                             <div className="achievements-list">
-                                {achievements.map((a) => (
-                                    <div className="ach-row" key={a.id}>
-                                        <img
-                                            className="ach-icon"
-                                            src={a.badgeUrl}
-                                            alt={a.name}
-                                            draggable={false}
-                                        />
-                                        {/* title + reward */}
-                                        <div className="ach-line">
-                                            <div className="ach-title">
-                                                {a.name}
-                                            </div>
-                                            <div className="ach-reward">
-                                                +{a.xpReward} XP
-                                            </div>
-                                        </div>
+                                {sortedGroupNames.map((groupName) => {
+                                    const group =
+                                        groupedAchievements[groupName];
+                                    if (!group) return null;
 
-                                        {/* optional description */}
-                                        {a.description && (
-                                            <div className="ach-text">
-                                                {a.description}
-                                            </div>
-                                        )}
+                                    const isOpen = openGroup === groupName;
 
-                                        {/* progress */}
-                                        <div className="ach-progress">
-                                            <div className="ach-bar">
-                                                <div
-                                                    className="ach-fill"
-                                                    style={{
-                                                        width: `${pct(
-                                                            a.current,
-                                                            a.target
-                                                        )}%`,
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="ach-text">
-                                                {a.current}/{a.target}
-                                            </div>
+                                    // Pretty display name for the group
+                                    const prettyName =
+                                        groupName === "kills"
+                                            ? "Kills"
+                                            : groupName === "deaths"
+                                            ? "Deaths"
+                                            : groupName === "punches"
+                                            ? "Punches Thrown"
+                                            : groupName === "damage"
+                                            ? "Damage"
+                                            : groupName === "gathering"
+                                            ? "Gathering"
+                                            : groupName === "pizza"
+                                            ? "Pizzas Sold"
+                                            : groupName === "mining"
+                                            ? "Mining"
+                                            : groupName
+                                                  .charAt(0)
+                                                  .toUpperCase() +
+                                              groupName.slice(1);
+
+                                    return (
+                                        <div
+                                            className={`ach-group ${
+                                                isOpen ? "open" : "collapsed"
+                                            }`}
+                                            key={groupName}
+                                        >
+                                            <button
+                                                className="ach-group-header"
+                                                onClick={() =>
+                                                    handleToggleGroup(groupName)
+                                                }
+                                            >
+                                                <span className="ach-group-title">
+                                                    {prettyName}
+                                                </span>
+                                                <span className="ach-group-arrow">
+                                                    {isOpen ? "▲" : "▼"}
+                                                </span>
+                                            </button>
+
+                                            {isOpen && (
+                                                <div className="ach-group-grid">
+                                                    {group.rows.map((a) => (
+                                                        <div
+                                                            className="ach-row"
+                                                            key={a.id}
+                                                        >
+                                                            <img
+                                                                className="ach-icon"
+                                                                src={a.badgeUrl}
+                                                                alt={a.name}
+                                                                draggable={
+                                                                    false
+                                                                }
+                                                            />
+
+                                                            {/* title + reward */}
+                                                            <div className="ach-line">
+                                                                <div className="ach-title">
+                                                                    {a.name}
+                                                                </div>
+                                                                <div className="ach-reward">
+                                                                    +
+                                                                    {a.xpReward}{" "}
+                                                                    XP
+                                                                </div>
+                                                            </div>
+
+                                                            {/* optional description */}
+                                                            {a.description && (
+                                                                <div className="ach-text">
+                                                                    {
+                                                                        a.description
+                                                                    }
+                                                                </div>
+                                                            )}
+
+                                                            {/* progress */}
+                                                            <div className="ach-progress">
+                                                                <div className="ach-bar">
+                                                                    <div
+                                                                        className="ach-fill"
+                                                                        style={{
+                                                                            width: `${
+                                                                                a.target >
+                                                                                0
+                                                                                    ? Math.min(
+                                                                                          100,
+                                                                                          (a.current /
+                                                                                              a.target) *
+                                                                                              100
+                                                                                      )
+                                                                                    : 0
+                                                                            }%`,
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <div className="ach-text">
+                                                                    {a.current}/
+                                                                    {a.target}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

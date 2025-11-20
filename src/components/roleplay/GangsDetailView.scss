@@ -75,13 +75,17 @@ $dur-slow: 420ms;
 
 /* ===== Header (drag handle) ===== */
 .gangs-header {
-    background: linear-gradient(180deg,#0067b3,#0067b3 50%,#005da3 0,#005da3);
+    background: #1e7295;
     color: #fff;
-    padding: 8px 12px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    padding: 8px 12px;
+    font-weight: 700;
+    font-size: 18px;
+    border-radius: 8px 8px 0 0;
     cursor: grab;
+    box-shadow: 0 0 #0000001a, 0 0 #0000001a, inset 0 -3px #00000017;
+    position: relative;
 }
 
 .gang-name-header {
@@ -92,8 +96,8 @@ $dur-slow: 420ms;
 
 .gang-color-split-box {
     position: relative;
-    width: 42px;
-    height: 42px;
+    width: 24px;
+    height: 24px;
     border: 2px solid #ffffff;
     border-radius: 10px;
     overflow: hidden;
@@ -225,6 +229,8 @@ $dur-slow: 420ms;
 .gang-name-text {
     font-size: 18px;
     font-weight: 800;
+    Filter: drop-shadow(0 0 1px black);
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 /* Close button (DiamondStore style) */
@@ -266,17 +272,17 @@ $dur-slow: 420ms;
 /* ===== Tabs (DiamondStore tabs) ===== */
 .gangs-tabs {
     display: flex;
-    justify-content:center;
+    justify-content: center;
     gap: 6px;
     padding: 8px 8px 0;
-    background: #2478b7;
+    background: #185d79;
 
     button {
         appearance: none;
         border: 2px solid #ffffff;
         border-bottom: none;
         border-radius: 8px 8px 0 0;
-        background: linear-gradient(180deg,#0067b3,#0067b3 50%,#005da3 0,#005da3);
+        background: linear-gradient(180deg, #1e7295, #1e7295 50%, #185d79 0, #185d79);
         font-weight: 800;
         font-size: 16px;
         padding: 10px 12px;
@@ -292,8 +298,8 @@ $dur-slow: 420ms;
         }
 
         &.active {
-            background:#cdcdcd;
-            color:#000;
+            background: #cdcdcd;
+            color: #000;
         }
     }
 }
@@ -363,14 +369,14 @@ GENERAL TAB
     .xp-bar-container {
         height: 30px;
         border: 2px solid #FFF;
-        
+
         border-radius: 6px;
         background: #cdcdcd;
         overflow: hidden;
 
         .xp-bar-fill {
             height: 100%;
-            background: linear-gradient(180deg,#0067b3,#0067b3 50%,#005da3 0,#005da3);
+            background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
         }
     }
 

@@ -64,7 +64,7 @@
 .inventory-header {
     position: relative;
     color: #fff;
-    background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
+    background: #1e7295;
     font-weight: bold;
     text-align: center;
     font-size: 20px;
@@ -72,7 +72,10 @@
     border-radius: 8px 8px 0 0;
     width: 100%;
     margin-bottom: 10px;
-    text-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    box-shadow: 0 0 #0000001a, 0 0 #0000001a, inset 0 -3px #00000017;
+    Filter: drop-shadow(0 0 1px black);
+
     user-select: none;
     cursor: move;
 }
@@ -145,22 +148,23 @@
 }
 
 .slot-label {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: bold;
     margin-bottom: 2px;
     color: #fff;
-    text-shadow: 0 0 2px #000;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
     line-height: 1;
+    Filter: drop-shadow(0 0 1px black);
 }
 
 /* Core slot */
 .inventory-slot {
     width: 48px;
     height: 48px;
-    background-color: #7a7a7a;
-    border: 2px solid #000;
+    background-color: rgb(214, 214, 214);
+    border: 1px solid rgba(119, 119, 119, .19);
     border-radius: 6px;
-    box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 #000;
+    box-shadow: #00000052 0 1px 4px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -185,7 +189,7 @@
 .inventory-slot.active-weapon,
 .inventory-slot.active-shield,
 .inventory-slot.active-potion {
-    background-color: rgba(24,24,24,.65);
+    background-color: rgba(24, 24, 24, .65);
 }
 
 /* DnD feedback: ONLY shadow/outline, no transform-scale */
@@ -344,7 +348,7 @@
     font-size: 11px;
     padding: 6px 8px;
     white-space: nowrap;
-    z-index: 999;
+    z-index: 9999;
     border-radius: 4px;
     box-shadow: rgba(0, 0, 0, .24) 0px 3px 8px;
     min-width: 120px;

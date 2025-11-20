@@ -18,7 +18,7 @@ const NAME_ICON_BASE = "/nitro-react/src/assets/images/chat/nameicons";
 /** Mention ping sound */
 const MENTION_PING_URL = "/assets/sounds/mention-ping.mp3";
 
-/** Escape only angle brackets (avoid double-escaping &amp;#60;) */
+/** Escape only angle brackets (for RP text) */
 const escapeAngles = (s: string) =>
     s.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -33,7 +33,6 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
 
     const [isVisible, setIsVisible] = useState(false);
     const elementRef = useRef<HTMLDivElement>(null);
-    const pingPlayedRef = useRef(false);
 
     const myName = (GetSessionDataManager()?.userName || "").trim();
     const myNameLower = myName.toLowerCase();
@@ -69,7 +68,13 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
             ? `<img class="name-icon" src="${nameIconUrl}" alt="" aria-hidden="true" draggable="false" /> `
             : "") + usernameHtmlCore;
 
-    /** Detect if THIS message mentions me (case-insensitive) */
+    /** Does this message contain *any* @mention (for bubble style)? */
+    const hasAnyMention = useMemo(() => {
+        const txt = chat?.formattedText || "";
+        return /@([A-Za-z0-9_-]+)/.test(txt);
+    }, [chat?.formattedText]);
+
+    /** Detect if THIS message mentions *me* (for ping) */
     const thisMentionsMe = useMemo(() => {
         const txt = chat?.formattedText || "";
         const me = myNameLower;
@@ -83,42 +88,33 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
         return false;
     }, [chat?.formattedText, myNameLower]);
 
-    /** Format with mention spans (multiple mentions, safe escaping) */
+    /**
+     * Format with mention spans.
+     * IMPORTANT: we operate on the *raw* formattedText and do NOT escape < >
+     * here, so all the Nitro <font> tags & colors still work.
+     */
     const formattedWithMentions = useMemo(() => {
         const raw = chat?.formattedText || "";
         if (!raw) return "";
 
-        // escape ONLY < and > so & and &# codes remain intact
-        const esc = escapeAngles(raw);
-
         const re = /@([A-Za-z0-9_-]+)/g;
-        const parts: string[] = [];
-        let last = 0;
-        let prevWasMention = false;
-        let m: RegExpExecArray | null;
 
-        while ((m = re.exec(esc)) !== null) {
-            if (m.index > last) {
-                parts.push(esc.slice(last, m.index));
-                prevWasMention = false;
-            }
-            if (prevWasMention) parts.push("&#8203;"); // zero-width joiner
-            parts.push(`<span class="mention">@${m[1]}</span>`);
-            prevWasMention = true;
-            last = m.index + m[0].length;
-        }
-
-        if (last < esc.length) parts.push(esc.slice(last));
-
-        return parts.join("");
+        // replace each @name with a span, preserving all other markup
+        return raw.replace(re, (_match, p1: string) => {
+            return `<span class="mention">@${p1}</span>`;
+        });
     }, [chat?.formattedText]);
 
-    /** Bubble style: roleplay (4), mention highlight (25), else normal */
+    /** Bubble style:
+     * - roleplay keeps style 4
+     * - any @mention → style 25 (mention bubble)
+     * - otherwise use server style
+     */
     const bubbleStyleId = useMemo(() => {
         if (isRoleplay) return 4;
-        if (thisMentionsMe) return 25;
+        if (hasAnyMention) return 25;
         return chat.styleId;
-    }, [isRoleplay, thisMentionsMe, chat.styleId]);
+    }, [isRoleplay, hasAnyMention, chat.styleId]);
 
     /** Measure / place bubble */
     useEffect(() => {
@@ -154,14 +150,15 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
 
     useEffect(() => setIsVisible(chat.visible), [chat.visible]);
 
-    /** Play ping for me once if I'm mentioned */
+    /** Play ping ONCE PER MESSAGE if it mentions me */
     useEffect(() => {
-        if (!thisMentionsMe) {
-            pingPlayedRef.current = false;
-            return;
-        }
-        if (pingPlayedRef.current) return;
-        pingPlayedRef.current = true;
+        if (!thisMentionsMe) return;
+
+        const anyChat = chat as any;
+
+        // guard: only ping once for this chat object
+        if (anyChat._mentionPingPlayed) return;
+        anyChat._mentionPingPlayed = true;
 
         try {
             const audio = new Audio(MENTION_PING_URL);
@@ -170,7 +167,7 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
         } catch {
             /* ignore */
         }
-    }, [thisMentionsMe]);
+    }, [thisMentionsMe, chat]);
 
     return (
         <div

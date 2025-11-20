@@ -1,4 +1,11 @@
-import { FC, useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, {
+    FC,
+    useEffect,
+    useRef,
+    useState,
+    useCallback,
+    useLayoutEffect,
+} from "react";
 import "./WantedListView.scss";
 
 interface WantedUser {

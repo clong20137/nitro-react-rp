@@ -35,13 +35,12 @@ const EVT_TOKENS_PURCHASE_OK_RAW = "store_tokens_purchase_ok_raw";
 const EVT_TOKENS_PURCHASE_FAIL_RAW = "store_tokens_purchase_fail_raw";
 
 /* ---------- Assets ---------- */
-const BUBBLE_ASSET_BASE = "/nitro/icons/chat/chatbubbles";
+const BUBBLE_ASSET_BASE = "/nitro/icons/chatbubbles/";
 const NAMEICON_ASSET_BASE = "/nitro/icons/nameicons/";
 
 const bubbleGif = (id: number) => `${BUBBLE_ASSET_BASE}/bubble_${id}.gif`;
 const bubblePng = (id: number) => `${BUBBLE_ASSET_BASE}/bubble_${id}.png`;
 const nameIconPng = (id: number) => `${NAMEICON_ASSET_BASE}/${id}.png`;
-
 
 /* --------------------------------------------------------
 BubbleImg: prefer PNG, pre-load GIF in parallel as backup
@@ -340,8 +339,6 @@ export const DiamondsStoreView: FC<{ onClose: () => void }> = ({ onClose }) => {
         }
     }, []);
 
-
-
     const requestTokensStore = useCallback(() => {
         try {
             setTokensLoading(true);
@@ -357,12 +354,7 @@ export const DiamondsStoreView: FC<{ onClose: () => void }> = ({ onClose }) => {
         requestTokensStore();
         requestBubbleStore();
         requestIconStore();
-    }, [
-        requestBubbleStore,
-        requestIconStore,
-
-        requestTokensStore,
-    ]);
+    }, [requestBubbleStore, requestIconStore, requestTokensStore]);
 
     /* ===== RAW → state (BUBBLES) ===== */
     useEffect(() => {
@@ -782,8 +774,6 @@ export const DiamondsStoreView: FC<{ onClose: () => void }> = ({ onClose }) => {
             }
             return;
         }
-       
-        
     };
 
     /* ---------- Render helpers ---------- */

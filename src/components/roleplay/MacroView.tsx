@@ -218,7 +218,7 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
     const [capturedKey, setCapturedKey] = useState<KeyString>("");
     const [newCmd, setNewCmd] = useState("");
 
-    // open modal: this was missing!
+    // open modal
     const openAddModal = () => {
         setCapturedKey("");
         setNewCmd("");
@@ -438,17 +438,6 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
 
                     {/* Add Macro button */}
                     <div className="row" style={{ gap: 8 }}>
-                        <button
-                            className="habbo-red-btn small"
-                            onClick={() =>
-                                canDeleteThisPreset &&
-                                activePreset &&
-                                deletePreset(activePreset.id)
-                            }
-                        >
-                            Delete
-                        </button>
-
                         <button
                             className="habbo-green-btn small"
                             type="button"
