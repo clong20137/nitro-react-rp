@@ -14,8 +14,8 @@
 
 /* Cards + layout */
 .rs-card {
-    background: #0067b3;
-    border: 2px solid #ffffff;
+    background: rgb(0 0 0 / 75%);
+    border: 2px solid rgba(255, 255, 255, .2);
     border-radius: 12px;
     padding: 10px;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
@@ -35,8 +35,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #0067b3;
-    border: 2px solid #ffffff;
+    background: rgb(0 0 0 / 60%);
+    border: 2px solid rgba(255, 255, 255, .2);
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
         0 2px 0 rgba(0, 0, 0, 0.25),
         inset 0 -4px rgba(0, 0, 0, 0.12);
@@ -83,7 +83,7 @@
 
 /* ---- CHIP STYLING ---- */
 .chip {
-    background: #2079bb;
+    background: #393c3e;
     padding: 6px 10px;
     border-radius: 12px;
     display: inline-flex;
