@@ -22,23 +22,31 @@ PhoneView.scss
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    position: fixed; // important for drag via top/left
+    position: fixed; // anchor to screen
     font-family: "Ubuntu", sans-serif;
+
+    /* NEW: stick it to bottom-right */
+    bottom: 24px;
+    right: 24px;
 }
 
 /* Slide in from right when opened */
+/* Slide in from bottom-right when opened */
 .phone-enter {
     animation: phone-slide-in 260ms ease-out;
+    transform-origin: bottom right;
+    /* optional, feels nicer */
 }
 
 @keyframes phone-slide-in {
     from {
-        transform: translateX(40px);
+        /* start further down and to the right (off-screen) */
+        transform: translate(40px, 40px);
         opacity: 0;
     }
 
     to {
-        transform: translateX(0);
+        transform: translate(0, 0);
         opacity: 1;
     }
 }
