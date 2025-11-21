@@ -79,6 +79,7 @@ $dur-slow: 420ms;
     color: #fff;
     display: flex;
     align-items: center;
+    justify-content: center;
     padding: 8px 12px;
     font-weight: 700;
     font-size: 18px;
@@ -285,12 +286,18 @@ $dur-slow: 420ms;
         background: linear-gradient(180deg, #1e7295, #1e7295 50%, #185d79 0, #185d79);
         font-weight: 800;
         font-size: 16px;
-        padding: 10px 12px;
+        padding: 10px 16px;
+        min-width: 120px;
         cursor: pointer;
         color: #ffffff;
-        text-shadow: 0 1px 0 rgba(255, 255, 255, .5);
+        text-shadow: -1px -1px 0 #000,
+            1px -1px 0 #000,
+            -1px 1px 0 #000,
+            1px 1px 0 #000;
         box-shadow: 0 1px 0 rgba(0, 0, 0, .06);
         transition: transform .12s ease, filter .12s ease;
+        filter: drop-shadow(0 0 1px black);
+
 
         &:hover {
             filter: brightness(1.05);
@@ -299,7 +306,6 @@ $dur-slow: 420ms;
 
         &.active {
             background: #cdcdcd;
-            color: #000;
         }
     }
 }

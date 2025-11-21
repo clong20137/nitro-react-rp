@@ -100,23 +100,20 @@ body.ob-block-scroll {
 .ob-welcome-card {
     position: absolute;
     max-width: 420px;
-    background: #0067b3;
     color: #ffffff;
-    border: 2px solid #ffffff;
     border-radius: 12px;
-    box-shadow:
-        0 10px 24px rgba(0, 0, 0, .22),
-        0 2px 0 rgba(0, 0, 0, .25),
-        inset 0 -4px rgba(0, 0, 0, .12);
     padding: 14px 16px 12px 16px;
     pointer-events: auto;
     /* clickable */
+    background: rgba(0, 0, 0, .90);
+    border: 2px solid hsla(0, 0%, 100%, .2);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
 }
 
 /* Title + body */
 .ob-title {
     font-weight: 600;
-    font-size:24px;
+    font-size: 24px;
     margin-bottom: 6px;
     color: #ffffff;
 }
@@ -145,13 +142,13 @@ body.ob-block-scroll {
 
     &.ob-next {
         background: #2079bb;
-        border:none;
+        border: none;
         color: #fff;
     }
 
     &.ob-skip {
-        background:#e52222;
-        border:none;
+        background: #e52222;
+        border: none;
         color: #fff;
     }
 

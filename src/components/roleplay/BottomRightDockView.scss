@@ -13,6 +13,17 @@
     z-index: 1000;
 }
 
+.dock-tile.arena-tile {
+    //background-image: url('../../icons/arena.png'); // or sprite
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.dock-tile.arena-tile.arena-tile--active {
+    filter: brightness(1.1);
+}
+
 .dock-tile {
     width: 36px;
     height: 48px;

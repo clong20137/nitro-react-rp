@@ -1,5 +1,6 @@
 .nitro-mod-tools {
     width: $nitro-mod-tools-width;
+    z-index: 9999;
 }
 
 .nitro-mod-tools-room {
@@ -23,12 +24,12 @@
     .table {
         color: $black;
 
-        > :not(caption) > * > * {
+        > :not(caption)>*>* {
             box-shadow: none;
             border-bottom: 1px solid rgba(0, 0, 0, .2);
         }
 
-        &.table-striped > tbody > tr:nth-of-type(odd) {
+        &.table-striped>tbody>tr:nth-of-type(odd) {
             color: $black;
             background: rgba(0, 0, 0, .05);
         }

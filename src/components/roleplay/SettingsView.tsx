@@ -8,7 +8,22 @@ import React, {
     useState,
 } from "react";
 import "./SettingsView.scss";
-import { SendMessageComposer } from "../../api";
+import {
+    SendMessageComposer,
+    LocalizeText,
+    DispatchMainEvent,
+    DispatchUiEvent,
+} from "../../api";
+import { useMessageEvent } from "../../hooks";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
+import {
+    NitroSettingsEvent,
+    UserSettingsCameraFollowComposer,
+    UserSettingsEvent,
+    UserSettingsOldChatComposer,
+    UserSettingsSoundComposer,
+} from "@nitrots/nitro-renderer";
 
 /* ==== Chat & Icons packets ==== */
 import { ChangeChatBubbleComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ChangeChatBubbleComposer";
@@ -105,7 +120,102 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
     const { ref: rootRef, onMouseDown: startDrag } =
         useDraggable<HTMLDivElement>();
 
-    /* Chat bubbles */
+    /* ====== USER SETTINGS (old chat, camera follow, volume) ====== */
+    const [userSettings, setUserSettings] = useState<NitroSettingsEvent>(() => {
+        const e = new NitroSettingsEvent();
+
+        // sensible defaults – overwritten once UserSettingsEvent arrives
+        e.volumeSystem = 100;
+        e.volumeFurni = 100;
+        e.volumeTrax = 100;
+        e.oldChat = false;
+        e.roomInvites = true;
+        e.cameraFollow = true;
+        e.flags = 0;
+        e.chatType = 0;
+
+        return e;
+    });
+
+    const processSetting = useCallback(
+        (type: string, value?: boolean | number) => {
+            let doUpdate = true;
+            const clone = userSettings.clone();
+
+            switch (type) {
+                case "oldchat":
+                    clone.oldChat = value as boolean;
+                    SendMessageComposer(
+                        new UserSettingsOldChatComposer(clone.oldChat)
+                    );
+                    break;
+                case "camera_follow":
+                    clone.cameraFollow = value as boolean;
+                    SendMessageComposer(
+                        new UserSettingsCameraFollowComposer(clone.cameraFollow)
+                    );
+                    break;
+                case "system_volume":
+                    clone.volumeSystem = Number(value ?? 0);
+                    clone.volumeSystem = Math.max(0, clone.volumeSystem);
+                    clone.volumeSystem = Math.min(100, clone.volumeSystem);
+                    break;
+                case "furni_volume":
+                    clone.volumeFurni = Number(value ?? 0);
+                    clone.volumeFurni = Math.max(0, clone.volumeFurni);
+                    clone.volumeFurni = Math.min(100, clone.volumeFurni);
+                    break;
+                case "trax_volume":
+                    clone.volumeTrax = Number(value ?? 0);
+                    clone.volumeTrax = Math.max(0, clone.volumeTrax);
+                    clone.volumeTrax = Math.min(100, clone.volumeTrax);
+                    break;
+                default:
+                    doUpdate = false;
+                    break;
+            }
+
+            if (doUpdate) {
+                setUserSettings(clone);
+                DispatchMainEvent(clone);
+            }
+        },
+        [userSettings]
+    );
+
+    const saveVolumeToServer = useCallback(() => {
+        SendMessageComposer(
+            new UserSettingsSoundComposer(
+                Math.round(userSettings.volumeSystem),
+                Math.round(userSettings.volumeFurni),
+                Math.round(userSettings.volumeTrax)
+            )
+        );
+    }, [userSettings]);
+
+    useMessageEvent<UserSettingsEvent>(UserSettingsEvent, (event) => {
+        const parser = event.getParser();
+        const settingsEvent = new NitroSettingsEvent();
+
+        settingsEvent.volumeSystem = parser.volumeSystem;
+        settingsEvent.volumeFurni = parser.volumeFurni;
+        settingsEvent.volumeTrax = parser.volumeTrax;
+        settingsEvent.oldChat = parser.oldChat;
+        settingsEvent.roomInvites = parser.roomInvites;
+        settingsEvent.cameraFollow = parser.cameraFollow;
+        settingsEvent.flags = parser.flags;
+        settingsEvent.chatType = parser.chatType;
+
+        setUserSettings(settingsEvent);
+        DispatchMainEvent(settingsEvent);
+    });
+
+    useEffect(() => {
+        if (!userSettings) return;
+        DispatchUiEvent(userSettings);
+    }, [userSettings]);
+
+    /* ====== Chat bubbles ====== */
     const [ownedBubbles, setOwnedBubbles] = useState<Map<number, OwnedItem>>(
         new Map()
     );
@@ -114,7 +224,7 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
         return Number.isFinite(saved) ? saved : 0;
     });
 
-    /* Name icons */
+    /* ====== Name icons ====== */
     const [ownedIcons, setOwnedIcons] = useState<Map<number, OwnedItem>>(
         new Map()
     );
@@ -243,7 +353,7 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
             );
     }, []);
 
-    /* ==== React to external owned updates ==== */
+    /* ==== React to external owned icon updates ==== */
     useEffect(() => {
         const onIconsOwned = (e: Event) => {
             const { detail } = e as CustomEvent<{
@@ -287,6 +397,13 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
 
     const handleClose = () => {
         setEntering(false);
+        if (rootRef.current) {
+            const rect = rootRef.current.getBoundingClientRect();
+            localStorage.setItem(
+                POS_KEY,
+                JSON.stringify({ left: rect.left, top: rect.top })
+            );
+        }
         setTimeout(onClose, 220);
     };
 
@@ -339,6 +456,205 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
             </div>
 
             <div className="settings-body">
+                {/* ===== GENERAL TAB ===== */}
+                {activeTab === "general" && (
+                    <div className="appearance-group">
+                        <div className="group-title with-sub">
+                            <span>General Settings</span>
+                            <small>Chat behaviour and sound preferences</small>
+                        </div>
+
+                        {/* Old chat */}
+                        <div className="settings-row checkbox-row">
+                            <label>
+                                <input
+                                    className="form-check-input"
+                                    type="checkbox"
+                                    checked={userSettings.oldChat}
+                                    onChange={(event) =>
+                                        processSetting(
+                                            "oldchat",
+                                            event.target.checked
+                                        )
+                                    }
+                                />
+                                <span>
+                                    {LocalizeText(
+                                        "memenu.settings.chat.prefer.old.chat"
+                                    )}
+                                </span>
+                            </label>
+                        </div>
+
+                        {/* Camera follow */}
+                        <div className="settings-row checkbox-row">
+                            <label>
+                                <input
+                                    className="form-check-input"
+                                    type="checkbox"
+                                    checked={userSettings.cameraFollow}
+                                    onChange={(event) =>
+                                        processSetting(
+                                            "camera_follow",
+                                            event.target.checked
+                                        )
+                                    }
+                                />
+                                <span>
+                                    {LocalizeText(
+                                        "memenu.settings.other.disable.room.camera.follow"
+                                    )}
+                                </span>
+                            </label>
+                        </div>
+
+                        {/* Volume sections */}
+                        <div className="settings-volume-block">
+                            {/* UI volume */}
+                            <div className="volume-section">
+                                <div className="volume-label">
+                                    {LocalizeText(
+                                        "widget.memenu.settings.volume.ui"
+                                    )}
+                                </div>
+                                <div className="volume-row">
+                                    <FontAwesomeIcon
+                                        icon={
+                                            userSettings.volumeSystem === 0
+                                                ? "volume-mute"
+                                                : "volume-down"
+                                        }
+                                        className={
+                                            userSettings.volumeSystem >= 50
+                                                ? "text-muted"
+                                                : ""
+                                        }
+                                    />
+                                    <input
+                                        type="range"
+                                        className="custom-range w-100"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        value={userSettings.volumeSystem}
+                                        onChange={(event) =>
+                                            processSetting(
+                                                "system_volume",
+                                                Number(event.target.value)
+                                            )
+                                        }
+                                        onMouseUp={saveVolumeToServer}
+                                        onTouchEnd={saveVolumeToServer}
+                                    />
+                                    <FontAwesomeIcon
+                                        icon="volume-up"
+                                        className={
+                                            userSettings.volumeSystem < 50
+                                                ? "text-muted"
+                                                : ""
+                                        }
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Furni volume */}
+                            <div className="volume-section">
+                                <div className="volume-label">
+                                    {LocalizeText(
+                                        "widget.memenu.settings.volume.furni"
+                                    )}
+                                </div>
+                                <div className="volume-row">
+                                    <FontAwesomeIcon
+                                        icon={
+                                            userSettings.volumeFurni === 0
+                                                ? "volume-mute"
+                                                : "volume-down"
+                                        }
+                                        className={
+                                            userSettings.volumeFurni >= 50
+                                                ? "text-muted"
+                                                : ""
+                                        }
+                                    />
+                                    <input
+                                        type="range"
+                                        className="custom-range w-100"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        value={userSettings.volumeFurni}
+                                        onChange={(event) =>
+                                            processSetting(
+                                                "furni_volume",
+                                                Number(event.target.value)
+                                            )
+                                        }
+                                        onMouseUp={saveVolumeToServer}
+                                        onTouchEnd={saveVolumeToServer}
+                                    />
+                                    <FontAwesomeIcon
+                                        icon="volume-up"
+                                        className={
+                                            userSettings.volumeFurni < 50
+                                                ? "text-muted"
+                                                : ""
+                                        }
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Trax volume */}
+                            <div className="volume-section">
+                                <div className="volume-label">
+                                    {LocalizeText(
+                                        "widget.memenu.settings.volume.trax"
+                                    )}
+                                </div>
+                                <div className="volume-row">
+                                    <FontAwesomeIcon
+                                        icon={
+                                            userSettings.volumeTrax === 0
+                                                ? "volume-mute"
+                                                : "volume-down"
+                                        }
+                                        className={
+                                            userSettings.volumeTrax >= 50
+                                                ? "text-muted"
+                                                : ""
+                                        }
+                                    />
+                                    <input
+                                        type="range"
+                                        className="custom-range w-100"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        value={userSettings.volumeTrax}
+                                        onChange={(event) =>
+                                            processSetting(
+                                                "trax_volume",
+                                                Number(event.target.value)
+                                            )
+                                        }
+                                        onMouseUp={saveVolumeToServer}
+                                        onTouchEnd={saveVolumeToServer}
+                                    />
+                                    <FontAwesomeIcon
+                                        icon="volume-up"
+                                        className={
+                                            userSettings.volumeTrax < 50
+                                                ? "text-muted"
+                                                : ""
+                                        }
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ===== CHAT BUBBLES TAB ===== */}
                 {activeTab === "chat" && (
                     <div className="appearance-group">
                         <div className="group-title with-sub">
@@ -378,6 +694,7 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
                     </div>
                 )}
 
+                {/* ===== NAME ICONS TAB ===== */}
                 {activeTab === "icons" && (
                     <div className="appearance-group">
                         <div className="group-title with-sub">
@@ -415,6 +732,7 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
                     </div>
                 )}
 
+                {/* ===== NAME COLOR TAB (placeholder) ===== */}
                 {activeTab === "namecolor" && (
                     <div className="appearance-group">
                         <div className="group-title with-sub">

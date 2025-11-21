@@ -12,7 +12,7 @@ $shadow-inset: inset 0 1px 0 rgba(255, 255, 255, .35),
   inset 0 -1px 0 rgba(0, 0, 0, .22);
 
 /* Dimensions */
-$sidebar-width: 76px;
+$sidebar-width: 76px; // visual body width (plus padding)
 $chip-size: 56px; // pill size
 $icon-size: 48px; // a smidge bigger than before
 $arrow-width: 22px; // peeking tab width
@@ -30,10 +30,15 @@ $arrow-height: 60px;
 .left-sidebar-container {
   position: relative;
   display: inline-block;
+
+  /* OPEN: fully visible, aligned to the left edge */
+  transform: translateX(0);
   transition: transform .28s ease;
   will-change: transform;
 
-  /* Hidden: slide fully off-screen but keep the arrow visible */
+  /* CLOSED: slide the whole sidebar left so that only a $arrow-width tab remains visible.
+Because we use -100% + $arrow-width, the container’s RIGHT edge lands at x = $arrow-width,
+and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush with the left edge. */
   &.closed,
   &.collapsed {
     transform: translateX(calc(-100% + #{$arrow-width}));
@@ -49,13 +54,15 @@ $arrow-height: 60px;
   border: 2px solid rgba(255, 255, 255, .2);
   border-left: 0;
   border-radius: 0 16px 16px 0;
-  box-shadow: 0 2px #000000b3,
+  box-shadow:
+    0 2px #000000b3,
     0 0 0 1px #000000b3;
 
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
+
 
   /* slim inner seam on the right edge */
   &::before {
@@ -73,7 +80,8 @@ $arrow-height: 60px;
   &__toggle {
     position: absolute;
     top: 50%;
-    right: 0px;
+    right: 0;
+    left: 75px;
     /* tuck under border so it feels unified */
     transform: translateY(-50%);
     width: $arrow-width;
@@ -85,7 +93,6 @@ $arrow-height: 60px;
     box-shadow: 0 2px #000000b3, 0 0 0 1px #000000b3;
     border-left: 0;
     cursor: pointer;
-    //box-shadow: $shadow-panel;
     transition: filter .12s ease, transform .12s ease;
 
     /* subtle sheen */
@@ -98,7 +105,10 @@ $arrow-height: 60px;
       pointer-events: none;
     }
 
-    /* chevron */
+    /* chevron:
+- default (open): arrow points LEFT
+- closed container overrides to point RIGHT
+*/
     &::before {
       content: "";
       position: absolute;
@@ -109,7 +119,7 @@ $arrow-height: 60px;
       border-top: 3px solid #fff;
       border-right: 3px solid #fff;
       transform: translateY(-50%) rotate(135deg);
-      /* default: LEFT (expanded) */
+      /* LEFT */
       filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .35));
       transition: transform .18s ease;
     }
@@ -128,7 +138,7 @@ $arrow-height: 60px;
 .left-sidebar-container.closed .left-sidebar__toggle::before,
 .left-sidebar-container.collapsed .left-sidebar__toggle::before {
   transform: translateY(-50%) rotate(-135deg);
-
+  /* RIGHT */
 }
 
 /* ---- Pills (icon holders) ---- */
@@ -137,7 +147,6 @@ $arrow-height: 60px;
   height: 48px;
   border-radius: 12px;
   background: rgb(0 0 0 / 60%);
-  /* your pill color */
   box-shadow: $shadow-inset, 0 2px 6px rgba(0, 0, 0, .25);
   position: relative;
   display: grid;
@@ -190,7 +199,6 @@ $arrow-height: 60px;
   height: 36px;
   background-repeat: no-repeat;
   background-size: contain;
-  /* remove pixelation per request */
   /* image-rendering: pixelated; <-- removed */
   filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .25));
   transition: filter .12s ease;
@@ -343,8 +351,6 @@ $arrow-height: 60px;
     margin-left: 0;
   }
 }
-
-
 
 /* ---- Reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {

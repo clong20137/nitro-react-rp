@@ -1,12 +1,9 @@
+import { FC, useEffect, useRef, useState, useLayoutEffect } from "react";
 import {
-    FC,
-    useEffect,
-    useRef,
-    useState,
-    useLayoutEffect,
-    useMemo,
-} from "react";
-import { GetSessionDataManager, SendMessageComposer } from "../../api";
+    GetSessionDataManager,
+    SendMessageComposer,
+    GetUserProfile,
+} from "../../api";
 import "./StatsBar.scss";
 import { XPGainPopup } from "./XPGainPopup";
 import { MyProfileView } from "./MyProfileView";
@@ -14,6 +11,12 @@ import { StartWorkComposer } from "@nitrots/nitro-renderer/src/nitro/communicati
 import { CallPoliceComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CallPoliceComposer";
 import { PassiveModeComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PassiveModeComposer";
 import { OpponentStatsOverlay } from "./OpponentStatsOverlay";
+import {
+    FriendlyTime,
+    UserProfileEvent,
+    UserProfileParser,
+} from "@nitrots/nitro-renderer";
+import { useMessageEvent } from "../../hooks";
 
 /** ---- onboarding anchor hook (local copy) ---- */
 type AnchorEventDetail = { id: string; el: HTMLElement | null };
@@ -35,6 +38,78 @@ function useOnboardingAnchor(
     }, [id, ref]);
 }
 /** ------------------------------------------- */
+
+type OpponentStats = {
+    userId: number;
+    username: string;
+    figure: string;
+    health: number;
+    maxHealth: number;
+    energy: number;
+    maxEnergy: number;
+    hunger: number;
+    maxHunger: number;
+    aggression: number;
+    xpPercent: number;
+    level: number;
+    healthPercent: number;
+    energyPercent: number;
+    hungerPercent: number;
+};
+
+/** Central profile payload passed into MyProfileView */
+interface ProfileStats {
+    // RP core stats
+    kills: number;
+    deaths: number;
+    punches: number;
+    damageGiven: number;
+    damageReceived: number;
+
+    strength: number;
+    stamina: number;
+    defense: number;
+    gathering: number;
+
+    xp: number;
+    maxXP: number;
+    level: number;
+    points: number;
+
+    // Vital bars
+    health: number;
+    maxHealth: number;
+
+    energy: number;
+    maxEnergy: number;
+
+    hunger: number;
+    maxHunger: number;
+
+    healthlevel: number;
+
+    // Identity
+    username: string;
+    figure: string;
+    motto?: string;
+    isOnline?: boolean;
+
+    // Employment / corporation
+    jobTitle?: string;
+    corporationName?: string;
+    corporationIconUrl?: string;
+
+    // Gang info
+    gangName?: string;
+    gangId?: number;
+    gangIconKey?: string;
+    gangPrimaryColor?: string;
+    gangSecondaryColor?: string;
+
+    // Profile meta
+    createdAt?: string;
+    lastLogin?: string;
+}
 
 export const StatsBar: FC = () => {
     const [OpponentStats, setOpponentStats] = useState<any | null>(null);
@@ -99,6 +174,10 @@ export const StatsBar: FC = () => {
     const [motto, setMotto] = useState<string | undefined>(undefined);
     const [isOnline, setIsOnline] = useState<boolean>(true);
 
+    // created + last login for profile
+    const [createdAt, setCreatedAt] = useState<string | undefined>(undefined);
+    const [lastLogin, setLastLogin] = useState<string | undefined>(undefined);
+
     const [showCallPoliceInput, setShowCallPoliceInput] = useState(false);
     const [callPoliceMessage, setCallPoliceMessage] = useState("");
 
@@ -127,7 +206,7 @@ export const StatsBar: FC = () => {
     const [callMessage, setCallMessage] = useState("");
 
     // central profile state (me OR opponent)
-    const [profileStats, setProfileStats] = useState<any | null>(null);
+    const [profileStats, setProfileStats] = useState<ProfileStats | null>(null);
     const [showProfile, setShowProfile] = useState(false);
 
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -276,7 +355,7 @@ export const StatsBar: FC = () => {
     const aggressionPercent = percent(remainingMs, aggressionWindowMs);
 
     // Build self profile payload
-    const buildSelfProfile = () => ({
+    const buildSelfProfile = (): ProfileStats => ({
         kills,
         deaths,
         punches: punches_thrown,
@@ -284,26 +363,69 @@ export const StatsBar: FC = () => {
         damageReceived: damage_received,
         strength,
         stamina,
+        defense,
+        gathering,
+
         xp,
         maxXP,
         level,
         points,
-        defense,
-        hungerLevel: hunger_level,
-        gathering,
+
+        health,
+        maxHealth,
+        energy,
+        maxEnergy,
+        hunger,
+        maxHunger,
+        healthlevel,
+
         username,
         figure,
-        healthlevel,
+        motto,
+
         gangName,
         gangId,
         gangIconKey,
         gangPrimaryColor,
         gangSecondaryColor,
-        motto,
+
         jobTitle,
         corporationName,
         corporationIconUrl,
+
         isOnline,
+        createdAt,
+        lastLogin,
+    });
+
+    // ==== UserProfileEvent hook (Created + Last Login) ====
+    // Request our own profile once so we can hydrate created/last-login + motto.
+    useEffect(() => {
+        const myId = GetSessionDataManager().userId;
+        if (myId > 0) GetUserProfile(myId);
+    }, []);
+
+    useMessageEvent<UserProfileEvent>(UserProfileEvent, (event) => {
+        const parser: UserProfileParser = event.getParser();
+        if (!parser) return;
+
+        // only care about our own profile for the stats/profile view
+        if (parser.id !== GetSessionDataManager().userId) return;
+
+        // Friendly Created + Last Login from Nitro parser
+        const created = parser.registration;
+        const last = FriendlyTime.format(
+            parser.secondsSinceLastVisit,
+            ".ago",
+            2
+        );
+
+        setCreatedAt(created);
+        setLastLogin(last);
+        setMotto(parser.motto);
+        setIsOnline(parser.isOnline);
+
+        // Also sync basic profile stats into profileStats (keep RP stats from prev)
     });
 
     // Listen for opponent avatar click → open profile
@@ -321,15 +443,30 @@ export const StatsBar: FC = () => {
                 damageReceived: 0,
                 strength: 0,
                 stamina: 0,
+                defense: 0,
+                gathering: 0,
                 xp: 0,
                 maxXP: 1,
                 level: 0,
                 points: 0,
-                defense: 0,
-                hungerLevel: 0,
-                gathering: 0,
+                username: detail.username || "",
+                figure: detail.figure || "",
+                motto: detail.motto,
+                gangName: detail.gangName,
+                gangId: detail.gangId,
+                gangIconKey: detail.gangIconKey,
+                gangPrimaryColor: detail.gangPrimaryColor,
+                gangSecondaryColor: detail.gangSecondaryColor,
+                jobTitle: detail.jobTitle,
+                corporationName: detail.corporationName,
+                corporationIconUrl: detail.corporationIconUrl,
+                isOnline: detail.isOnline,
+                createdAt: detail.createdAt,
+                lastLogin: detail.lastLogin,
+                // RP stats override defaults if present
+                killsOverride: undefined,
                 ...detail,
-            });
+            } as ProfileStats);
             setShowProfile(true);
         };
 
