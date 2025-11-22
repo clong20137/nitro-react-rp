@@ -6,6 +6,7 @@ import "./SlotMachineView.scss";
 import { SendMessageComposer } from "../../api";
 import { SlotMachineLeaveComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/SlotMachineLeaveComposer";
 import { SlotSpinComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/SlotSpinComposer";
+
 const leave = () => SendMessageComposer(new SlotMachineLeaveComposer());
 const spin = (bet: number) => SendMessageComposer(new SlotSpinComposer(bet));
 
@@ -100,21 +101,39 @@ export const SlotMachineView: FC = () => {
                     maxBet: 25,
                     reels: 3,
                 };
+
                 setOpen(true);
 
-                const min = Math.max(5, cfg.minBet ?? 5);
-                const max = Math.min(25, cfg.maxBet ?? 25);
+                // --- sanitize incoming min/max from server ---
+                let min = typeof cfg.minBet === "number" ? cfg.minBet : 5;
+                let max = typeof cfg.maxBet === "number" ? cfg.maxBet : 25;
+
+                min = Math.round(min);
+                max = Math.round(max);
+
+                // enforce hard client bounds
+                if (min < 5) min = 5;
+                if (max > 25) max = 25;
+
+                // if server sends invalid or reversed range, fall back to 5–25
+                if (max < min) {
+                    min = 5;
+                    max = 25;
+                }
 
                 setMinBet(min);
                 setMaxBet(max);
                 setNReels(Math.max(1, cfg.reels ?? 3));
+
                 // keep user's typed bet if it exists, otherwise clamp to range
                 setBet((prev) => {
-                    const v = Number.isFinite(prev as number)
+                    const raw = Number.isFinite(prev as number)
                         ? (prev as number)
                         : min;
-                    return Math.min(Math.max(Math.round(v), min), max);
+                    const v = Math.round(raw);
+                    return Math.min(Math.max(v, min), max);
                 });
+
                 setSpinning(false);
                 setStops([]);
                 setLastWin(0);
@@ -189,8 +208,13 @@ export const SlotMachineView: FC = () => {
 
     if (!open) return null;
 
-    const clampBet = (v: number) =>
-        Math.min(Math.max(Math.round(v), minBet), maxBet);
+    const clampBet = (v: number) => {
+        // robust even if minBet/maxBet briefly get out of order
+        const lo = Math.min(minBet, maxBet);
+        const hi = Math.max(minBet, maxBet);
+        return Math.min(Math.max(Math.round(v), lo), hi);
+    };
+
     const adjustBet = (d: number) =>
         setBet((b) =>
             clampBet(
@@ -200,7 +224,7 @@ export const SlotMachineView: FC = () => {
 
     const onSpin = () => {
         if (spinning) return;
-        const b = clampBet(bet); // <-- uses what's currently typed
+        const b = clampBet(bet); // uses what's currently typed
         setBet(b); // keep it in the box
         setSpinning(true);
         setReelDone(Array.from({ length: nReels }).map(() => false));
