@@ -36,6 +36,7 @@ import { RoomUnitWalkComposer } from "@nitrots/nitro-renderer/src/nitro/communic
 import { RoomObjectTileMouseEvent } from "@nitrots/nitro-renderer/src/nitro/room/events/RoomObjectTileMouseEvent";
 import { BottomRightDockView } from "../roleplay/BottomRightDockView";
 import { ArenaQueueView } from "../roleplay/ArenaQueueView";
+import { HotRoomsView } from "../roleplay/HotRoomsView";
 
 /* -----------------------------------------------------------
 Click-through helpers
@@ -213,6 +214,7 @@ Render
                     <TaxiView />
                     <JukeboxView />
                     <ATMView></ATMView>
+                    <HotRoomsView></HotRoomsView>
                     <CommandsListView />
                     <BottomRightDockView></BottomRightDockView>
                     {/*
