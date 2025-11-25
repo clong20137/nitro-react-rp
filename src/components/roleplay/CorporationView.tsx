@@ -136,7 +136,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         return "success";
     };
     const avatarUrl = (figure: string) =>
-        `https://www.habbo.com/habbo-imaging/avatarimage?figure=${encodeURIComponent(
+        `https://imager.olympusrp.pw/?figure=${encodeURIComponent(
             figure
         )}&size=b&headonly=0&gesture=sml`;
 
@@ -803,7 +803,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                                                                                     (
                                                                                         e.currentTarget as HTMLImageElement
                                                                                     ).src =
-                                                                                        "https://www.habbo.com/habbo-imaging/avatarimage?figure=hd-180-1.lg-280-110.sh-290-64&size=b&headonly=0&gesture=sml";
+                                                                                        "https://imager.olympusrp.pw/?figure=hd-180-1.lg-280-110.sh-290-64&size=b&headonly=0&gesture=sml";
                                                                                 }}
                                                                             />
                                                                         </div>

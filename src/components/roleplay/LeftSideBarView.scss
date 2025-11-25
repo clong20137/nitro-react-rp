@@ -50,7 +50,7 @@ and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush wi
   position: relative;
   width: $sidebar-width;
   padding: 10px 12px;
-  background: rgb(0 0 0 / 60%);
+  background: #dfdfdf;
   border: 2px solid rgba(255, 255, 255, .2);
   border-left: 0;
   border-radius: 0 16px 16px 0;
@@ -87,10 +87,13 @@ and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush wi
     width: $arrow-width;
     height: $arrow-height;
     border-radius: 0 10px 10px 0;
-    background: rgb(0 0 0 / 75%);
+    background: #dfdfdf;
+
     /* same bg to blend */
     border: 2px solid rgba(255, 255, 255, .2);
-    box-shadow: 0 2px #000000b3, 0 0 0 1px #000000b3;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
+      0 2px 0 rgba(0, 0, 0, .25),
+      inset 0 -4px rgba(0, 0, 0, .12);
     border-left: 0;
     cursor: pointer;
     transition: filter .12s ease, transform .12s ease;
@@ -146,9 +149,13 @@ and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush wi
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: rgb(0 0 0 / 60%);
-  box-shadow: $shadow-inset, 0 2px 6px rgba(0, 0, 0, .25);
+  background: #dfdfdf;
+  border: 1px solid hsla(0, 0%, 46.7%, .19);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .3215686275);
   position: relative;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
+    0 2px 0 rgba(0, 0, 0, .25),
+    inset 0 -4px rgba(0, 0, 0, .12);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -251,7 +258,7 @@ and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush wi
 
 .sidebar-chip[data-tip]::before {
   content: attr(data-tip);
-  background: #0067b3;
+  background: rgba(0, 0, 0, .6);
   color: #fff;
   font-size: 12px;
   line-height: 1;

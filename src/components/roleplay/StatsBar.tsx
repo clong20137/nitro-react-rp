@@ -520,7 +520,7 @@ export const StatsBar: FC = () => {
                         >
                             <img
                                 className="avatar-head"
-                                src={`http://www.habbo.com/habbo-imaging/avatarimage?figure=${figure}&direction=2&head_direction=2&gesture=sml`}
+                                src={`https://imager.olympusrp.pw/?figure=${figure}&direction=2&head_direction=2&gesture=sml`}
                                 alt="Avatar"
                             />
                             {showXPTooltip && (

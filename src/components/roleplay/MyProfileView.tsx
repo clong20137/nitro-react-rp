@@ -437,7 +437,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                             <div className="avatar-frame">
                                 <img
                                     className="profile-avatar"
-                                    src={`https://www.habbo.com/habbo-imaging/avatarimage?figure=${stats.figure}`}
+                                    src={`https://imager.olympusrp.pw/?figure=${stats.figure}`}
                                     alt="avatar"
                                     draggable={false}
                                 />
