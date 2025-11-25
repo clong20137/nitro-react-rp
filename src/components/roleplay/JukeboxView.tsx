@@ -40,11 +40,12 @@ type JState = {
     currentTitle?: string | null;
     requestCost: number;
     expediteCost: number;
+    startedAt?: number; // NEW: unix seconds
     queue: QueueItem[];
 };
 
 type Props = {
-    onClose?: () => void; // optional; we also close locally
+    onClose?: () => void;
 };
 
 /* ---------- helpers ---------- */
@@ -118,10 +119,10 @@ function useDraggable<T extends HTMLElement>() {
 
 /* ---------- component ---------- */
 export const JukeboxView: React.FC<Props> = ({ onClose }) => {
-    // ONLY render when we receive an explicit open signal
+    // ONLY control the *window* with this; audio continues regardless
     const [open, setOpen] = useState(false);
 
-    // Live state pushed by server (we do NOT auto-open on this)
+    // Live state pushed by server
     const [state, setState] = useState<JState>({
         roomId: 0,
         isOpen: true,
@@ -130,11 +131,15 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
         currentTitle: null,
         requestCost: 2,
         expediteCost: 5,
+        startedAt: 0,
         queue: [],
     });
 
     const [input, setInput] = useState("");
     const [submitting, setSubmitting] = useState(false);
+
+    // Hidden player URL (includes start offset)
+    const [playerUrl, setPlayerUrl] = useState<string | null>(null);
 
     // drag like TaxiView
     const { ref: dragRef, onMouseDown: startDrag } =
@@ -142,10 +147,9 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
 
     /* ---------- bridges ---------- */
     useEffect(() => {
-        // OPEN: fired by furniture double-click handler / interaction
+        // OPEN: fired by furniture click
         const onOpen = () => {
             setOpen(true);
-            // optional: center on open
             if (dragRef.current) {
                 const el = dragRef.current;
                 el.style.left = "50%";
@@ -154,7 +158,7 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
             }
         };
 
-        // STATE updates (don’t open here)
+        // STATE updates
         const onState = (e: any) => {
             const d = (e?.detail || {}) as Partial<JState>;
             setState((prev) => ({
@@ -164,7 +168,7 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
             }));
         };
 
-        // TOAST passthrough (same as before)
+        // TOAST passthrough
         const onToast = (e: any) => {
             const d = e?.detail as { kind: string; text: string };
             if (!d) return;
@@ -206,7 +210,32 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
     const doClose = () => {
         setOpen(false);
         onClose?.();
+        // NOTE: we do NOT stop audio here.
     };
+
+    /* ---------- AUDIO SYNC EFFECT ---------- */
+    useEffect(() => {
+        // Only play when server says playing + we have a video id
+        if (!state.isPlaying || !state.currentVideoId) {
+            setPlayerUrl(null);
+            return;
+        }
+
+        const nowSec = Math.floor(Date.now() / 1000);
+        const started = state.startedAt ?? nowSec;
+        let offset = nowSec - started;
+
+        // Clamp offset: never negative, never beyond 5 minutes
+        if (offset < 0) offset = 0;
+        if (offset > 5 * 60) offset = 5 * 60;
+
+        const vid = state.currentVideoId;
+        const url =
+            `https://www.youtube.com/embed/${vid}` +
+            `?autoplay=1&controls=0&modestbranding=1&rel=0&playsinline=1&start=${offset}`;
+
+        setPlayerUrl(url);
+    }, [state.isPlaying, state.currentVideoId, state.startedAt]);
 
     /* ---------- actions ---------- */
     const sendRequest = (expedite: boolean) => {
@@ -232,7 +261,6 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
     const toggleOpen = () => {
         if (!JukeboxOpenCloseComposerRef) return;
         SendMessageComposer(new JukeboxOpenCloseComposerRef(!state.isOpen));
-        // optimistic
         setState((s) => ({ ...s, isOpen: !s.isOpen }));
     };
 
@@ -241,158 +269,190 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
         [input, submitting]
     );
 
-    if (!open) return null;
-
     return (
-        <div className="jukebox-layer">
+        <>
+            {/* 🔊 Hidden YouTube iframe for audio playback.
+This stays mounted even when the jukebox window is closed. */}
             <div
-                className="jukebox-view enter"
-                ref={dragRef}
-                role="dialog"
-                aria-modal="true"
-                aria-label="Room Jukebox"
-                // initial center (drag hook will override left/top on move)
                 style={{
-                    left: "50%",
-                    top: "50%",
-                    transform: "translate(-50%, -50%)",
+                    position: "absolute",
+                    width: 0,
+                    height: 0,
+                    overflow: "hidden",
+                    pointerEvents: "none",
                 }}
             >
-                <div className="juke-header" onMouseDown={startDrag}>
-                    <div className="title">
-                        <i className="ico ico-note" /> Room Jukebox
-                    </div>
-                    <div className="spacer" />
-                    <button
-                        className="hb-btn hb-danger"
-                        onClick={doClose}
-                        aria-label="Close"
-                    >
-                        ✕
-                    </button>
-                </div>
+                {state.isPlaying && state.currentVideoId && playerUrl && (
+                    <iframe
+                        title="Room Jukebox Audio"
+                        src={playerUrl}
+                        allow="autoplay"
+                        style={{
+                            width: 0,
+                            height: 0,
+                            border: 0,
+                        }}
+                    />
+                )}
+            </div>
 
-                <div className="juke-body">
-                    <div className="now-card">
-                        <div className="now-row">
-                            <div className="now-label">Status</div>
-                            <div
-                                className={`pill ${
-                                    state.isOpen ? "ok" : "bad"
-                                }`}
-                            >
-                                {state.isOpen ? "Open" : "Closed"}
-                            </div>
-                            <div
-                                className={`pill ${
-                                    state.isPlaying ? "ok" : ""
-                                }`}
-                            >
-                                {state.isPlaying ? "Playing" : "Idle"}
+            {/* UI window (can be closed/minimized independently) */}
+            {open && (
+                <div className="jukebox-layer">
+                    <div
+                        className="jukebox-view enter"
+                        ref={dragRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Room Jukebox"
+                        style={{
+                            left: "50%",
+                            top: "50%",
+                            transform: "translate(-50%, -50%)",
+                        }}
+                    >
+                        <div className="juke-header" onMouseDown={startDrag}>
+                            <div className="title">
+                                <i className="ico ico-note" /> Room Jukebox
                             </div>
                             <div className="spacer" />
                             <button
-                                className="hb-btn hb-ghost"
-                                onClick={toggleOpen}
+                                className="hb-btn hb-danger"
+                                onClick={doClose}
+                                aria-label="Close"
                             >
-                                {state.isOpen
-                                    ? "Close Jukebox"
-                                    : "Open Jukebox"}
+                                ✕
                             </button>
                         </div>
-                        <div
-                            className="now-title"
-                            title={state.currentTitle || ""}
-                        >
-                            {state.currentTitle
-                                ? `Now Playing: ${state.currentTitle}`
-                                : "No track playing"}
-                        </div>
-                    </div>
 
-                    <div className="entry">
-                        <label>Paste YouTube Link or ID</label>
-                        <div className="entry-row">
-                            <input
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                placeholder="https://youtu.be/… or 11-char video id"
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" && canSubmit)
-                                        sendRequest(false);
-                                }}
-                                autoFocus
-                            />
-                        </div>
-
-                        <div className="actions">
-                            <button
-                                className="hb-btn hb-primary"
-                                disabled={!canSubmit}
-                                onClick={() => sendRequest(false)}
-                            >
-                                Add to Queue{" "}
-                                <span className="cost">
-                                    <i className="ico ico-diamond" />{" "}
-                                    {state.requestCost}
-                                </span>
-                            </button>
-                            <button
-                                className="hb-btn hb-accent"
-                                disabled={!canSubmit}
-                                onClick={() => sendRequest(true)}
-                                title="Jump to the front of the line"
-                            >
-                                Expedite Next{" "}
-                                <span className="cost">
-                                    <i className="ico ico-diamond" />{" "}
-                                    {state.expediteCost}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="queue">
-                        <div className="q-head">
-                            <div>Up Next</div>
-                            <div className="muted">
-                                ({state.queue?.length || 0})
-                            </div>
-                        </div>
-
-                        <div className="q-list">
-                            {(state.queue ?? []).map((q) => (
+                        <div className="juke-body">
+                            <div className="now-card">
+                                <div className="now-row">
+                                    <div className="now-label">Status</div>
+                                    <div
+                                        className={`pill ${
+                                            state.isOpen ? "ok" : "bad"
+                                        }`}
+                                    >
+                                        {state.isOpen ? "Open" : "Closed"}
+                                    </div>
+                                    <div
+                                        className={`pill ${
+                                            state.isPlaying ? "ok" : ""
+                                        }`}
+                                    >
+                                        {state.isPlaying ? "Playing" : "Idle"}
+                                    </div>
+                                    <div className="spacer" />
+                                    <button
+                                        className="hb-btn hb-ghost"
+                                        onClick={toggleOpen}
+                                    >
+                                        {state.isOpen
+                                            ? "Close Jukebox"
+                                            : "Open Jukebox"}
+                                    </button>
+                                </div>
                                 <div
-                                    key={q.id}
-                                    className={`q-item ${
-                                        q.expedited ? "expedited" : ""
-                                    }`}
+                                    className="now-title"
+                                    title={state.currentTitle || ""}
                                 >
-                                    <div className="q-title" title={q.title}>
-                                        {q.title}
-                                    </div>
-                                    <div className="q-meta">
-                                        <span className="by">
-                                            by {q.requestedBy}
+                                    {state.currentTitle
+                                        ? `Now Playing: ${state.currentTitle}`
+                                        : "No track playing"}
+                                </div>
+                            </div>
+
+                            <div className="entry">
+                                <label>Paste YouTube Link or ID</label>
+                                <div className="entry-row">
+                                    <input
+                                        value={input}
+                                        onChange={(e) =>
+                                            setInput(e.target.value)
+                                        }
+                                        placeholder="https://youtu.be/… or 11-char video id"
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" && canSubmit)
+                                                sendRequest(false);
+                                        }}
+                                        autoFocus
+                                    />
+                                </div>
+
+                                <div className="actions">
+                                    <button
+                                        className="hb-btn hb-primary"
+                                        disabled={!canSubmit}
+                                        onClick={() => sendRequest(false)}
+                                    >
+                                        Add to Queue{" "}
+                                        <span className="cost">
+                                            <i className="ico ico-diamond" />{" "}
+                                            {state.requestCost}
                                         </span>
-                                        {q.expedited && (
-                                            <span className="tag-rush">
-                                                RUSH
-                                            </span>
-                                        )}
+                                    </button>
+                                    <button
+                                        className="hb-btn hb-accent"
+                                        disabled={!canSubmit}
+                                        onClick={() => sendRequest(true)}
+                                        title="Jump to the front of the line"
+                                    >
+                                        Expedite Next{" "}
+                                        <span className="cost">
+                                            <i className="ico ico-diamond" />{" "}
+                                            {state.expediteCost}
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="queue">
+                                <div className="q-head">
+                                    <div>Up Next</div>
+                                    <div className="muted">
+                                        ({state.queue?.length || 0})
                                     </div>
                                 </div>
-                            ))}
-                            {!state.queue?.length && (
-                                <div className="q-empty">
-                                    No pending requests.
+
+                                <div className="q-list">
+                                    {(state.queue ?? []).map((q) => (
+                                        <div
+                                            key={q.id}
+                                            className={`q-item ${
+                                                q.expedited ? "expedited" : ""
+                                            }`}
+                                        >
+                                            <div
+                                                className="q-title"
+                                                title={q.title}
+                                            >
+                                                {q.title || q.videoId}
+                                            </div>
+                                            <div className="q-meta">
+                                                <span className="by">
+                                                    by {q.requestedBy}
+                                                </span>
+                                                {q.expedited && (
+                                                    <span className="tag-rush">
+                                                        RUSH
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {!state.queue?.length && (
+                                        <div className="q-empty">
+                                            No pending requests.
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            )}
+        </>
     );
 };
 
