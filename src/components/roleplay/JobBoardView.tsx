@@ -2,17 +2,21 @@ import React, { FC, useEffect, useRef, useState } from "react";
 import "./JobBoardView.scss";
 
 import { SendMessageComposer } from "../../api";
-import { ICorpJobOpeningData } from "@nitrots/nitro-renderer/src/nitro/communication/messages/parser/OpenCorpJobBoardParser";
+import {
+    ICorpJobOpeningData,
+    ICorpRankOption,
+} from "@nitrots/nitro-renderer/src/nitro/communication/messages/parser/OpenCorpJobBoardParser";
 import { JobBoardCreateOpeningComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/JobBoardCreateOpeningComposer";
 import { JobBoardApplyComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/JobBoardApplyComposer";
 import { JobBoardCloseOpeningComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/JobBoardCloseOpeningComposer";
 
-/* ---- Data coming from the parser ---- */
+/* ---- Data coming from the parser + bridge ---- */
 interface JobBoardData {
     corpId: number;
     corpName: string;
     isManager: boolean;
     openings: ICorpJobOpeningData[];
+    ranks: ICorpRankOption[]; // <-- available ranks for this corp
 }
 
 export const JobBoardView: FC = () => {
@@ -20,7 +24,8 @@ export const JobBoardView: FC = () => {
     const [data, setData] = useState<JobBoardData | null>(null);
     const rootRef = useRef<HTMLDivElement>(null);
 
-    const [newTitle, setNewTitle] = useState("");
+    // manager create form
+    const [selectedRankId, setSelectedRankId] = useState<number | null>(null);
     const [newSlots, setNewSlots] = useState<string>("1");
 
     /* ---- LISTEN FOR BRIDGE EVENT ---- */
@@ -28,6 +33,14 @@ export const JobBoardView: FC = () => {
         const onOpen = (e: CustomEvent<JobBoardData>) => {
             if (!e.detail) return;
             setData(e.detail);
+
+            // default to first rank if manager & ranks exist
+            if (e.detail.isManager && e.detail.ranks.length > 0) {
+                setSelectedRankId(e.detail.ranks[0].id);
+            } else {
+                setSelectedRankId(null);
+            }
+
             setVisible(true);
         };
 
@@ -52,6 +65,7 @@ export const JobBoardView: FC = () => {
         let offsetY = 0;
 
         const header = root.querySelector(".jobboard-header") as HTMLElement;
+        if (!header) return;
 
         const onDown = (ev: MouseEvent) => {
             dragging = true;
@@ -93,18 +107,25 @@ export const JobBoardView: FC = () => {
     };
 
     const onToggle = (id: number, isOpen: boolean) => {
-        // if open → close
+        // we only support "close" from UI; composer just needs openingId
+        if (!isOpen) return;
         SendMessageComposer(new JobBoardCloseOpeningComposer(id));
     };
 
     const onCreate = () => {
-        const title = newTitle.trim();
+        if (!data || !data.isManager) return;
+        if (selectedRankId === null) return;
+
+        const rank = data.ranks.find((r) => r.id === selectedRankId);
+        if (!rank) return;
+
         const slots = Math.max(1, parseInt(newSlots) || 1);
 
-        if (!title) return;
+        // IMPORTANT: we send the rank name as the title, server stays the same
+        SendMessageComposer(
+            new JobBoardCreateOpeningComposer(rank.name, slots)
+        );
 
-        SendMessageComposer(new JobBoardCreateOpeningComposer(title, slots));
-        setNewTitle("");
         setNewSlots("1");
     };
 
@@ -140,15 +161,36 @@ export const JobBoardView: FC = () => {
                     )}
                 </div>
 
-                {/* MANAGER CREATE FORM */}
+                {/* MANAGER CREATE FORM – rank dropdown ONLY */}
                 {data.isManager && (
                     <div className="jobboard-create">
-                        <input
-                            className="jobboard-input"
-                            placeholder="Position title…"
-                            value={newTitle}
-                            onChange={(e) => setNewTitle(e.target.value)}
-                        />
+                        <select
+                            className="jobboard-input rank-select"
+                            value={selectedRankId ?? ""}
+                            onChange={(e) =>
+                                setSelectedRankId(
+                                    e.target.value
+                                        ? parseInt(e.target.value)
+                                        : null
+                                )
+                            }
+                        >
+                            {data.ranks.length === 0 && (
+                                <option value="">No ranks available</option>
+                            )}
+
+                            {data.ranks.length > 0 && (
+                                <>
+                                    <option value="">Select a rank…</option>
+                                    {data.ranks.map((r) => (
+                                        <option key={r.id} value={r.id}>
+                                            {r.name}
+                                        </option>
+                                    ))}
+                                </>
+                            )}
+                        </select>
+
                         <input
                             className="jobboard-input slots-input"
                             type="number"
@@ -157,10 +199,14 @@ export const JobBoardView: FC = () => {
                             value={newSlots}
                             onChange={(e) => setNewSlots(e.target.value)}
                         />
+
                         <button
                             className="jobboard-btn btn-create"
                             onClick={onCreate}
-                            disabled={!newTitle.trim()}
+                            disabled={
+                                selectedRankId === null ||
+                                data.ranks.length === 0
+                            }
                         >
                             Add
                         </button>
