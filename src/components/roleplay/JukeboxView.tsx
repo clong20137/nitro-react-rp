@@ -40,7 +40,7 @@ type JState = {
     currentTitle?: string | null;
     requestCost: number;
     expediteCost: number;
-    startedAt?: number; // NEW: unix seconds
+    startedAt?: number; // unix seconds
     queue: QueueItem[];
 };
 
@@ -138,7 +138,10 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
     const [input, setInput] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
-    // Hidden player URL (includes start offset)
+    // 🔇 local mute toggle (per-user only)
+    const [muted, setMuted] = useState(false);
+
+    // Hidden player URL (includes start offset + mute flag)
     const [playerUrl, setPlayerUrl] = useState<string | null>(null);
 
     // drag like TaxiView
@@ -158,7 +161,7 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
             }
         };
 
-        // STATE updates
+        // STATE updates (from parser → window.dispatchEvent)
         const onState = (e: any) => {
             const d = (e?.detail || {}) as Partial<JState>;
             setState((prev) => ({
@@ -210,7 +213,7 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
     const doClose = () => {
         setOpen(false);
         onClose?.();
-        // NOTE: we do NOT stop audio here.
+        // NOTE: we do NOT stop audio here; audio is controlled by server state
     };
 
     /* ---------- AUDIO SYNC EFFECT ---------- */
@@ -232,10 +235,12 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
         const vid = state.currentVideoId;
         const url =
             `https://www.youtube.com/embed/${vid}` +
-            `?autoplay=1&controls=0&modestbranding=1&rel=0&playsinline=1&start=${offset}`;
+            `?autoplay=1&controls=0&modestbranding=1&rel=0&playsinline=1` +
+            `&start=${offset}` +
+            `&mute=${muted ? 1 : 0}`;
 
         setPlayerUrl(url);
-    }, [state.isPlaying, state.currentVideoId, state.startedAt]);
+    }, [state.isPlaying, state.currentVideoId, state.startedAt, muted]);
 
     /* ---------- actions ---------- */
     const sendRequest = (expedite: boolean) => {
@@ -251,6 +256,7 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
         }
         setSubmitting(true);
         try {
+            // NOTE: Composer now wraps whatever data the server expects
             SendMessageComposer(new JukeboxRequestComposerRef(vid, expedite));
             setInput("");
         } finally {
@@ -262,6 +268,10 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
         if (!JukeboxOpenCloseComposerRef) return;
         SendMessageComposer(new JukeboxOpenCloseComposerRef(!state.isOpen));
         setState((s) => ({ ...s, isOpen: !s.isOpen }));
+    };
+
+    const toggleMute = () => {
+        setMuted((m) => !m);
     };
 
     const canSubmit = useMemo(
@@ -317,9 +327,19 @@ This stays mounted even when the jukebox window is closed. */}
                             </div>
                             <div className="spacer" />
                             <button
+                                className={`hb-btn hb-ghost ${
+                                    muted ? "is-muted" : ""
+                                }`}
+                                onClick={toggleMute}
+                                type="button"
+                            >
+                                {muted ? "Unmute" : "Mute"}
+                            </button>
+                            <button
                                 className="hb-btn hb-danger"
                                 onClick={doClose}
                                 aria-label="Close"
+                                type="button"
                             >
                                 ✕
                             </button>
@@ -343,10 +363,16 @@ This stays mounted even when the jukebox window is closed. */}
                                     >
                                         {state.isPlaying ? "Playing" : "Idle"}
                                     </div>
+                                    {muted && (
+                                        <div className="pill muted-pill">
+                                            Muted
+                                        </div>
+                                    )}
                                     <div className="spacer" />
                                     <button
                                         className="hb-btn hb-ghost"
                                         onClick={toggleOpen}
+                                        type="button"
                                     >
                                         {state.isOpen
                                             ? "Close Jukebox"
@@ -385,6 +411,7 @@ This stays mounted even when the jukebox window is closed. */}
                                         className="hb-btn hb-primary"
                                         disabled={!canSubmit}
                                         onClick={() => sendRequest(false)}
+                                        type="button"
                                     >
                                         Add to Queue{" "}
                                         <span className="cost">
@@ -397,6 +424,7 @@ This stays mounted even when the jukebox window is closed. */}
                                         disabled={!canSubmit}
                                         onClick={() => sendRequest(true)}
                                         title="Jump to the front of the line"
+                                        type="button"
                                     >
                                         Expedite Next{" "}
                                         <span className="cost">
