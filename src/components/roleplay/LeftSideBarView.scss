@@ -54,9 +54,9 @@ and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush wi
   border: 2px solid rgba(255, 255, 255, .2);
   border-left: 0;
   border-radius: 0 16px 16px 0;
-  box-shadow:
-    0 2px #000000b3,
-    0 0 0 1px #000000b3;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
+    0 2px 0 rgba(0, 0, 0, .25),
+    inset 0 -4px rgba(0, 0, 0, .12);
 
   display: flex;
   flex-direction: column;

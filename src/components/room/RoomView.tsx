@@ -37,6 +37,7 @@ import { RoomObjectTileMouseEvent } from "@nitrots/nitro-renderer/src/nitro/room
 import { BottomRightDockView } from "../roleplay/BottomRightDockView";
 import { ArenaQueueView } from "../roleplay/ArenaQueueView";
 import { HotRoomsView } from "../roleplay/HotRoomsView";
+import { JobBoardView } from "../roleplay/JobBoardView";
 
 /* -----------------------------------------------------------
 Click-through helpers
@@ -217,6 +218,7 @@ Render
                     <HotRoomsView></HotRoomsView>
                     <CommandsListView />
                     <BottomRightDockView></BottomRightDockView>
+                    <JobBoardView></JobBoardView>
                     {/*
                     <ArenaQueueView visible={true}></ArenaQueueView>
                     */}
