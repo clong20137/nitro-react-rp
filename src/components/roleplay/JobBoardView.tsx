@@ -138,7 +138,7 @@ export const JobBoardView: FC = () => {
         <div
             className="jobboard-view enter-br"
             ref={rootRef}
-            style={{ left: 40, top: 40 }}
+            style={{ left: 100, top: 400 }}
         >
             <div className="jobboard-header">
                 <div className="jobboard-title">

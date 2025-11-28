@@ -82,6 +82,72 @@ export const SlotMachineView: FC = () => {
 
     const rootRef = useRef<HTMLDivElement>(null);
 
+    /* ---- DRAG STATE ---- */
+    const [position, setPosition] = useState<{ x: number; y: number } | null>(
+        null
+    );
+    const [dragging, setDragging] = useState(false);
+
+    // init position when opened
+    useEffect(() => {
+        if (!open) return;
+        if (position !== null) return;
+
+        const width = 580;
+        const height = 360;
+        const x = Math.max(10, (window.innerWidth - width) / 2);
+        const y = Math.max(40, (window.innerHeight - height) / 2);
+
+        setPosition({ x, y });
+    }, [open, position]);
+
+    const handleHeaderMouseDown = (
+        e: React.MouseEvent<HTMLDivElement, MouseEvent>
+    ) => {
+        if (e.button !== 0) return;
+        if (!rootRef.current) return;
+
+        const rect = rootRef.current.getBoundingClientRect();
+        const startX = e.clientX;
+        const startY = e.clientY;
+
+        const startPos = {
+            x: position?.x ?? rect.left,
+            y: position?.y ?? rect.top,
+        };
+
+        setDragging(true);
+
+        const onMove = (ev: MouseEvent) => {
+            const dx = ev.clientX - startX;
+            const dy = ev.clientY - startY;
+
+            let nextX = startPos.x + dx;
+            let nextY = startPos.y + dy;
+
+            const margin = 20;
+            const maxX = window.innerWidth - margin - rect.width;
+            const maxY = window.innerHeight - margin - rect.height;
+
+            if (nextX < margin) nextX = margin;
+            if (nextY < margin) nextY = margin;
+            if (nextX > maxX) nextX = maxX;
+            if (nextY > maxY) nextY = maxY;
+
+            setPosition({ x: nextX, y: nextY });
+        };
+
+        const onUp = () => {
+            setDragging(false);
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", onUp);
+        };
+
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+        e.preventDefault();
+    };
+
     /* long strips */
     const strips = useMemo(() => {
         return Array.from({ length: Math.max(1, nReels) }).map(() =>
@@ -244,14 +310,30 @@ export const SlotMachineView: FC = () => {
     const CELL_H = 56;
     const VISIBLE_ROW = 3;
 
+    const rootStyle: React.CSSProperties | undefined = position
+        ? {
+              left: position.x,
+              top: position.y,
+          }
+        : undefined;
+
     return (
-        <div className="slot-root" ref={rootRef}>
-            <div className="slot-header">
+        <div className="slot-root" ref={rootRef} style={rootStyle}>
+            <div
+                className={
+                    "slot-header" + (dragging ? " slot-header-grabbing" : "")
+                }
+                onMouseDown={handleHeaderMouseDown}
+            >
                 <span>Slots</span>
-                <div className="spacer" />
-                <button className="btn grey" onClick={onClose}>
-                    ✕
-                </button>
+
+                {/* Close button styled like inventory view */}
+                <button
+                    className="inventory-close"
+                    onClick={onClose}
+                    aria-label="Close slots"
+                    type="button"
+                />
             </div>
 
             <div className="slot-body">
