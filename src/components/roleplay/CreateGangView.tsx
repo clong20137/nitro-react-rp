@@ -298,9 +298,10 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
                     </div>
                     Create Gang
                 </div>
-                <button className="c-button close-button" onClick={onClose}>
-                    ✖
-                </button>
+                <button
+                    className="c-button close-button"
+                    onClick={onClose}
+                ></button>
             </div>
 
             <div className="create-gang-body-horizontal">

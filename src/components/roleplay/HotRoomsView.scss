@@ -1,6 +1,6 @@
 /* ===== Theme bits (matching CommandsListView) ===== */
 $hot-bg: #dedede;
-$hot-header-grad: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
+$hot-header-grad: #1e7295;
 $hot-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 
 /* ===== Root container ===== */
@@ -62,14 +62,16 @@ $hot-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     align-items: center;
     justify-content: center;
     position: relative;
-    background: $hot-header-grad;
+    background: #1e7295;
     color: #fff;
-    padding: 8px 10px;
-    font-size: 18px;
+    padding: 8px 12px;
+    font-size: 20px;
     font-weight: 700;
     cursor: grab;
     user-select: none;
-    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    filter: drop-shadow(0 0 1px black);
+    box-shadow: 0 0 rgba(0, 0, 0, .1019607843), 0 0 rgba(0, 0, 0, .1019607843), inset 0 -3px rgba(0, 0, 0, .0901960784);
 }
 
 .hot-rooms-title {
@@ -219,10 +221,10 @@ $hot-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 }
 
 .hot-rooms-table td {
-    padding: 4px 8px;
+    padding: 10px;
     border-top: 1px solid #d0d0d0;
     vertical-align: middle;
-    font-size: 12px;
+    font-size: 14px;
 }
 
 /* cells */

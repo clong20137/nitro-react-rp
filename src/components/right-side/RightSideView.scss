@@ -14,8 +14,8 @@
 
 /* Cards + layout */
 .rs-card {
-    background: #dfdfdf;
-    border: 2px solid rgba(255, 255, 255, .2);
+    background: #0e1f2b;
+    border: 2px solid #1b374a;
     border-radius: 12px;
     padding: 10px;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
@@ -35,8 +35,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #dfdfdf;
-    border: 2px solid rgba(255, 255, 255, .2);
+    background: #0e1f2b;
+    border: 2px solid #1b374a;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
         0 2px 0 rgba(0, 0, 0, 0.25),
         inset 0 -4px rgba(0, 0, 0, 0.12);
@@ -83,7 +83,8 @@
 
 /* ---- CHIP STYLING ---- */
 .chip {
-    background: #989898;
+    background: #0B6091;
+    border: solid 1px #2685BC;
     padding: 6px 10px;
     border-radius: 12px;
     display: inline-flex;
@@ -91,8 +92,9 @@
     font-size: 14px;
     gap: 6px;
     color: #fff;
-    font-weight: 600;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
+        0 2px 0 rgba(0, 0, 0, .25),
+        inset 0 -4px rgba(0, 0, 0, .12);
     transition: filter 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
 }
 
@@ -148,8 +150,8 @@
 /* Icons */
 .ico {
     display: inline-block;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     background-size: contain;
     background-repeat: no-repeat;
 }
@@ -159,15 +161,19 @@
 }
 
 .ico-coin {
-    background-image: url("../../icons/coins.gif");
+    background-image: url("../../icons/coins.png");
 }
 
 .ico-zone {
-    background-image: url("../../icons/room.gif");
+    background-image: url("../../icons/room.png");
+    height: 24px;
+    width: 24px;
 }
 
 .ico-flag {
-    background-image: url("../../icons/online.gif");
+    background-image: url("../../icons/online.png");
+    width: 24px;
+    height: 24px;
 }
 
 .ico-chatlog {

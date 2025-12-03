@@ -105,9 +105,42 @@ body.ob-block-scroll {
     padding: 14px 16px 12px 16px;
     pointer-events: auto;
     /* clickable */
-    background: rgba(0, 0, 0, .90);
-    border: 2px solid hsla(0, 0%, 100%, .2);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
+    background: #0e466d;
+    border: 2px solid #205f86;
+    box-shadow:
+        0 10px 24px rgba(0, 0, 0, .22),
+        0 2px 0 rgba(0, 0, 0, .25),
+        inset 0 -4px rgba(0, 0, 0, .12);
+
+    /* smoother movement + fade/scale between steps */
+    opacity: 0;
+    transform: translateY(4px) scale(.98);
+    transition:
+        left .18s ease,
+        top .18s ease,
+        opacity .18s ease,
+        transform .18s ease;
+}
+
+.ob-card-enter {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* layout when a step image is present */
+.ob-illustration {
+    margin-bottom: 8px;
+
+    img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        image-rendering: pixelated;
+    }
+}
+
+.ob-content {
+    /* wraps title/body/actions so illustration can sit above */
 }
 
 /* Title + body */
@@ -133,22 +166,22 @@ body.ob-block-scroll {
 .ob-btn {
     min-width: 66px;
     padding: 6px 10px;
-    border-radius: 8px;
-    border: none;
+    border-radius: 4px;
+    border: solid 1px #277baf;
     font-weight: 700;
     cursor: pointer;
-    background: #dedede;
-    color: #000;
+    background: #0a6091;
+    color: #ffffff;
 
     &.ob-next {
-        background: #2079bb;
-        border: none;
+        background: #04a157;
+        border: solid 1px #adf26c;
         color: #fff;
     }
 
     &.ob-skip {
-        background: #e52222;
-        border: none;
+        background: #ae1d52;
+        border: solid 1px #d76e8b;
         color: #fff;
     }
 
@@ -169,12 +202,15 @@ body.ob-block-scroll {
     filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .25));
 }
 
+/* match arrow color to card background */
+$ob-card-bg: #0e466d;
+
 .ob-coach-card.place-right::after {
     left: -10px;
     top: 14px;
     border-top: 10px solid transparent;
     border-bottom: 10px solid transparent;
-    border-right: 10px solid #ffffff;
+    border-right: 10px solid $ob-card-bg;
 }
 
 .ob-coach-card.place-left::after {
@@ -182,7 +218,7 @@ body.ob-block-scroll {
     top: 14px;
     border-top: 10px solid transparent;
     border-bottom: 10px solid transparent;
-    border-left: 10px solid #ffffff;
+    border-left: 10px solid $ob-card-bg;
 }
 
 .ob-coach-card.place-top::after {
@@ -190,7 +226,7 @@ body.ob-block-scroll {
     bottom: -10px;
     border-left: 10px solid transparent;
     border-right: 10px solid transparent;
-    border-top: 10px solid #ffffff;
+    border-top: 10px solid $ob-card-bg;
 }
 
 .ob-coach-card.place-bottom::after {
@@ -198,7 +234,7 @@ body.ob-block-scroll {
     top: -10px;
     border-left: 10px solid transparent;
     border-right: 10px solid transparent;
-    border-bottom: 10px solid #ffffff;
+    border-bottom: 10px solid $ob-card-bg;
 }
 
 /* ---------- Welcome card variant --------------------------------------- */
@@ -221,6 +257,83 @@ body.ob-block-scroll {
     line-height: 1.35;
 }
 
+/* ---------- Frank bottom-right ----------------------------------------- */
+
+.ob-frank {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    pointer-events: none;
+    z-index: 10000;
+    animation: obFrankIn .18s ease-out;
+}
+
+@keyframes obFrankIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ob-frank-img-wrapper {
+    pointer-events: none;
+
+    .ob-frank-img {
+        display: block;
+        width: 72px;
+        height: auto;
+        image-rendering: pixelated;
+    }
+}
+
+.ob-frank-bubble {
+    pointer-events: none;
+    max-width: 260px;
+    background: #f2e0b9;
+    border-radius: 10px;
+    padding: 8px 10px;
+    box-shadow:
+        0 6px 14px rgba(0, 0, 0, .25),
+        0 1px 0 rgba(0, 0, 0, .2);
+    border: 2px solid #c79e53;
+    color: #2b2414;
+    position: relative;
+    font-size: 12px;
+    line-height: 1.3;
+
+    &::after {
+        content: '';
+        position: absolute;
+        right: -10px;
+        bottom: 10px;
+        width: 0;
+        height: 0;
+        border-left: 10px solid #f2e0b9;
+        border-top: 8px solid transparent;
+        border-bottom: 8px solid transparent;
+        filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .25));
+    }
+}
+
+.ob-frank-name {
+    font-weight: 800;
+    margin-bottom: 2px;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.ob-frank-text {
+    font-size: 12px;
+}
+
 /* ---------- Safe reduce-motion ----------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
     .ob-target-ring {
@@ -228,7 +341,11 @@ body.ob-block-scroll {
     }
 
     .ob-backdrop::before,
-    .ob-target-ring {
+    .ob-target-ring,
+    .ob-coach-card,
+    .ob-welcome-card,
+    .ob-frank {
         transition: none !important;
+        animation: none !important;
     }
 }

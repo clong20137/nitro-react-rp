@@ -64,7 +64,12 @@ export const LeftSidebarView: FC = () => {
         const handleGangStatus = (event: Event) => {
             const detail = (event as CustomEvent).detail as any;
             const inGang = decideFromPayload(detail);
-            setGangMode(inGang ? "details" : "create");
+
+            // ⭐ Only change modes if we are currently "loading"
+            setGangMode((prev) => {
+                if (prev !== "loading") return prev;
+                return inGang ? "details" : "create";
+            });
         };
 
         window.addEventListener("open-create-gang", handleCreate);
@@ -142,6 +147,11 @@ export const LeftSidebarView: FC = () => {
         // for older bridges
         window.dispatchEvent(new CustomEvent("request_gang_status"));
     };
+
+    // still ok to request status once on boot; it no longer opens UI
+    useEffect(() => {
+        askGangStatus();
+    }, []);
 
     const onClickGangs = () => {
         setGangMode((m) => {

@@ -16,7 +16,7 @@ If you have CSS vars, these fallbacks will match your chips/buttons. */
 .live-feed-container {
     position: fixed;
     right: 12px;
-    top: calc(var(--toolbar-height) + 80px);
+    top: calc(var(--toolbar-height) + 100px);
     width: min(260px, 32vw);
     display: flex;
     flex-direction: column;
@@ -38,12 +38,12 @@ If you have CSS vars, these fallbacks will match your chips/buttons. */
     grid-column-gap: 8px;
     align-items: start;
     border-radius: 8px;
-    background: rgb(0 0 0 / 60%);
+    background: #0c456d;
     padding: 8px 10px 10px 10px;
     position: relative;
     overflow: hidden;
     box-shadow: 0 2px #000000b3, 0 0 0 1px #000000b3;
-    border: 2px solid rgba(255, 255, 255, .2);
+    border: 2px solid #2a759a;
     /* entry + exit animation */
     opacity: 0;
     transform: translateY(-6px);

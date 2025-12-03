@@ -287,6 +287,16 @@ export const StatsBar: FC = () => {
             setAggressive(!!stats.isAggressive);
             setIsWorking(!!stats.working);
             setGangName(stats.gangName);
+            setJobTitle(stats.jobTitle);
+            setCorporationName(stats.corporationName);
+            // Convert icon key into URL (same as CorporationsView logic)
+            if (stats.corporationIcon) {
+                setCorporationIconUrl(
+                    /^https?:\/\//i.test(stats.corporationIcon)
+                        ? stats.corporationIcon
+                        : `/icons/corporations/${stats.corporationIcon}`
+                );
+            } else setCorporationIconUrl("");
         };
 
         window.addEventListener("user_stats_update", handleStatsUpdate);
@@ -406,26 +416,25 @@ export const StatsBar: FC = () => {
     }, []);
 
     useMessageEvent<UserProfileEvent>(UserProfileEvent, (event) => {
-        const parser: UserProfileParser = event.getParser();
+        const parser = event.getParser();
         if (!parser) return;
 
-        // only care about our own profile for the stats/profile view
-        if (parser.id !== GetSessionDataManager().userId) return;
+        const myId = GetSessionDataManager().userId;
+        if (parser.id !== myId) return;
 
-        // Friendly Created + Last Login from Nitro parser
-        const created = parser.registration;
-        const last = FriendlyTime.format(
-            parser.secondsSinceLastVisit,
-            ".ago",
-            2
-        );
+        // Created date is already a string (same as UserContainerView)
+        const created: string = parser.registration ?? "Unknown";
 
+        // Format last login using FriendlyTime (returns string)
+        const last: string =
+            FriendlyTime.format(parser.secondsSinceLastVisit ?? 0, ".ago", 2) ??
+            "Unknown";
+
+        // Update your local state (must be string | undefined)
         setCreatedAt(created);
         setLastLogin(last);
         setMotto(parser.motto);
         setIsOnline(parser.isOnline);
-
-        // Also sync basic profile stats into profileStats (keep RP stats from prev)
     });
 
     // Listen for opponent avatar click → open profile

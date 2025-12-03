@@ -4,40 +4,46 @@
     left: 50%;
     transform: translateX(-50%);
     background: #dfdfdf;
-    border-radius:5px;
+    border-radius: 5px;
     width: auto;
     z-index: 9999;
-    border-radius:8px;
-    box-shadow: 0 10px 24px rgba(0,0,0,.22),0 2px 0 rgba(0,0,0,.25),inset 0 -4px rgba(0,0,0,.12);
+    border-radius: 8px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
 }
 
 .popup-header {
-    background:linear-gradient(180deg, #b57f2a, #b57f2a 50%, #c38c35 0, #c38c35);
-    padding: 8px 12px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    color: white;
-    font-weight: bold;
+    justify-content: center;
+    position: relative;
+    background: #1e7295;
+    color: #fff;
+    padding: 8px 12px;
     font-size: 20px;
-    border-radius: 8px 8px 0px 0px;
+    font-weight: 700;
+    cursor: grab;
+    -webkit-user-select: none;
+    user-select: none;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    filter: drop-shadow(0 0 1px black);
+    box-shadow: 0 0 rgba(0, 0, 0, .1019607843), 0 0 rgba(0, 0, 0, .1019607843), inset 0 -3px rgba(0, 0, 0, .0901960784);
 
     .popup-close {
-        background: repeating-linear-gradient(#f55041,#f55041 50%,#c23027 0,#c23027);
-        box-shadow:0 0 0 1.6px #fff,0 2px 0 rgba(0,0,0,.22);
-        border:2px solid #921911;
-        color: white;
-        border:solid 1px #FFF;
-        border: none;
-        padding: 0 6px;
-        font-weight: bold;
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        width: 24px;
+        height: 24px;
+        border: 2px solid #921911;
+        background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
+        border-radius: 4px;
+        box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
         cursor: pointer;
-        border-radius:5px;
-        font-size: 20px;
-        transition:0.5s;
+        padding: 0;
+
         &:hover {
             background: rgb(220, 39, 39);
-            transition:0.5s;
+            transition: 0.5s;
         }
     }
 }
@@ -51,21 +57,21 @@
     align-items: center;
     padding: 3px;
 
-    color:#000000;
+    color: #000000;
     margin-bottom: 10px;
 
     img {
         width: 48px;
         height: 48px;
         margin-right: 10px;
-        border-radius:5px;
+        border-radius: 5px;
         background: #c4c4c4;
     }
 
     .item-info {
         font-size: 16px;
-        color:#000000;
-        font-weight:300;
+        color: #000000;
+        font-weight: 300;
     }
 }
 
@@ -92,43 +98,38 @@
     background-color: #000;
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6)
 }
-.habbo-action-button.gold {
-    background:linear-gradient(180deg,#bd9426,#bd9426 50%,#cdb267 0,#cdb267);
-    border:solid 2px #bd9426
+
+.habbo-action-button.default {
+    background: #0a6091;
+    border: solid 1px #1e7ab0;
 }
-.habbo-action-button.gold:hover {
-    background:linear-gradient(180deg,#cda22e,#cda22e 50%,#d7bc71 0,#d7bc71);
-    border:solid 2px #bd9426
+
+.habbo-action-button.default:hover {
+    filter: brightness(1.06) drop-shadow(0 1px 0 rgba(0, 0, 0, .35));
+    transition: 0.5s;
 }
+
 .habbo-action-button.green {
-    background: linear-gradient(180deg,#007c17,#007c17,50%,#003d0b 50%,#003d0b);
-    transition:0.5s;
+    background: #04a258;
+    border: 1px solid #adf26c;
+    transition: 0.5s;
 }
 
 .habbo-action-button.green:hover {
-    background: linear-gradient(180deg,#048b1c,#048b1c,50%,#055e15 50%,#055e15);
-    transition:0.5s;
+    filter: brightness(1.06) drop-shadow(0 1px 0 rgba(0, 0, 0, .35));
+    transition: 0.5s;
 }
 
-.habbo-action-button.green:active {
-    background-color: #003d0b;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6)
-}
 
 .habbo-action-button.red {
-    background: linear-gradient(180deg, #d21212, #d21212 50%, #e22222 0, #e22222);
-    transition:0.5s;
-    border:solid 1px #e22222;
+    background: #ae1d52;
+    transition: 0.5s;
+    border: solid 1px #e85d83;
 }
 
 .habbo-action-button.red:hover {
-    background: linear-gradient(180deg, #e21919, #e21919 50%, #ec2020 0, #ec2020);
-    transition:0.5s;
-}
-
-.habbo-action-button.red:active {
-    background-color: #5a0000;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6)
+    filter: brightness(1.06) drop-shadow(0 1px 0 rgba(0, 0, 0, .35));
+    transition: 0.5s;
 }
 
 .item-offer-buttons {

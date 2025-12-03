@@ -3,6 +3,19 @@ import "./MyProfileView.scss";
 import { GetCommunication } from "../../api/nitro/GetCommunication";
 import { UpgradeStatComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/UpgradeStatComposer";
 import { ProfileAchievementsRequestComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ProfileAchievementsRequestComposer";
+import { FriendlyTime } from "@nitrots/nitro-renderer";
+
+// ⬇️ NEW imports
+import {
+    UserCurrentBadgesComposer,
+    UserCurrentBadgesEvent,
+    UserProfileEvent,
+} from "@nitrots/nitro-renderer";
+import { GetSessionDataManager, GetUserProfile } from "../../api";
+import { useMessageEvent } from "../../hooks";
+import { BadgesContainerView } from "../user-profile/views/BadgesContainerView";
+// ⬆️ NEW imports
+
 import { setRPStats } from "./rpStatsCache";
 
 /* --------------------------------- Types --------------------------------- */
@@ -59,6 +72,9 @@ interface StatsProps {
     createdAt?: string; // e.g., "10-11-2025"
     lastLogin?: string; // e.g., "3 minutes ago"
     relationships?: RelationshipCounts;
+
+    // NEW: allow badges coming from props if you want
+    badges?: string[];
 }
 
 type UpgradeableStat =
@@ -122,6 +138,18 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
     // 🔹 which group is expanded (accordion: one at a time)
     const [openGroup, setOpenGroup] = useState<string | null>(null);
 
+    // 🔹 NEW: badges state for current user
+    const [badges, setBadges] = useState<string[]>(stats.badges ?? []);
+
+    // 🔹 NEW: local meta for created / last login
+    const [meta, setMeta] = useState<{
+        createdAt?: string;
+        lastLogin?: string;
+    }>({
+        createdAt: stats.createdAt,
+        lastLogin: stats.lastLogin,
+    });
+
     // 🔹 Listen for achievements from the parser bridge
     useEffect(() => {
         const onAchievements = (ev: any) => {
@@ -168,27 +196,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
         stats.level,
     ]);
 
-    // OPTIONAL: listen for a live RP stats event (map its payload to uiStats)
-    useEffect(() => {
-        const onRpStats = (ev: any) => {
-            const d = ev.detail || {};
-            setUiStats((s) => ({
-                ...s,
-                strength: d.strength ?? s.strength,
-                stamina: d.stamina ?? s.stamina,
-                defense: d.defense ?? s.defense,
-                gathering: d.gathering ?? s.gathering,
-                healthlevel: d.healthlevel ?? d.healthLevel ?? s.healthlevel,
-                points: d.points ?? s.points,
-                xp: d.xp ?? s.xp,
-                maxXP: d.maxXP ?? s.maxXP,
-                level: d.level ?? s.level,
-            }));
-        };
-        window.addEventListener("rp_stats_update", onRpStats);
-        return () => window.removeEventListener("rp_stats_update", onRpStats);
-    }, []);
-
     // keep small cache in sync for other overlays
     useEffect(() => {
         setRPStats({
@@ -196,6 +203,53 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
             level: uiStats.level ?? 1,
         });
     }, [uiStats.gathering, uiStats.level]);
+
+    // 🔹 NEW: on mount, request profile + badges for current user
+    useEffect(() => {
+        const userId = GetSessionDataManager().userId;
+
+        if (!userId) return;
+
+        // This will fire UserProfileEvent, which contains creation & last login
+        GetUserProfile(userId);
+
+        // This will fire UserCurrentBadgesEvent with the user's badges
+        try {
+            GetCommunication().connection.send(
+                new UserCurrentBadgesComposer(userId)
+            );
+        } catch (e) {
+            console.error("Failed to send UserCurrentBadgesComposer", e);
+        }
+    }, []);
+
+    // 🔹 NEW: listen for UserProfileEvent to fill createdAt / lastLogin
+    useMessageEvent<UserProfileEvent>(UserProfileEvent, (event) => {
+        const parser = event.getParser();
+        if (!parser) return;
+
+        const myId = GetSessionDataManager().userId;
+        if (parser.id !== myId) return;
+
+        setMeta({
+            createdAt: parser.registration ?? "Unknown",
+            lastLogin:
+                FriendlyTime.format(
+                    parser.secondsSinceLastVisit ?? 0,
+                    ".ago",
+                    2
+                ) ?? "Unknown",
+        });
+    });
+    // 🔹 NEW: listen for UserCurrentBadgesEvent to update badges
+    useMessageEvent<UserCurrentBadgesEvent>(UserCurrentBadgesEvent, (event) => {
+        const parser = event.getParser();
+        const myId = GetSessionDataManager().userId;
+
+        if (!myId || parser.userId !== myId) return;
+
+        setBadges(parser.badges || []);
+    });
 
     // initial window position (persisted)
     const [position] = useState<{ x: number; y: number }>(() => {
@@ -507,6 +561,17 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                             </span>
                                         )}
                                     </div>
+
+                                    {/* 🔹 Badges UNDER avatar, max 5 */}
+                                    {badges && badges.length > 0 && (
+                                        <div className="badge-strip">
+                                            <BadgesContainerView
+                                                fullWidth
+                                                center
+                                                badges={badges.slice(0, 5)}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -518,11 +583,11 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                 <h5>Account</h5>
                                 <div>
                                     Created:{" "}
-                                    <b>{stats.createdAt ?? "Unknown"}</b>
+                                    <b>{meta.createdAt ?? "Unknown"}</b>
                                 </div>
                                 <div>
                                     Last login:{" "}
-                                    <b>{stats.lastLogin ?? "Unknown"}</b>
+                                    <b>{meta.lastLogin ?? "Unknown"}</b>
                                 </div>
                             </div>
 
@@ -566,7 +631,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                             </div>
                         </div>
                     </div>
-
                     {/* RIGHT COLUMN */}
                     <div className="profile-right">
                         {/* Level / XP */}
@@ -639,23 +703,74 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
 
                         {/* Totals */}
                         <div className="stats-breakdown">
-                            <div className="stat-badge">
-                                🔪 {stats.kills} Kills
+                            <div className="stat-card stat-card--kills">
+                                <div className="stat-icon" />
+                                <div className="stat-text">
+                                    <div className="stat-label">Kills</div>
+                                    <div className="stat-value">
+                                        {stats.kills}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="stat-badge">
-                                💀 {stats.deaths} Deaths
+
+                            <div className="stat-card stat-card--deaths">
+                                <div className="stat-icon" />
+                                <div className="stat-text">
+                                    <div className="stat-label">Deaths</div>
+                                    <div className="stat-value">
+                                        {stats.deaths}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="stat-badge">
-                                ⚔️ {stats.punches} Punches Thrown
+
+                            <div className="stat-card stat-card--punches">
+                                <div className="stat-icon" />
+                                <div className="stat-text">
+                                    <div className="stat-label">
+                                        Punches Thrown
+                                    </div>
+                                    <div className="stat-value">
+                                        {stats.punches}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="stat-badge">
-                                🔥 {stats.damageGiven} Damage Dealt
+
+                            <div className="stat-card stat-card--dmg-dealt">
+                                <div className="stat-icon" />
+                                <div className="stat-text">
+                                    <div className="stat-label">
+                                        Damage Dealt
+                                    </div>
+                                    <div className="stat-value">
+                                        {stats.damageGiven}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="stat-badge">
-                                🛡️ {stats.damageReceived} Damage Received
+
+                            <div className="stat-card stat-card--dmg-taken">
+                                <div className="stat-icon" />
+                                <div className="stat-text">
+                                    <div className="stat-label">
+                                        Damage Received
+                                    </div>
+                                    <div className="stat-value">
+                                        {stats.damageReceived}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="stat-badge">
-                                📊 {kdRatio} K/D Ratio
+
+                            <div className="stat-card stat-card--kdr">
+                                <div className="stat-icon" />
+                                <div className="stat-text">
+                                    <div className="stat-label">K/D Ratio</div>
+                                    <div className="stat-value">
+                                        {stats.deaths > 0
+                                            ? (
+                                                  stats.kills / stats.deaths
+                                              ).toFixed(2)
+                                            : "∞"}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

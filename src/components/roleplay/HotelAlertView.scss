@@ -1,17 +1,20 @@
-/* OlympusRP — Compact Hotel Toasts */
+/* OlympusRP — Hotel Alert Toasts */
+
 .hotel-toast-region {
     position: fixed;
-    top: 12px;
-    right: 400px;
+    top: 16px;
+    left: 0;
+    right: 0;
     z-index: 9999;
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 8px;
     pointer-events: none;
-    /* clicks pass through except toasts */
+    /* only toasts catch clicks */
 }
 
-/* Base token colors (aligns with your theme) */
+/* Base token colors (align with your old theme) */
 $bg: #426e8f;
 $bg-soft: #3c5e78;
 $border: #22425d;
@@ -24,32 +27,37 @@ $accent-danger: #ff9aa2;
 
 .hotel-toast {
     pointer-events: auto;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    column-gap: 10px;
-    align-items: center;
 
-    max-width: 360px;
-    /* smaller! */
-    width: calc(100vw - 24px);
-    background: rgba(24,24,24,.88);
+    display: flex;
+    flex-direction: column;
+    row-gap: 6px;
+
+    max-width: 420px;
+    width: calc(100vw - 40px);
+
+    background: #0c456d;
     color: #fff;
-    border: 2px solid #FFF;
+    border: 2px solid #3685ad;
     border-radius: 10px;
     box-shadow: $shadow;
-    padding: 10px 10px 10px 10px;
+    padding: 12px 14px 12px 14px;
     position: relative;
     overflow: hidden;
 
-    transform: translateY(calc((var(--delay-index, 0)) * 6px)) translateX(12px);
+    /* slide DOWN from the top when appearing */
     opacity: 0;
-    animation: toastIn 160ms ease-out forwards;
-    /* cascade delays slightly so multiple don’t pop at once */
-    animation-delay: calc((var(--delay-index, 0)) * 60ms);
+    transform: translateY(-20px);
+    animation: toastIn 180ms ease-out forwards;
+    animation-delay: calc((var(--delay-index, 0)) * 70ms);
 
     &.paused .hotel-toast__progress {
         animation-play-state: paused;
     }
+}
+
+/* When leaving, slide back UP */
+.hotel-toast--leaving {
+    animation: toastOut 180ms ease-in forwards;
 }
 
 /* Variants = tiny left border + subtle glow */
@@ -57,8 +65,8 @@ $accent-danger: #ff9aa2;
     content: "";
     position: absolute;
     left: 0;
-    top: 6px;
-    bottom: 6px;
+    top: 8px;
+    bottom: 8px;
     width: 3px;
     border-radius: 2px;
     background: #cfe9ff;
@@ -82,24 +90,25 @@ $accent-danger: #ff9aa2;
     background: $accent-danger;
 }
 
+/* Header: icon + title aligned vertically center */
+.hotel-toast__header {
+    display: flex;
+    align-items: center;
+    column-gap: 8px;
+}
+
 .hotel-toast__icon {
     width: 28px;
     height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: 4px;
+    margin-left: 2px;
 
     img {
         width: 24px;
         height: 24px;
     }
-}
-
-.hotel-toast__body {
-    display: grid;
-    row-gap: 4px;
-    min-width: 0;
 }
 
 .hotel-toast__title {
@@ -110,10 +119,11 @@ $accent-danger: #ff9aa2;
     opacity: .95;
 }
 
+/* Message is now full width under the header */
 .hotel-toast__message {
-    font-size: 13px;
+    font-size: 16px;
     line-height: 1.25;
-    background: $bg-soft;
+    background: #0e1c2c;
     border-radius: 6px;
     padding: 8px;
     opacity: .95;
@@ -121,23 +131,19 @@ $accent-danger: #ff9aa2;
     word-break: break-word;
 }
 
+/* Close button in top-right corner */
 .hotel-toast__close {
+    position: absolute;
+    top: 6px;
+    right: 8px;
     width: 24px;
     height: 24px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     border: 2px solid #921911;
-    border-radius: 4px;
     background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
-    box-shadow: 0 0 0 1.3px #fff;
-    color: #fff;
-    font-size: 16px;
-    line-height: 1;
+    border-radius: 4px;
+    box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
     cursor: pointer;
     padding: 0;
-    transition: transform 100ms ease, filter 100ms ease;
-    margin-left: 4px;
 
     &:hover {
         filter: brightness(1.05);
@@ -161,15 +167,28 @@ $accent-danger: #ff9aa2;
     animation-timing-function: linear;
 }
 
+/* Animations */
 @keyframes toastIn {
     from {
-        transform: translateY(calc((var(--delay-index, 0)) * 6px)) translateX(20px);
         opacity: 0;
+        transform: translateY(-20px);
     }
 
     to {
-        transform: translateY(calc((var(--delay-index, 0)) * 6px)) translateX(0);
         opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes toastOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
     }
 }
 
@@ -187,13 +206,12 @@ $accent-danger: #ff9aa2;
 @media (max-width: 420px) {
     .hotel-toast-region {
         top: 10px;
-        right: 10px;
         gap: 6px;
     }
 
     .hotel-toast {
-        max-width: 320px;
-        padding: 8px;
+        max-width: 360px;
+        padding: 10px;
     }
 
     .hotel-toast__message {

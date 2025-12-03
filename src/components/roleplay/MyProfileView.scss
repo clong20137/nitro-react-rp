@@ -7,7 +7,7 @@ MyProfileView.scss
     top: 60px;
     left: 50%;
     transform: translateX(-50%);
-    width: 750px;
+    width: 850px;
     box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
         0 2px 0 rgba(0, 0, 0, .25),
         inset 0 -4px rgba(0, 0, 0, .12);
@@ -21,7 +21,49 @@ MyProfileView.scss
     /* allow inner content to scroll if it gets tall */
     display: flex;
     flex-direction: column;
-    max-height: 540px;
+    max-height: 560px;
+    padding-bottom: 10px;
+}
+
+
+/* Badges under avatar – fixed 5-slot row */
+.badge-strip {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: center;
+}
+
+/* root container that BadgesContainerView renders */
+.badge-strip .badges-container {
+    display: flex;
+    flex-wrap: nowrap;
+    /* no wrapping */
+    gap: 4px;
+    justify-content: center;
+}
+
+/* each badge "slot" – names may vary slightly, so keep both */
+.badge-strip .badge-slot,
+.badge-strip .badge-container {
+    width: 32px;
+    height: 32px;
+    background: #bcbcbc;
+    border-radius: 4px;
+    border: 1px solid #ffffff;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.badge-strip img {
+    max-width: 28px;
+    max-height: 28px;
+    image-rendering: pixelated;
+    display: block;
 }
 
 /* Header */
@@ -97,11 +139,12 @@ MyProfileView.scss
 }
 
 .profile-left {
-    width: 260px;
+    width: 280px;
 }
 
 .profile-right {
     min-width: 0;
+    margin-left: 20px;
 }
 
 /* Left column */
@@ -214,10 +257,9 @@ MyProfileView.scss
 
 /* RENAMED to avoid collisions with existing .card styles */
 .info-card {
-    background: #dfdfdf;
+    background: #cdcdcd;
     border-radius: 6px;
     padding: 8px 10px;
-    border: 1px solid #ffffff;
     width: 100%;
     box-sizing: border-box;
 }
@@ -278,8 +320,7 @@ MyProfileView.scss
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6);
         cursor: pointer;
         transition: background .15s ease, transform .08s ease;
-        Filter: drop-shadow(0 0 1px black);
-            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+        text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 
         &.active {
             background: #b6bec5;
@@ -307,7 +348,7 @@ MyProfileView.scss
     padding: 8px;
 
     .xp-bar {
-        background: #dfdfdf;
+        background: #302E29;
         height: 20px;
         margin: 6px 0;
         padding: 1px;
@@ -317,8 +358,10 @@ MyProfileView.scss
 
         .xp-fill {
             height: 100%;
-            background: repeating-linear-gradient(#2dabc2, #2dabc2 50%, #2b91a7 0, #2b91a7);
+            background: #0F96BC;
             transition: width .3s ease-out;
+            border: solid 1px #42C9EF;
+            border-radius: 2px;
         }
     }
 
@@ -327,7 +370,7 @@ MyProfileView.scss
     }
 
     .points-left {
-        background: rgba(24, 24, 24, .88);
+        background: #0f96bc;
         color: #fff;
         text-align: center;
         padding: 5px;
@@ -364,22 +407,23 @@ MyProfileView.scss
     flex: 1;
     height: 24px;
     padding: 1px;
-    background: #dfdfdf;
-    border-radius: 2px;
+    background: #302E29;
+    border-radius: 4px;
     overflow: hidden;
+    border: 1px solid #fff;
 
     .skill-bar-fill {
-        background: repeating-linear-gradient(#2dabc2, #2dabc2 50%, #2b91a7 0, #2b91a7);
+        background: #0F96BC;
         height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: width .3s ease;
-        border-radius: 4px;
-        border: 1px solid #fff;
+        border-radius: 2px;
+        border: solid 1px #42C9EF;
 
         .skill-bar-text {
-            font-size: 10px;
+            font-size: 16px;
             font-weight: 700;
             color: #fff;
         }
@@ -408,20 +452,117 @@ MyProfileView.scss
 }
 
 .stats-breakdown {
-    margin-top: 15px;
-    font-size: 13px;
+    margin-top: 16px;
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    font-size: 13px;
 
-    .stat-badge {
-        background: #cdcdcd;
-        border-radius: 5px;
-        padding: 3px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #000;
+    @media (max-width: 860px) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+}
+
+/* Each stat card */
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: #cdcdcd;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        0 1px 0 rgba(0, 0, 0, 0.18);
+
+    min-height: 40px;
+}
+
+/* Icon on the left */
+.stat-icon {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
+/* Text on the right */
+.stat-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: #ffffff;
+    filter: drop-shadow(0 0 1px black);
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 14px;
+    font-weight: 800;
+    color: #ffffff;
+    filter: drop-shadow(0 0 1px black);
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+
+/* Optional subtle coloring by type */
+.stat-card--kills .stat-value {
+    color: #ffffff;
+}
+
+.stat-card--deaths .stat-value {
+    color: #ffffff;
+}
+
+.stat-card--punches .stat-value {
+    color: #ffffff;
+}
+
+.stat-card--dmg-dealt .stat-value {
+    color: #ffffff;
+}
+
+.stat-card--dmg-taken .stat-value {
+    color: #ffffff;
+}
+
+.stat-card--kdr .stat-value {
+    color: #ffffff;
+}
+
+/* Icon image hooks – swap the URLs to your actual assets */
+.stat-card--kills .stat-icon {
+    background-image: url('../../icons/kills.png');
+}
+
+.stat-card--deaths .stat-icon {
+    background-image: url('../../icons/deaths.png');
+}
+
+.stat-card--punches .stat-icon {
+    background-image: url('../../icons/punches_thrown.png');
+}
+
+.stat-card--dmg-dealt .stat-icon {
+    background-image: url('../../icons/punches.png');
+}
+
+.stat-card--dmg-taken .stat-icon {
+    background-image: url('../../icons/punches_negative.png');
+}
+
+.stat-card--kdr .stat-icon {
+    background-image: url('../../icons/kd.png');
 }
 
 /* ==============================

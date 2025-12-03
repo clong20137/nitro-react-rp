@@ -50,8 +50,8 @@ and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush wi
   position: relative;
   width: $sidebar-width;
   padding: 10px 12px;
-  background: #dfdfdf;
-  border: 2px solid rgba(255, 255, 255, .2);
+  background: #111d2e;
+  border: 2px solid #1b374a;
   border-left: 0;
   border-radius: 0 16px 16px 0;
   box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
@@ -87,10 +87,10 @@ and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush wi
     width: $arrow-width;
     height: $arrow-height;
     border-radius: 0 10px 10px 0;
-    background: #dfdfdf;
+    background: #111d2e;
 
     /* same bg to blend */
-    border: 2px solid rgba(255, 255, 255, .2);
+    border: 2px solid #1b374a;
     box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
       0 2px 0 rgba(0, 0, 0, .25),
       inset 0 -4px rgba(0, 0, 0, .12);
@@ -149,8 +149,8 @@ and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush wi
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: #dfdfdf;
-  border: 1px solid hsla(0, 0%, 46.7%, .19);
+  background: #0b446c;
+  border: solid 1px #2c759b;
   box-shadow: 0 1px 4px rgba(0, 0, 0, .3215686275);
   position: relative;
   box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
@@ -202,8 +202,8 @@ and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush wi
 
 /* ---- Icon images inside pills ---- */
 .sidebar-chip .chip-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   background-repeat: no-repeat;
   background-size: contain;
   /* image-rendering: pixelated; <-- removed */

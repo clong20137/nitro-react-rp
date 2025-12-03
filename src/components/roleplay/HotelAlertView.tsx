@@ -1,4 +1,4 @@
-import { FC, useEffect, useMemo, useRef, useState } from "react";
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./HotelAlertView.scss";
 
 type AlertPayload = {
@@ -6,10 +6,9 @@ type AlertPayload = {
     icon?: string;
     soundUrl?: string;
     title?: string;
-    // optional, won’t break old callers
     variant?: "info" | "success" | "warning" | "danger";
-    sticky?: boolean; // if true, no auto-dismiss
-    durationMs?: number; // override per-alert duration
+    sticky?: boolean;
+    durationMs?: number;
 };
 
 type AlertItem = {
@@ -24,9 +23,9 @@ type AlertItem = {
 };
 
 const DEFAULT_TITLE = "Hotel Alert";
-const DEFAULT_ICON = "../../icons/alert.gif";
+const DEFAULT_ICON = "../../icons/alert.png";
 const DEFAULT_SOUND = "../../icons/audio/ping.mp3";
-const DEFAULT_DURATION = 5500; // much shorter than before
+const DEFAULT_DURATION = 15000; // 15 seconds
 const MAX_VISIBLE = 3;
 
 export const HotelAlertView: FC = () => {
@@ -118,24 +117,32 @@ const Toast: FC<{
 }> = ({ alert, index, duration, onClose }) => {
     const timerRef = useRef<number | null>(null);
     const elRef = useRef<HTMLDivElement | null>(null);
+    const [leaving, setLeaving] = useState(false);
+
+    const handleClose = useCallback(() => {
+        if (leaving) return;
+        setLeaving(true);
+        // Give time for slide-up animation
+        window.setTimeout(onClose, 180);
+    }, [leaving, onClose]);
 
     // Auto-dismiss
     useEffect(() => {
         if (!duration) return;
-        timerRef.current = window.setTimeout(onClose, duration);
+        timerRef.current = window.setTimeout(handleClose, duration);
         return () => {
             if (timerRef.current) window.clearTimeout(timerRef.current);
         };
-    }, [duration, onClose]);
+    }, [duration, handleClose]);
 
     // Escape to close
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") onClose();
+            if (e.key === "Escape") handleClose();
         };
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [onClose]);
+    }, [handleClose]);
 
     // Pause on hover
     const pause = () => {
@@ -146,48 +153,56 @@ const Toast: FC<{
         }
     };
     const resume = () => {
-        if (timerRef.current || !duration) return;
+        if (timerRef.current || !duration || leaving) return;
         elRef.current?.classList.remove("paused");
-        timerRef.current = window.setTimeout(onClose, 1200); // small grace after hover
+        timerRef.current = window.setTimeout(handleClose, 1200); // small grace
     };
+
+    const title = alert.title || DEFAULT_TITLE;
 
     return (
         <div
             ref={elRef}
-            className={`hotel-toast variant-${alert.variant || "info"}`}
-            style={{ "--delay-index": index } as React.CSSProperties}
+            className={`hotel-toast variant-${alert.variant || "info"} ${
+                leaving ? "hotel-toast--leaving" : ""
+            }`}
+            style={{ ["--delay-index" as any]: index }}
             onMouseEnter={pause}
             onMouseLeave={resume}
-            onClick={onClose}
+            onClick={handleClose}
             role="alert"
-            aria-label={alert.title || DEFAULT_TITLE}
+            aria-label={title}
         >
-            <div className="hotel-toast__icon">
-                <img src={alert.icon || DEFAULT_ICON} alt="" />
-            </div>
-            <div className="hotel-toast__body">
-                <div className="hotel-toast__title">
-                    {alert.title || DEFAULT_TITLE}
-                </div>
-                <div className="hotel-toast__message">{alert.message}</div>
-                {!!duration && (
-                    <div
-                        className="hotel-toast__progress"
-                        style={{ animationDuration: `${duration}ms` }}
-                        aria-hidden="true"
-                    />
-                )}
-            </div>
+            {/* Close button in top-right */}
             <button
                 className="hotel-toast__close"
                 aria-label="Close hotel alert"
                 onClick={(e) => {
                     e.stopPropagation();
-                    onClose();
+                    handleClose();
                 }}
             >
                 ×
             </button>
+
+            {/* Header row: icon + title, vertically centered */}
+            <div className="hotel-toast__header">
+                <div className="hotel-toast__icon">
+                    <img src={alert.icon || DEFAULT_ICON} alt="" />
+                </div>
+                <div className="hotel-toast__title">{title}</div>
+            </div>
+
+            {/* Message full width under header */}
+            <div className="hotel-toast__message">{alert.message}</div>
+
+            {!!duration && (
+                <div
+                    className="hotel-toast__progress"
+                    style={{ animationDuration: `${duration}ms` }}
+                    aria-hidden="true"
+                />
+            )}
         </div>
     );
 };

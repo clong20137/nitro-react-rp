@@ -150,9 +150,9 @@ export const HotRoomsView: FC = () => {
                     <table className="hot-rooms-table">
                         <thead>
                             <tr>
-                                <th className="col-id">VROOM ID</th>
-                                <th className="col-name">ZONE NAME</th>
-                                <th className="col-users">USERS</th>
+                                <th className="col-id">Room ID:</th>
+                                <th className="col-name">Location Name:</th>
+                                <th className="col-users">Total Users:</th>
                             </tr>
                         </thead>
                         <tbody>

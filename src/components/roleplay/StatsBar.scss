@@ -371,13 +371,15 @@ XP tooltip (shared)
 
 .xp-ring-background {
     fill: none;
-    stroke: #eaece7;
+    stroke: #302e28;
+    border: 1px solid #4c5056;
     stroke-width: 3;
 }
 
 .xp-ring-progress {
     fill: none;
-    stroke: #0067b3;
+    stroke: #03a15d;
+
     stroke-width: 3;
     stroke-linecap: round;
     transition: stroke-dasharray .8s ease;
@@ -502,7 +504,8 @@ XP tooltip (shared)
 .stats-right {
     display: flex;
     flex-direction: column;
-    margin-left: 0;
+    margin-left: -15px;
+    margin-top: -15px;
 }
 
 .stat {
@@ -515,28 +518,51 @@ XP tooltip (shared)
 .bar {
     position: relative;
     width: 180px;
-    height: 14px;
-    background: rgba(24, 24, 24, .88);
-    border-radius: 2px;
+    height: 18px;
+    background: #302e28;
+    border: solid 1px #4c5056;
+    border-radius: 4px;
+    padding: 1px;
     margin-left: 20px;
     overflow: hidden;
+
+    &.health-bar {
+        background: #78092d;
+        border: solid 1px #9f4c61;
+
+    }
+
+    &.energy-bar {
+        background: #dd8d0b;
+        border: solid 1px #fdc453;
+
+    }
+
+    &.hunger-bar {
+
+        background: #156091;
+        border: solid 1px #2d81b4;
+    }
 }
 
 .fill {
     height: 100%;
     transition: width .3s ease;
-    border-radius: 2px;
+    border-radius: 4px;
 
     &.health {
-        background: linear-gradient(180deg, #b82626, #b82626 50%, #ca3333 0, #ca3333);
+        background: #ab204b;
+        border: solid 1px #e9708c;
     }
 
     &.energy {
-        background: linear-gradient(180deg, #f1c40f, #f1c40f 50%, #f5d65a 0, #f5d65a);
+        background: #e6ac09;
+        border: solid 1px #fde257;
     }
 
     &.hunger {
-        background: linear-gradient(180deg, #13affe, #13affe 50%, #4bc1fe 0, #4bc1fe);
+        background: #156091;
+        border: solid 1px #2d81b4;
     }
 }
 
@@ -572,12 +598,12 @@ XP tooltip (shared)
 /* Aggression bar */
 .aggression-bar-wrapper {
     width: 180px;
-    height: 10px;
+    height: 12px;
     margin-top: 6px;
-    margin-left: 18px;
-    background: rgba(24, 24, 24, .88);
-    border: 1px solid rgba(255, 255, 255, .2);
-    border-radius: 4px;
+    margin-left: 20px;
+    background: #302e28;
+    border: solid 1px #4c5056;
+    border-radius: 2px;
     overflow: hidden;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 2px 4px rgba(0, 0, 0, .25);
     transition: all .3s ease;
@@ -590,7 +616,7 @@ XP tooltip (shared)
     left: 0;
     height: 100%;
     width: var(--aggression-width, 0%);
-    background: #ff6200;
+    background: #df8e11;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 1px 2px rgba(0, 0, 0, .35);
     transition: width .15s ease;
 }

@@ -52,7 +52,6 @@ import MarketplaceView from "./components/roleplay/MarketplaceView";
 import HighLowView from "./components/roleplay/HighLowView";
 import SlotMachineView from "./components/roleplay/SlotMachineView";
 import { HotelAlertView } from "./components/roleplay/HotelAlertView";
-import { OnboardingOverlay } from "./components/roleplay/OnboardingOverlay";
 import { initClickThroughUsers } from "./components/roleplay/ClickThroughUsers";
 
 // optional: if you later restore big wheel
@@ -260,7 +259,6 @@ Render
 
                 {isReady && <StatsBar />}
 
-                
                 <LiveFeed />
                 <BlackjackView />
                 <HighLowView />
@@ -268,8 +266,7 @@ Render
                 <MarketplaceView />
                 <HotelAlertView />
                 {/* <BigWheelView /> */}
-                <PoliceCallView  />
-                <OnboardingOverlay />
+                <PoliceCallView />
 
                 {/* Disconnect overlay */}
                 {dcVisible && (

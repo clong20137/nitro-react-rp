@@ -55,6 +55,7 @@ type Step = {
     padding?: number;
     placement?: "right" | "left" | "top" | "bottom" | "auto";
     arrow?: "right" | "left" | "top" | "bottom";
+    image?: string; // optional illustration for this step
 };
 
 const q = (sel: string): HTMLElement | null =>
@@ -117,6 +118,7 @@ const setPulseOn = (el: HTMLElement | null) => {
 const CoachCard: FC<{
     title: string;
     body: string;
+    image?: string;
     onNext: () => void;
     onPrev?: () => void;
     onSkip?: () => void;
@@ -128,6 +130,7 @@ const CoachCard: FC<{
 }> = ({
     title,
     body,
+    image,
     onNext,
     onPrev,
     onSkip,
@@ -140,6 +143,15 @@ const CoachCard: FC<{
     const cardRef = useRef<HTMLDivElement | null>(null);
     const [style, setStyle] = useState<React.CSSProperties>({});
     const [placeClass, setPlaceClass] = useState<string>("");
+    const [mounted, setMounted] = useState(false);
+
+    // fade/slide in on mount (step change)
+    useEffect(() => {
+        setMounted(true);
+        return () => {
+            setMounted(false);
+        };
+    }, []);
 
     useLayoutEffect(() => {
         const c = cardRef.current;
@@ -196,27 +208,37 @@ const CoachCard: FC<{
     return (
         <div
             ref={cardRef}
-            className={`ob-coach-card ${placeClass}`}
+            className={`ob-coach-card ${placeClass} ${
+                mounted ? "ob-card-enter" : ""
+            }`}
             style={style}
             role="dialog"
             aria-live="polite"
         >
-            <div className="ob-title">{title}</div>
-            <div className="ob-body">{body}</div>
-            <div className="ob-actions">
-                {showPrev && (
-                    <button className="ob-btn" onClick={onPrev}>
-                        Previous
+            {image && (
+                <div className="ob-illustration">
+                    {/* swap this src to whatever sprite/path you want */}
+                    <img src={image} alt="" />
+                </div>
+            )}
+            <div className="ob-content">
+                <div className="ob-title">{title}</div>
+                <div className="ob-body">{body}</div>
+                <div className="ob-actions">
+                    {showPrev && (
+                        <button className="ob-btn" onClick={onPrev}>
+                            Previous
+                        </button>
+                    )}
+                    {showSkip && (
+                        <button className="ob-btn ob-skip" onClick={onSkip}>
+                            Skip
+                        </button>
+                    )}
+                    <button className="ob-btn ob-next" onClick={onNext}>
+                        Next
                     </button>
-                )}
-                {showSkip && (
-                    <button className="ob-btn ob-skip" onClick={onSkip}>
-                        Skip
-                    </button>
-                )}
-                <button className="ob-btn ob-next" onClick={onNext}>
-                    Next
-                </button>
+                </div>
             </div>
         </div>
     );
@@ -226,13 +248,17 @@ const WelcomeCard: FC<{ onStart: () => void; onSkipForever: () => void }> = ({
     onStart,
     onSkipForever,
 }) => (
-    <div className="ob-welcome-card" role="dialog" aria-modal="true">
+    <div
+        className="ob-welcome-card ob-card-enter"
+        role="dialog"
+        aria-modal="true"
+    >
         <div className="ob-welcome-title">Welcome to OlympusRP!</div>
         <p className="ob-welcome-text">
             We’ll take <strong>30 seconds</strong> to show you where things are:
             stats, inventory, wanted list, corporations, gangs, gang chat,
-            macros, time, credits, settings, your location, online & chat logs,
-            quick actions, and the chat bar.
+            macros, time, credits, settings, your location, online &amp; chat
+            logs, quick actions, and the chat bar.
         </p>
         <div className="ob-actions">
             <button className="ob-btn ob-skip" onClick={onSkipForever}>
@@ -280,7 +306,7 @@ export const OnboardingOverlay: FC = () => {
 
     const steps: Step[] = useMemo(
         () => [
-            /* 1) Stats — card should sit LEFT of the stats so the arrow points RIGHT */
+            /* 1) Stats */
             {
                 id: "stats",
                 targets: ["reg:stats", ".stats-bar-container", ".greek-circle"],
@@ -289,9 +315,10 @@ export const OnboardingOverlay: FC = () => {
                 padding: 10,
                 placement: "left",
                 arrow: "right",
+                image: "/onboarding/stats.png", // TODO: adjust paths
             },
 
-            /* 2) Inventory — new sidebar class; arrow should point LEFT toward the sidebar */
+            /* 2) Inventory — arrow LEFT */
             {
                 id: "inv",
                 targets: [
@@ -301,11 +328,12 @@ export const OnboardingOverlay: FC = () => {
                 title: "Inventory",
                 body: "Open your backpack to use weapons, defensive gear like Kevlar, consumables, and items you’ve gathered in-game. Click this icon or the X inside the module to open or close it.",
                 padding: 8,
-                placement: "right",
+                placement: "left",
                 arrow: "left",
+                image: "/onboarding/inventory.png",
             },
 
-            /* 3) Wanted */
+            /* 3) Wanted — arrow LEFT */
             {
                 id: "wanted",
                 targets: [
@@ -315,11 +343,12 @@ export const OnboardingOverlay: FC = () => {
                 title: "Wanted List",
                 body: "See who’s flagged in the city and why. Use it to avoid trouble — or to hunt bounties.",
                 padding: 8,
-                placement: "right",
+                placement: "left",
                 arrow: "left",
+                image: "/onboarding/wanted.png",
             },
 
-            /* 4) Gangs */
+            /* 4) Gangs — arrow LEFT */
             {
                 id: "gangs",
                 targets: [
@@ -329,11 +358,12 @@ export const OnboardingOverlay: FC = () => {
                 title: "Gangs",
                 body: "Create or manage your gang, view membership and identity, and coordinate territory or activities.",
                 padding: 8,
-                placement: "right",
+                placement: "left",
                 arrow: "left",
+                image: "/onboarding/gangs.png",
             },
 
-            /* 5) Corporations */
+            /* 5) Corporations — arrow LEFT */
             {
                 id: "corps",
                 targets: [
@@ -343,11 +373,12 @@ export const OnboardingOverlay: FC = () => {
                 title: "Corporations",
                 body: "Browse corporations, their ranks and perks. Join up, climb the ladder and unlock role-specific duties.",
                 padding: 8,
-                placement: "right",
+                placement: "left",
                 arrow: "left",
+                image: "/onboarding/corporations.png",
             },
 
-            /* 6) Gang Chat toggle */
+            /* 6) Gang Chat toggle — arrow LEFT */
             {
                 id: "gangchat",
                 targets: [
@@ -357,11 +388,12 @@ export const OnboardingOverlay: FC = () => {
                 title: "Gang Chat",
                 body: "Toggle private gang chat on or off. When enabled, your messages go only to your gang.",
                 padding: 8,
-                placement: "right",
+                placement: "left",
                 arrow: "left",
+                image: "/onboarding/gangchat.png",
             },
 
-            /* 7) Macros */
+            /* 7) Macros — arrow LEFT */
             {
                 id: "macros",
                 targets: [
@@ -371,11 +403,12 @@ export const OnboardingOverlay: FC = () => {
                 title: "Macros",
                 body: "Save your most-used commands as quick actions. Trigger them instantly to speed up roleplay.",
                 padding: 8,
-                placement: "right",
+                placement: "left",
                 arrow: "left",
+                image: "/onboarding/macros.png",
             },
 
-            /* 8) Time (use the CHIP itself, not the icon; put card BELOW, arrow UP) */
+            /* 8) Time — arrow UP */
             {
                 id: "time",
                 targets: [
@@ -386,9 +419,10 @@ export const OnboardingOverlay: FC = () => {
                 padding: 10,
                 placement: "bottom",
                 arrow: "top",
+                image: "/onboarding/time.png",
             },
 
-            /* 9) Credits (chip, not icon) */
+            /* 9) Credits — arrow UP */
             {
                 id: "credits",
                 targets: [
@@ -399,9 +433,10 @@ export const OnboardingOverlay: FC = () => {
                 padding: 10,
                 placement: "bottom",
                 arrow: "top",
+                image: "/onboarding/credits.png",
             },
 
-            /* 10) Diamonds — was missing before */
+            /* 10) Diamonds — arrow UP */
             {
                 id: "diamonds",
                 targets: [
@@ -412,9 +447,10 @@ export const OnboardingOverlay: FC = () => {
                 padding: 10,
                 placement: "bottom",
                 arrow: "top",
+                image: "/onboarding/diamonds.png",
             },
 
-            /* 11) Settings — anchor the CHIP (data-tip) so the rect is correct */
+            /* 11) Settings — arrow UP */
             {
                 id: "settings",
                 targets: [
@@ -425,9 +461,10 @@ export const OnboardingOverlay: FC = () => {
                 padding: 10,
                 placement: "bottom",
                 arrow: "top",
+                image: "/onboarding/settings.png",
             },
 
-            /* 12) Location — card BELOW, arrow UP */
+            /* 12) Location — arrow UP */
             {
                 id: "zone",
                 targets: [
@@ -439,9 +476,10 @@ export const OnboardingOverlay: FC = () => {
                 padding: 12,
                 placement: "bottom",
                 arrow: "top",
+                image: "/onboarding/location.png",
             },
 
-            /* 13) Online & Chat Logs — cover BOTH by anchoring the container first */
+            /* 13) Online & Chat Logs — arrow UP now */
             {
                 id: "counter_chat",
                 targets: [
@@ -451,11 +489,12 @@ export const OnboardingOverlay: FC = () => {
                 title: "Online & Chat Logs",
                 body: "See how many players are around you, and open the chat log to review recent conversations.",
                 padding: 10,
-                placement: "left" /* card on the left side of the block */,
-                arrow: "right",
+                placement: "bottom",
+                arrow: "top",
+                image: "/onboarding/online-chat.png",
             },
 
-            /* 14) Chat bar — unchanged */
+            /* 14) Chat bar */
             {
                 id: "chat",
                 targets: [
@@ -469,6 +508,8 @@ export const OnboardingOverlay: FC = () => {
                 body: "Type here to talk. Press Enter to send — and use /commands or your macros to act fast.",
                 padding: 10,
                 placement: "top",
+                arrow: "bottom",
+                image: "/onboarding/chat.png",
             },
         ],
         []
@@ -519,32 +560,6 @@ export const OnboardingOverlay: FC = () => {
         };
     }, [visible]);
 
-    // keyboard
-    useEffect(() => {
-        if (!visible) return;
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                try {
-                    localStorage.setItem(KEY_WELCOME_SEEN, "1");
-                } catch {}
-                try {
-                    localStorage.setItem(KEY_GUIDE_DONE, "1");
-                } catch {}
-                setStepIndex(0);
-                setPulseOn(null);
-            } else if (
-                e.key === "ArrowRight" ||
-                e.key.toLowerCase() === "enter"
-            ) {
-                next();
-            } else if (e.key === "ArrowLeft") {
-                prev();
-            }
-        };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-    }, [visible, stepIndex]);
-
     const startGuide = () => {
         try {
             localStorage.setItem(KEY_WELCOME_SEEN, "1");
@@ -580,6 +595,33 @@ export const OnboardingOverlay: FC = () => {
         setStepIndex((i) => Math.min(i + 1, steps.length - 1));
     };
     const prev = () => setStepIndex((i) => Math.max(0, i - 1));
+
+    // keyboard
+    useEffect(() => {
+        if (!visible) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                try {
+                    localStorage.setItem(KEY_WELCOME_SEEN, "1");
+                } catch {}
+                try {
+                    localStorage.setItem(KEY_GUIDE_DONE, "1");
+                } catch {}
+                setStepIndex(0);
+                setPulseOn(null);
+            } else if (
+                e.key === "ArrowRight" ||
+                e.key.toLowerCase() === "enter"
+            ) {
+                next();
+            } else if (e.key === "ArrowLeft") {
+                prev();
+            }
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [visible, stepIndex]);
 
     if (!visible) return null;
 
@@ -638,8 +680,10 @@ export const OnboardingOverlay: FC = () => {
                 <WelcomeCard onStart={startGuide} onSkipForever={skipForever} />
             ) : step ? (
                 <CoachCard
+                    key={step.id}
                     title={step.title}
                     body={step.body}
+                    image={step.image}
                     onNext={next}
                     onPrev={prev}
                     onSkip={skipForever}

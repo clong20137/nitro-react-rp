@@ -4,6 +4,7 @@ import { SendMessageComposer } from "../../api";
 import { SetTargetComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/SetTargetComposer";
 import { StartInspectComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/StartInspectComposer";
 
+/** THIS MUST MATCH SERVER FIELD NAMES EXACTLY */
 type OpponentStats = {
     userId: number;
     username: string;
@@ -16,36 +17,48 @@ type OpponentStats = {
     hunger: number;
     maxHunger: number;
 
-    // server sends remaining ms of aggression for *viewer*
     aggressionMs?: number;
 
     level?: number;
     xp?: number;
     maxXP?: number;
 
-    // --- NEW: combat stats ---
+    /** --- COMBAT --- */
     strength?: number;
     stamina?: number;
     defense?: number;
     gathering?: number;
     healthlevel?: number;
 
-    // --- NEW: fighting stats ---
+    /** --- FIGHTING STATS --- */
+    punches_thrown?: number;
+    damage_inflicted?: number;
+    damage_received?: number;
     kills?: number;
     deaths?: number;
-    punches?: number;
-    damageGiven?: number;
-    damageReceived?: number;
 
-    // --- NEW: employment ---
+    /** --- EMPLOYMENT --- */
     jobTitle?: string;
     corporationName?: string;
     corporationIconUrl?: string;
 
-    // Gang visuals
+    /** --- GANG --- */
+    gangId?: number;
     gangName?: string;
+    gangIconKey?: string;
     gangPrimaryColor?: string;
     gangSecondaryColor?: string;
+
+    /** --- PROFILE META --- */
+    motto?: string;
+    createdAt?: string;
+    lastLogin?: string;
+    lastSeenAgo?: string;
+    isOnline?: boolean;
+
+    /** --- WORK --- */
+    weeklyShifts?: number;
+    totalShifts?: number;
 };
 
 type Props = { onClose: () => void };
@@ -65,35 +78,21 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     };
 
     const sendWatch = (targetId: number) => {
-        // avoid spamming StartInspectComposer
         if (lastWatchedIdRef.current === targetId) return;
         lastWatchedIdRef.current = targetId;
+
         try {
             SendMessageComposer(new StartInspectComposer(targetId));
-        } catch {
-            // ignore
-        }
+        } catch {}
     };
 
+    // Listen for inspect update packets
     useEffect(() => {
         const onStats = (e: Event) => {
             const payload = (e as CustomEvent<any>).detail as
                 | OpponentStats
                 | undefined;
             if (!payload || !payload.userId) return;
-
-            // ignore obviously bogus payloads
-            if (
-                payload.maxHealth <= 0 ||
-                payload.maxEnergy <= 0 ||
-                payload.maxHunger <= 0
-            ) {
-                console.warn(
-                    "[OpponentStatsOverlay] Ignoring zeroed stats payload:",
-                    payload
-                );
-                return;
-            }
 
             mergeUpdate(payload);
             sendWatch(payload.userId);
@@ -105,7 +104,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
             setTimeout(() => {
                 setStats(null);
                 setLocked(false);
-                sendWatch(0); // stop inspecting on server
+                sendWatch(0);
             }, 180);
         };
 
@@ -150,11 +149,10 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
 
     const figureUrl = useMemo(() => {
         if (!stats?.figure) return "";
-        // face LEFT (toward the bars)
         return `https://www.habbo.com/habbo-imaging/avatarimage?figure=${stats.figure}&direction=4&head_direction=4&gesture=sml`;
     }, [stats?.figure]);
 
-    // 👉 this is where we actually feed MyProfileView with opponent data
+    /** 🔥 PATCHED: FULL opponent → MyProfileView payload */
     const openProfile = () => {
         if (!stats) return;
 
@@ -164,25 +162,26 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                     // identity
                     username: stats.username,
                     figure: stats.figure,
+                    motto: stats.motto,
 
-                    // level / xp
-                    level: stats.level ?? 0,
+                    // xp / level
                     xp: stats.xp ?? 0,
                     maxXP: stats.maxXP ?? 1,
+                    level: stats.level ?? 0,
 
-                    // combat stats
+                    // combat
                     strength: stats.strength ?? 0,
                     stamina: stats.stamina ?? 0,
                     defense: stats.defense ?? 0,
-                    healthlevel: stats.healthlevel ?? 0,
                     gathering: stats.gathering ?? 0,
+                    healthlevel: stats.healthlevel ?? 0,
 
-                    // fighting stats
+                    // fighting
+                    punches_thrown: stats.punches_thrown ?? 0,
+                    damage_inflicted: stats.damage_inflicted ?? 0,
+                    damage_received: stats.damage_received ?? 0,
                     kills: stats.kills ?? 0,
                     deaths: stats.deaths ?? 0,
-                    punches: stats.punches ?? 0,
-                    damageGiven: stats.damageGiven ?? 0,
-                    damageReceived: stats.damageReceived ?? 0,
 
                     // employment
                     jobTitle: stats.jobTitle,
@@ -190,68 +189,57 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                     corporationIconUrl: stats.corporationIconUrl,
 
                     // gang
+                    gangId: stats.gangId,
                     gangName: stats.gangName,
+                    gangIconKey: stats.gangIconKey,
                     gangPrimaryColor: stats.gangPrimaryColor,
                     gangSecondaryColor: stats.gangSecondaryColor,
 
-                    isOnline: true,
+                    // meta
+                    createdAt: stats.createdAt,
+                    lastLogin: stats.lastLogin,
+                    lastSeenAgo: stats.lastSeenAgo,
+                    isOnline: stats.isOnline ?? true,
+
+                    // work stats
+                    weeklyShifts: stats.weeklyShifts,
+                    totalShifts: stats.totalShifts,
                 },
             })
         );
     };
 
-    // No stats yet → nothing visible
     if (!stats) return null;
 
     const xpPct = percent(stats.xp ?? 0, stats.maxXP ?? 1);
+    const aggressionPct = percent(stats.aggressionMs ?? 0, 45000);
 
-    // aggressionMs is remaining ms; treat 45s window same as self bar
-    const AGGRO_WINDOW_MS = 45_000;
-    const aggressionPct = percent(stats.aggressionMs ?? 0, AGGRO_WINDOW_MS);
-
-    const handleClose = (e?: React.MouseEvent) => {
-        e?.stopPropagation();
+    const handleClose = () => {
         setHiding(true);
         setTimeout(() => {
             sendWatch(0);
             setStats(null);
             setLocked(false);
             window.dispatchEvent(new CustomEvent("user_inspect_clear"));
-            // we intentionally do NOT call onClose so root overlay component can stay mounted
         }, 180);
     };
 
-    const toggleLock = (e?: React.MouseEvent) => {
-        e?.stopPropagation();
+    const toggleLock = () => {
         if (!stats) return;
-
         const next = !locked;
         setLocked(next);
-
-        try {
-            SendMessageComposer(
-                new SetTargetComposer(next ? stats.userId : 0, next)
-            );
-        } catch {
-            // ignore
-        }
-
-        window.dispatchEvent(
-            new CustomEvent(
-                next ? "opponent_target_set" : "opponent_target_clear",
-                { detail: { userId: stats.userId } }
-            )
+        SendMessageComposer(
+            new SetTargetComposer(next ? stats.userId : 0, next)
         );
     };
 
-    const gangSquareStyle: React.CSSProperties | undefined =
-        stats.gangPrimaryColor
-            ? {
-                  background: stats.gangSecondaryColor
-                      ? `linear-gradient(90deg, ${stats.gangPrimaryColor} 50%, ${stats.gangSecondaryColor} 50%)`
-                      : stats.gangPrimaryColor,
-              }
-            : undefined;
+    const gangSquareStyle = stats.gangPrimaryColor
+        ? {
+              background: stats.gangSecondaryColor
+                  ? `linear-gradient(90deg, ${stats.gangPrimaryColor} 50%, ${stats.gangSecondaryColor} 50%)`
+                  : stats.gangPrimaryColor,
+          }
+        : undefined;
 
     return (
         <div className="opponent-anchor">
@@ -260,7 +248,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                     hiding ? "fade-out" : "fade-in"
                 }`}
             >
-                {/* LEFT column = bars */}
+                {/* LEFT: bars */}
                 <div className="stats-right">
                     <div className="stat">
                         <div className="icons heart" />
@@ -274,7 +262,9 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                     )}%`,
                                 }}
                             />
-                            <div className="bar-text">{`${stats.health} / ${stats.maxHealth}`}</div>
+                            <div className="bar-text">
+                                {stats.health} / {stats.maxHealth}
+                            </div>
                         </div>
                     </div>
 
@@ -290,7 +280,9 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                     )}%`,
                                 }}
                             />
-                            <div className="bar-text">{`${stats.energy} / ${stats.maxEnergy}`}</div>
+                            <div className="bar-text">
+                                {stats.energy} / {stats.maxEnergy}
+                            </div>
                         </div>
                     </div>
 
@@ -306,7 +298,9 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                     )}%`,
                                 }}
                             />
-                            <div className="bar-text">{`${stats.hunger} / ${stats.maxHunger}`}</div>
+                            <div className="bar-text">
+                                {stats.hunger} / {stats.maxHunger}
+                            </div>
                         </div>
                     </div>
 
@@ -318,19 +312,11 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                     </div>
                 </div>
 
-                {/* RIGHT column = avatar */}
+                {/* RIGHT: avatar + actions */}
                 <div className="stats-left">
-                    <div
-                        className="greek-circle"
-                        title={stats.username}
-                        onClick={openProfile}
-                    >
+                    <div className="greek-circle" onClick={openProfile}>
                         <div className="greek-xp-ring">
-                            <svg
-                                className="xp-ring-svg"
-                                viewBox="0 0 36 36"
-                                aria-hidden
-                            >
+                            <svg className="xp-ring-svg" viewBox="0 0 36 36">
                                 <path
                                     className="xp-ring-background"
                                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -348,40 +334,20 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                 alt={stats.username}
                             />
 
-                            {!!stats.level && (
+                            {stats.level ? (
                                 <div className="level-badge">{stats.level}</div>
-                            )}
+                            ) : null}
 
-                            {/* Close (top-right) */}
                             <button
-                                type="button"
                                 className="circle-close"
                                 onClick={handleClose}
-                                aria-label="Close"
                             />
-
-                            {/* Lock/Unlock (bottom-right) */}
                             <button
-                                type="button"
                                 className={`circle-lock ${
                                     locked ? "is-locked" : ""
                                 }`}
                                 onClick={toggleLock}
-                                aria-label={
-                                    locked ? "Unlock target" : "Lock target"
-                                }
-                                title={locked ? "Unlock target" : "Lock target"}
-                            >
-                                <img
-                                    className="lock-icon"
-                                    src={
-                                        locked
-                                            ? "/icons/lock.png"
-                                            : "/icons/unlock.png"
-                                    }
-                                    alt={locked ? "Locked" : "Unlocked"}
-                                />
-                            </button>
+                            />
                         </div>
                     </div>
 
@@ -391,13 +357,14 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                             <span
                                 className="gang-square"
                                 style={gangSquareStyle}
-                                title={stats.gangName || "Gang"}
+                                title={stats.gangName}
                             />
                         )}
                     </div>
-                    {!!stats.level && (
+
+                    {stats.level ? (
                         <div className="avatar-level">Level: {stats.level}</div>
-                    )}
+                    ) : null}
                 </div>
             </div>
         </div>

@@ -74,6 +74,12 @@ export const UserProfileView: FC<{}> = (props) => {
 
     useMessageEvent<UserProfileEvent>(UserProfileEvent, (event) => {
         const parser = event.getParser();
+        if (!parser) return;
+
+        // 🔹 NEW: don't open this Nitro profile for **our own** user.
+        // MyProfileView handles the self-profile instead.
+        const myId = GetSessionDataManager().userId;
+        if (parser.id === myId) return;
 
         let isSameProfile = false;
 

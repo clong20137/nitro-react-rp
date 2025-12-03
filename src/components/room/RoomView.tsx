@@ -38,6 +38,7 @@ import { BottomRightDockView } from "../roleplay/BottomRightDockView";
 import { ArenaQueueView } from "../roleplay/ArenaQueueView";
 import { HotRoomsView } from "../roleplay/HotRoomsView";
 import { JobBoardView } from "../roleplay/JobBoardView";
+import { OnboardingOverlay } from "../../components/roleplay/OnboardingOverlay";
 
 /* -----------------------------------------------------------
 Click-through helpers
@@ -219,6 +220,7 @@ Render
                     <CommandsListView />
                     <BottomRightDockView></BottomRightDockView>
                     <JobBoardView></JobBoardView>
+                    <OnboardingOverlay />
                     {/*
                     <ArenaQueueView visible={true}></ArenaQueueView>
                     */}

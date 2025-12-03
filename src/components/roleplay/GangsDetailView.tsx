@@ -378,6 +378,409 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         }
     });
 
+    const renderConfirmRoleDelete = () =>
+        showConfirmRoleDeleteModal && (
+            <div className="gangs-modal-overlay">
+                <div className="gangs-modal-popup scale-in">
+                    <div className="popup-header">
+                        <span>Confirm Role Delete</span>
+                        <button
+                            className="close-button"
+                            onClick={() => setShowConfirmRoleDeleteModal(false)}
+                        >
+                            ✖
+                        </button>
+                    </div>
+
+                    <div className="popup-body">
+                        <p>Are you sure you want to delete this role?</p>
+
+                        <div className="popup-actions">
+                            <button
+                                className="habbo-btn danger"
+                                onClick={confirmDeleteRole}
+                            >
+                                Yes, Delete
+                            </button>
+
+                            <button
+                                className="habbo-btn default"
+                                onClick={() =>
+                                    setShowConfirmRoleDeleteModal(false)
+                                }
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+    const renderNewRole = () =>
+        showNewRoleModal && (
+            <div className="gangs-modal-overlay">
+                <div className="gangs-modal-popup scale-in">
+                    <div className="popup-header">
+                        <span>New Role</span>
+                        <button
+                            className="close-button"
+                            onClick={() => setShowNewRoleModal(false)}
+                        >
+                            ✖
+                        </button>
+                    </div>
+
+                    <div className="popup-body">
+                        <input
+                            type="text"
+                            className="gangs-invite-input"
+                            placeholder="Enter role name"
+                            value={newRoleName}
+                            onChange={(e) => setNewRoleName(e.target.value)}
+                        />
+
+                        <div className="permission-checkboxes">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.bankAccess}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            bankAccess: !p.bankAccess,
+                                        }))
+                                    }
+                                />{" "}
+                                Bank Access
+                            </label>
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.kickMembers}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            kickMembers: !p.kickMembers,
+                                        }))
+                                    }
+                                />{" "}
+                                Kick Members
+                            </label>
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.inviteMembers}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            inviteMembers: !p.inviteMembers,
+                                        }))
+                                    }
+                                />{" "}
+                                Invite Members
+                            </label>
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.administrator}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            administrator: !p.administrator,
+                                        }))
+                                    }
+                                />{" "}
+                                Administrator
+                            </label>
+                        </div>
+
+                        <div className="popup-actions">
+                            <button
+                                className="habbo-btn default"
+                                onClick={() => {
+                                    if (!newRoleName.trim()) return;
+                                    SendMessageComposer(
+                                        new CreateGangRoleComposer(
+                                            newRoleName.trim(),
+                                            rolePermissions.bankAccess,
+                                            rolePermissions.kickMembers,
+                                            rolePermissions.inviteMembers,
+                                            rolePermissions.administrator
+                                        )
+                                    );
+                                    setShowNewRoleModal(false);
+                                    setNewRoleName("");
+                                    setTimeout(refreshAll, 120);
+                                }}
+                            >
+                                Save
+                            </button>
+
+                            <button
+                                className="habbo-btn danger"
+                                onClick={() => setShowNewRoleModal(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+    const renderEditRole = () =>
+        showEditRoleModal && (
+            <div className="gangs-modal-overlay">
+                <div className="gangs-modal-popup scale-in">
+                    <div className="popup-header">
+                        <span>Edit Role</span>
+                        <button
+                            className="close-button"
+                            onClick={() => setShowEditRoleModal(false)}
+                        >
+                            ✖
+                        </button>
+                    </div>
+
+                    <div className="popup-body">
+                        <label>Role Name</label>
+                        <input
+                            className="gangs-invite-input"
+                            type="text"
+                            value={roleName}
+                            onChange={(e) => setRoleName(e.target.value)}
+                        />
+
+                        <div className="permission-checkboxes">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.bankAccess}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            bankAccess: !p.bankAccess,
+                                        }))
+                                    }
+                                />
+                                Bank Access
+                            </label>
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.kickMembers}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            kickMembers: !p.kickMembers,
+                                        }))
+                                    }
+                                />
+                                Kick Members
+                            </label>
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.inviteMembers}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            inviteMembers: !p.inviteMembers,
+                                        }))
+                                    }
+                                />
+                                Invite Members
+                            </label>
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.administrator}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            administrator: !p.administrator,
+                                        }))
+                                    }
+                                />
+                                Administrator
+                            </label>
+                        </div>
+
+                        <div className="popup-actions">
+                            <button
+                                className="habbo-btn default"
+                                onClick={handleEditRoleSubmit}
+                            >
+                                Save Changes
+                            </button>
+
+                            <button
+                                className="habbo-btn danger"
+                                onClick={() => setShowEditRoleModal(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+    const renderConfirmDisband = () =>
+        showConfirmDeleteModal && (
+            <div className="gangs-modal-overlay">
+                <div className="gangs-modal-popup scale-in">
+                    <div className="popup-header">
+                        <span>Confirm Disband</span>
+                        <button
+                            className="close-button"
+                            onClick={() => setShowConfirmDeleteModal(false)}
+                        >
+                            ✖
+                        </button>
+                    </div>
+
+                    <div className="popup-body">
+                        <p>
+                            Are you sure you want to disband your gang? This
+                            cannot be undone.
+                        </p>
+
+                        <div className="popup-actions">
+                            <button
+                                className="habbo-btn danger"
+                                onClick={() => {
+                                    SendMessageComposer(
+                                        new DeleteGangMessageComposer()
+                                    );
+                                    setShowConfirmDeleteModal(false);
+                                    setTimeout(refreshAll, 120);
+                                    handleClose();
+                                }}
+                            >
+                                Yes, Disband
+                            </button>
+
+                            <button
+                                className="habbo-btn default"
+                                onClick={() => setShowConfirmDeleteModal(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+    const renderEditRoleModal = () =>
+        showEditRoleModal && (
+            <div className="gangs-modal-overlay">
+                <div className="gangs-modal-popup scale-in">
+                    <div className="popup-header">
+                        <span>Edit Role</span>
+                        <button
+                            className="close-button"
+                            onClick={() => setShowEditRoleModal(false)}
+                        >
+                            ✖
+                        </button>
+                    </div>
+
+                    <div className="popup-body">
+                        <label>Role Name</label>
+                        <input
+                            className="gangs-invite-input"
+                            type="text"
+                            value={roleName}
+                            onChange={(e) => setRoleName(e.target.value)}
+                        />
+
+                        <div className="permission-checkboxes">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.bankAccess}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            bankAccess: !p.bankAccess,
+                                        }))
+                                    }
+                                />
+                                Bank Access
+                            </label>
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.kickMembers}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            kickMembers: !p.kickMembers,
+                                        }))
+                                    }
+                                />
+                                Kick Members
+                            </label>
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.inviteMembers}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            inviteMembers: !p.inviteMembers,
+                                        }))
+                                    }
+                                />
+                                Invite Members
+                            </label>
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissions.administrator}
+                                    onChange={() =>
+                                        setRolePermissions((p) => ({
+                                            ...p,
+                                            administrator: !p.administrator,
+                                        }))
+                                    }
+                                />
+                                Administrator
+                            </label>
+                        </div>
+
+                        <div className="popup-actions">
+                            <button
+                                className="habbo-btn default"
+                                onClick={handleEditRoleSubmit}
+                            >
+                                Save Changes
+                            </button>
+
+                            <button
+                                className="habbo-btn danger"
+                                onClick={() => setShowEditRoleModal(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
     const selectedIconSrc =
         ICON_OPTIONS.find(
             (i) =>
@@ -557,28 +960,28 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             return [];
         };
         const handleMembers = (ev: Event) => {
-            const detail: any = (ev as CustomEvent).detail;
-            const src = coerceMemberArray(detail);
-            const mapped: GangMemberRaw[] = src.map((m: any) => ({
+            let detail: any = (ev as CustomEvent).detail;
+
+            // --- Force unwrap all possible gang payload shapes ---
+            if (detail?.gangMembers) detail = detail.gangMembers;
+            if (detail?.members) detail = detail.members;
+            if (detail?.list) detail = detail.list;
+            if (detail?.data) detail = detail.data;
+
+            if (!Array.isArray(detail)) {
+                console.warn("Gang members payload malformed:", detail);
+                return;
+            }
+
+            const mapped = detail.map((m) => ({
                 userId: Number(m.userId ?? m.id ?? m.user_id),
-                username: String(m.username ?? m.name ?? m.userName ?? ""),
-                rankName: m.rankName ?? m.roleName ?? m.rank ?? "",
-                rankId:
-                    m.rankId !== undefined
-                        ? Number(m.rankId)
-                        : m.roleId !== undefined
-                        ? Number(m.roleId)
-                        : undefined,
-                rankOrder:
-                    m.rankOrder !== undefined
-                        ? Number(m.rankOrder)
-                        : m.position !== undefined
-                        ? Number(m.position)
-                        : m.rank_pos !== undefined
-                        ? Number(m.rank_pos)
-                        : undefined,
-                figure: String(m.figure ?? m.look ?? m.avatar ?? ""),
+                username: String(m.username ?? m.name ?? ""),
+                figure: String(m.figure ?? m.look ?? ""),
+                rankName: String(m.rankName ?? m.roleName ?? ""),
+                rankId: m.rankId ?? m.roleId ?? null,
+                rankOrder: m.rankOrder ?? m.position ?? m.rank_pos ?? -1,
             }));
+
             setMembersRaw(mapped);
         };
         const handleRanks = (ev: Event) => {
@@ -1697,6 +2100,14 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* --- PORTAL WRAPPER TO FLOAT POPUPS ABOVE --- */}
+            <div className="gangs-modal-layer">
+                {showConfirmDeleteModal && renderConfirmDisband()}
+                {showNewRoleModal && renderNewRole()}
+                {showEditRoleModal && renderEditRole()}
+                {showConfirmRoleDeleteModal && renderConfirmRoleDelete()}
             </div>
 
             {/* Confirm Disband */}
