@@ -5,14 +5,13 @@
     transform: translateX(-50%);
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    width: 900px;
-    /* fixed width prevents layout jitter */
+    justify-content: center; // center the input block
+    width: 900px; // fixed shell width
     max-width: 95%;
-    height: 60px;
-    padding: 0 10px 0 14px;
-    background:linear-gradient(180deg, #ffffff, #ffffff 50%, #e7e7e7 0, #e7e7e7);
-    border: 4px solid #22425d;
+    height: 65px;
+    padding: 0 10px 0 0px;
+    background: #0d6091;
+    border: 3px solid #2077ab;
     border-radius: 10px;
     z-index: 1000;
 
@@ -21,52 +20,72 @@
         display: flex;
         align-items: center;
         height: 100%;
-        padding: 2px 8px 0 8px;
+        padding: 2px 2px 0 8px;
+        position: relative; // so emoji can overlay inside here
 
         input.chat-input {
             width: 100%;
             font-size: 18px;
             padding-top: 6px;
-            background: transparent;
-            border: none;
+            padding-left: 10px;
+            padding-right: 42px; // space so text doesn’t go under emoji
+            height: 58px;
+            background: linear-gradient(180deg,
+                    #fff,
+                    #fff 50%,
+                    #e7e7e7 0,
+                    #e7e7e7);
+            border: solid 2px #000;
+            border-radius: 12px;
             outline: none;
             line-height: 1.4;
+            box-sizing: border-box;
         }
 
+        /* ❌ Kill the old auto-sizing hack so width stays stable */
         &::after {
-            content: attr(data-value) ' ';
-            visibility: hidden;
-            white-space: pre-wrap;
+            content: none;
         }
-    }
 
-    /* single emoji button */
-    .emoji-button {
-        width: 28px;
-        height: 28px;
-        background: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        border: none;
-        font-size: 28px;
-        transition: transform .12s ease, background-color .12s ease, box-shadow .12s ease;
-        transform-origin: center center;
-        border-radius: 6px;
-    }
+        /* ✅ Emoji button overlaid on the far right of the input */
+        .emoji-button {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+            font-size: 20px;
+            transition: transform 0.12s ease,
+                background-color 0.12s ease,
+                box-shadow 0.12s ease;
+            transform-origin: center center;
+            border-radius: 6px;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6),
+                0 1px 0 rgba(0, 0, 0, 0.3);
+        }
 
-    .emoji-btn:hover {
-        transform: scale(1.05);
-        background: #f7f7f7;
-        box-shadow: inset 0 0 0 1px #eaeaea;
-    }
+        .emoji-button:hover {
+            transform: translateY(-50%) scale(1.05);
+            background: #f7f7f7;
+            box-shadow: inset 0 0 0 1px #eaeaea;
+        }
 
-    .emoji-btn>span {
-        display: block;
-        line-height: 1;
-        font-size: 18px;
-        /* visually centers emoji */
+        .emoji-button:active {
+            transform: translateY(-49%) scale(0.96);
+        }
+
+        .emoji-button>span {
+            display: block;
+            line-height: 1;
+            font-size: 18px; // visually centers emoji
+        }
     }
 }
 
@@ -76,11 +95,11 @@
     overflow: hidden;
     border-radius: 10px;
     background: #fff;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
     padding: 10px;
     z-index: 2000;
     box-sizing: border-box;
-    animation: popoverFadeIn 180ms cubic-bezier(.22, .9, .24, 1);
+    animation: popoverFadeIn 180ms cubic-bezier(0.22, 0.9, 0.24, 1);
     transform-origin: top center;
 }
 
@@ -113,7 +132,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: background-color .12s ease, transform .1s ease;
+    transition: background-color 0.12s ease, transform 0.1s ease;
 
     &:hover {
         background: #f2f2f2;

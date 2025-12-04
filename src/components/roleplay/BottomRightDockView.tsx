@@ -94,8 +94,10 @@ export const BottomRightDockView: FC = () => {
 
     return (
         <>
+            {/* PHONE VIEW */}
             {phoneOpen && <PhoneView onClose={() => setPhoneOpen(false)} />}
 
+            {/* ARENA QUEUE VIEW */}
             {isArenaRoom && (
                 <ArenaQueueView
                     visible={arenaOpen}
@@ -104,18 +106,24 @@ export const BottomRightDockView: FC = () => {
             )}
 
             <div className="bottom-right-dock">
-                {/* Phone */}
+                {/* Phone (always visible) */}
                 <button
                     className={
-                        "dock-tile arena-tile" +
-                        (arenaOpen ? " arena-tile--active" : "")
+                        "dock-tile phone-tile" + (shake ? " dock-shake" : "")
                     }
-                    onClick={() => setArenaOpen((prev) => !prev)}
+                    onClick={() => setPhoneOpen((prev) => !prev)}
                     title="Phone"
                     data-label="Phone"
                 >
                     <span className="dock-icon dock-icon-phone" />
+
+                    {notificationCount > 0 && (
+                        <span className="dock-notification-badge">
+                            {notificationCount}
+                        </span>
+                    )}
                 </button>
+
                 {/* Arena – only in vRoom 33 */}
                 {isArenaRoom && (
                     <button

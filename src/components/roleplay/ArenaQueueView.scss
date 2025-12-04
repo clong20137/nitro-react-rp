@@ -19,16 +19,17 @@ ArenaView.scss
 
 /* Header (matching MyProfileView) */
 .arena-header {
-    position: relative;
-    background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
+    background: #1e7295;
     color: #fff;
     display: flex;
     align-items: center;
     padding: 8px 12px;
+    justify-content: center;
     font-weight: 700;
     font-size: 18px;
     border-radius: 8px 8px 0 0;
     cursor: grab;
+    position: relative;
 
     .title {
         text-shadow: 1px 1px 0 #000;
@@ -174,7 +175,7 @@ ArenaView.scss
     display: flex;
     justify-content: center;
     gap: 6px;
-    background: #2478b7;
+    background: #185d79;
 }
 
 .arena-tabs .tab-btn {

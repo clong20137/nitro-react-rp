@@ -153,12 +153,6 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
         // OPEN: fired by furniture click
         const onOpen = () => {
             setOpen(true);
-            if (dragRef.current) {
-                const el = dragRef.current;
-                el.style.left = "50%";
-                el.style.top = "50%";
-                el.style.transform = "translate(-50%, -50%)";
-            }
         };
 
         // STATE updates (from parser → window.dispatchEvent)
@@ -208,7 +202,7 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
             );
             window.removeEventListener("keydown", onEsc);
         };
-    }, [open, dragRef]);
+    }, [open]);
 
     const doClose = () => {
         setOpen(false);
@@ -310,16 +304,11 @@ This stays mounted even when the jukebox window is closed. */}
             {open && (
                 <div className="jukebox-layer">
                     <div
-                        className="jukebox-view enter"
+                        className="jukebox-view enter-br"
                         ref={dragRef}
                         role="dialog"
                         aria-modal="true"
                         aria-label="Room Jukebox"
-                        style={{
-                            left: "50%",
-                            top: "50%",
-                            transform: "translate(-50%, -50%)",
-                        }}
                     >
                         <div className="juke-header" onMouseDown={startDrag}>
                             <div className="title">
