@@ -14,10 +14,10 @@
 
 /* Cards + layout */
 .rs-card {
-    background: #0e1f2b;
-    border: 2px solid #1b374a;
+    background: #0d6091;
+    border: 3px solid #2077ab;
     border-radius: 12px;
-    padding: 10px;
+    padding: 4px;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
         0 2px 0 rgba(0, 0, 0, 0.25),
         inset 0 -4px rgba(0, 0, 0, 0.12);
@@ -35,13 +35,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #0e1f2b;
-    border: 2px solid #1b374a;
+    background: #0d6091;
+    border: 3px solid #2077ab;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
         0 2px 0 rgba(0, 0, 0, 0.25),
         inset 0 -4px rgba(0, 0, 0, 0.12);
     border-radius: 12px;
-    padding: 6px 8px;
+    padding: 4px;
     margin-bottom: 8px;
     font-family: var(--font-greek-theme);
     font-size: 12px;
@@ -83,7 +83,7 @@
 
 /* ---- CHIP STYLING ---- */
 .chip {
-    background: #0B6091;
+    background: #0d4366;
     border: solid 1px #2685BC;
     padding: 6px 10px;
     border-radius: 12px;

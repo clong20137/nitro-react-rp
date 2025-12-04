@@ -34,13 +34,14 @@ import {
     useRoomEngineEvent,
     useSessionInfo,
 } from "../../hooks";
-import { ToolbarMeView } from "./ToolbarMeView";
 
-export const ToolbarView: FC<{ isInRoom: boolean }> = (props) => {
-    const { isInRoom } = props;
+// ❌ Me Menu — now fully disabled
+// import { ToolbarMeView } from "./ToolbarMeView";
 
+export const ToolbarView: FC<{ isInRoom: boolean }> = ({ isInRoom }) => {
     const [isMeExpanded, setMeExpanded] = useState(false);
     const [useGuideTool, setUseGuideTool] = useState(false);
+
     const { userFigure = null } = useSessionInfo();
     const { getFullCount = 0 } = useInventoryUnseenTracker();
     const { getTotalUnseen = 0 } = useAchievements();
@@ -123,17 +124,23 @@ export const ToolbarView: FC<{ isInRoom: boolean }> = (props) => {
 
     return (
         <>
-            <TransitionAnimation
-                type={TransitionAnimationTypes.FADE_IN}
-                inProp={isMeExpanded}
-                timeout={300}
-            >
-                <ToolbarMeView
-                    useGuideTool={useGuideTool}
-                    unseenAchievementCount={getTotalUnseen}
-                    setMeExpanded={setMeExpanded}
-                />
-            </TransitionAnimation>
+            {/* ❌======================
+ME MENU DISABLED
+======================*/}
+
+            {/*
+<TransitionAnimation
+type={TransitionAnimationTypes.FADE_IN}
+inProp={isMeExpanded}
+timeout={300}
+>
+<ToolbarMeView
+useGuideTool={useGuideTool}
+unseenAchievementCount={getTotalUnseen}
+setMeExpanded={setMeExpanded}
+/>
+</TransitionAnimation>
+*/}
 
             <Flex
                 alignItems="center"
@@ -144,126 +151,30 @@ export const ToolbarView: FC<{ isInRoom: boolean }> = (props) => {
                 {/* LEFT SIDE */}
                 <Flex gap={2} alignItems="center">
                     <Flex alignItems="center" gap={2}>
-                        {/* Avatar */}
+                        {/* ❌ Avatar no longer clickable — removed pointer + onClick */}
                         <Flex
                             center
-                            pointer
                             role="button"
-                            aria-label="Open Me menu"
-                            className={
-                                "navigation-item item-avatar " +
-                                (isMeExpanded ? "active " : "")
-                            }
-                            onClick={() => setMeExpanded(!isMeExpanded)}
+                            aria-label="Avatar"
+                            className="navigation-item item-avatar disabled-avatar"
                         >
                             <LayoutAvatarImageView
                                 figure={userFigure}
                                 direction={2}
                                 position="absolute"
                             />
+
+                            {/* still show unseen badges */}
                             {getTotalUnseen > 0 && (
                                 <LayoutItemCountView count={getTotalUnseen} />
                             )}
                         </Flex>
 
-                        {/* Blue Chip Tray */}
-                        <div className="left-chip-tray" aria-label="Tools">
-                            {isMod && (
-                                <Base
-                                    pointer
-                                    role="button"
-                                    aria-label="Navigator"
-                                    className="chip"
-                                    data-tip="Navigator"
-                                >
-                                    <Base
-                                        className="navigation-item icon icon-rooms"
-                                        onClick={() =>
-                                            CreateLinkEvent("navigator/toggle")
-                                        }
-                                    />
-                                </Base>
-                            )}
-
-                            {isMod && (
-                                <Base
-                                    pointer
-                                    role="button"
-                                    aria-label="Catalog"
-                                    className="chip"
-                                    data-tip="Catalog"
-                                >
-                                    <Base
-                                        className="navigation-item icon icon-catalog"
-                                        onClick={() =>
-                                            CreateLinkEvent("catalog/toggle")
-                                        }
-                                    />
-                                </Base>
-                            )}
-
-                            {isMod && (
-                                <Base
-                                    pointer
-                                    role="button"
-                                    aria-label="Inventory"
-                                    className="chip"
-                                    data-tip="Inventory"
-                                >
-                                    <Base
-                                        className="navigation-item icon icon-inventory"
-                                        onClick={() =>
-                                            CreateLinkEvent("inventory/toggle")
-                                        }
-                                    >
-                                        {getFullCount > 0 && (
-                                            <LayoutItemCountView
-                                                count={getFullCount}
-                                            />
-                                        )}
-                                    </Base>
-                                </Base>
-                            )}
-
-                            {/* Floor Builder -> opens Floorplan Editor */}
-                            {isMod && (
-                                <Base
-                                    pointer
-                                    role="button"
-                                    aria-label="Floor Builder"
-                                    className="chip"
-                                    data-tip="Floor Builder"
-                                    onClick={() =>
-                                        CreateLinkEvent("floor-editor/toggle")
-                                    }
-                                >
-                                    <Base className="navigation-item icon-floorbuilder" />
-                                </Base>
-                            )}
-
-                           
-
-                            {/* Mod Tools */}
-                            {isMod && (
-                                <Base
-                                    pointer
-                                    role="button"
-                                    aria-label="Mod Tools"
-                                    className="chip"
-                                    data-tip="Mod Tools"
-                                >
-                                    <Base
-                                        className="navigation-item icon icon-modtools"
-                                        onClick={() =>
-                                            CreateLinkEvent("mod-tools/toggle")
-                                        }
-                                    />
-                                </Base>
-                            )}
-                        </div>
+                        {/* Blue Chip Tray (no Me menu anymore) */}
+                        <div className="left-chip-tray"></div>
                     </Flex>
 
-                    {/* Chat input anchor */}
+                    {/* Chat anchor */}
                     <Flex
                         alignItems="center"
                         id="toolbar-chat-input-container"

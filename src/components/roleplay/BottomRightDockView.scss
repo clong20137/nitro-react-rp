@@ -6,53 +6,151 @@
     gap: 4px;
     padding: 6px;
     border-radius: 16px;
-    background: rgb(0 0 0 / 60%);
-    box-shadow: 0 0 4px rgba(0, 0, 0, .4);
-    border: 2px solid rgba(255, 255, 255, .2);
+    background: #0d6091;
+    border: 3px solid #2077ab;
     box-shadow: 0 2px #000000b3, 0 0 0 1px #000000b3;
     z-index: 1000;
 }
 
-.dock-tile.arena-tile {
-    //background-image: url('../../icons/arena.png'); // or sprite
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-}
-
-.dock-tile.arena-tile.arena-tile--active {
-    filter: brightness(1.1);
-}
-
 .dock-tile {
-    width: 36px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
     border-radius: 8px;
-    background: rgb(0 0 0 / 60%);
+    background: #0d4366;
     box-shadow: 0 0 4px rgba(0, 0, 0, .4);
-    border: 2px solid rgba(255, 255, 255, .2);
+    border: 3px solid #2077ab;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
     outline: none;
     cursor: pointer;
-    position: relative; // needed for badge positioning
-}
+    position: relative; // needed for badge + tooltip positioning
 
-/* PHONE ICON FROM SCSS */
-.phone-tile {
-    background-image: url("../../icons/phone.png");
-    background-size: 32px 47px;
-    background-repeat: no-repeat;
+    /* smooth hover/press animation */
+    transition:
+        transform 120ms ease-out,
+        box-shadow 120ms ease-out,
+        filter 120ms ease-out,
+        background 120ms ease-out,
+        border-color 120ms ease-out;
 
     &:hover {
-        filter: brightness(1.15);
+        filter: brightness(1.12);
+        transform: translateY(-1px);
+        box-shadow: 0 0 6px rgba(0, 0, 0, .6);
+        border-color: #45a4e0;
+        background: #0f5b8c;
     }
 
     &:active {
         transform: translateY(1px);
+        box-shadow: 0 0 3px rgba(0, 0, 0, .6);
+        filter: brightness(0.98);
     }
+}
+
+/* ===== Tooltip (like “Current Room”) ===== */
+/* Uses data-label from the button */
+
+.dock-tile::before,
+.dock-tile::after {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    left: 50%;
+    transition: opacity 120ms ease-out, transform 120ms ease-out;
+    z-index: 20;
+}
+
+/* bubble */
+.dock-tile::before {
+    content: attr(data-label);
+    bottom: 64px; // above tile
+    transform: translateX(-50%) translateY(4px);
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: #000;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, .6);
+}
+
+/* arrow pointing down to tile */
+.dock-tile::after {
+    content: "";
+    bottom: 56px;
+    transform: translateX(-50%) translateY(4px);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #000;
+}
+
+/* show on hover/focus */
+.dock-tile:hover::before,
+.dock-tile:hover::after,
+.dock-tile:focus-visible::before,
+.dock-tile:focus-visible::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ===== Icons & specific tiles ===== */
+
+/* PHONE tile */
+.phone-tile {
+    background: #0d6091;
+}
+
+/* actual phone image – shrink so it fits nicely */
+.phone-icon {
+    width: 40px;
+    height: 40px;
+    image-rendering: pixelated; // Habbo-style art
+    pointer-events: none;
+    object-fit: contain;
+    transition: filter 120ms ease-out;
+}
+
+/* extra pop on hover */
+.phone-tile:hover .phone-icon {
+    filter: brightness(1.2);
+}
+
+/* generic sprite icons inside other tiles (like sidebar chips) */
+.dock-icon {
+    display: block;
+    width: 40px;
+    height: 40px;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+    image-rendering: pixelated;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .25));
+    transition: filter 120ms ease-out;
+}
+
+.dock-tile:hover .dock-icon {
+    filter: brightness(1.06) drop-shadow(0 1px 0 rgba(0, 0, 0, .35));
+}
+
+/* Arena icon (CSS sprite) */
+.dock-icon-arena {
+    background-image: url('../../icons/arena.gif');
+}
+
+/* Clothing store icon (CSS sprite) */
+.dock-icon-clothing {
+    background-image: url('../../icons/clothing.png');
+}
+
+.dock-icon-phone {
+    background-image: url('../../icons/phone.png');
 }
 
 /* Little red badge in the top-right corner of the tile */
@@ -106,7 +204,7 @@
     }
 }
 
-/* REMOVE OLD GLYPH */
+/* old glyph no longer used, safe to keep or delete */
 .phone-glyph {
     display: none;
 }

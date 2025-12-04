@@ -30,16 +30,22 @@ export const LeftSidebarView: FC = () => {
 
     const userId = GetSessionDataManager().userId;
 
+    /* ----------------------- Corporations event listener ---------------------- */
+
     useEffect(() => {
         const handleCorporationsList = (event: any) => {
             const corps = event.detail.corporations as CorporationData[];
             setCorporations(corps);
-            setShowCorporations((prev) => prev || true);
+            // ❌ previously: setShowCorporations((prev) => prev || true);
+            // That can auto-open on login if this event fires.
+            // ✅ Now we only open Corporations when user clicks the chip.
         };
+
         window.addEventListener(
             "corporations_list_result",
             handleCorporationsList
         );
+
         return () =>
             window.removeEventListener(
                 "corporations_list_result",
@@ -47,13 +53,14 @@ export const LeftSidebarView: FC = () => {
             );
     }, []);
 
+    /* -------------------------- Gangs bridge listeners ------------------------ */
+
     useEffect(() => {
         const handleCreate = () => setGangMode("create");
         const handleDetail = () => setGangMode("details");
 
         const decideFromPayload = (detail: any): boolean => {
             if (!detail) return false;
-            // accept multiple shapes
             if (typeof detail.inGang === "boolean") return detail.inGang;
             if (typeof detail.isInGang === "boolean") return detail.isInGang;
             if (detail.gangId) return true;
@@ -91,6 +98,7 @@ export const LeftSidebarView: FC = () => {
             } catch {}
             window.dispatchEvent(new CustomEvent("request_gang_status"));
         };
+
         window.addEventListener(
             "request_gang_refresh",
             refreshOnBridge as EventListener
@@ -122,6 +130,8 @@ export const LeftSidebarView: FC = () => {
         };
     }, []);
 
+    /* ---------------------------- Sidebar handlers ---------------------------- */
+
     const onClickInventory = () => setShowInventory((p) => !p);
 
     const onClickWanted = () => {
@@ -148,10 +158,13 @@ export const LeftSidebarView: FC = () => {
         window.dispatchEvent(new CustomEvent("request_gang_status"));
     };
 
-    // still ok to request status once on boot; it no longer opens UI
-    useEffect(() => {
-        askGangStatus();
-    }, []);
+    // ❌ REMOVED: auto gang status on boot that could cause unintended UI opens
+    //
+    // useEffect(() => {
+    // askGangStatus();
+    // }, []);
+    //
+    // ✅ Now we only ask for status when the user actually clicks the Gangs chip.
 
     const onClickGangs = () => {
         setGangMode((m) => {
@@ -174,6 +187,8 @@ export const LeftSidebarView: FC = () => {
     };
 
     const onClickMacros = () => setShowMacros((p) => !p);
+
+    /* ----------------------------------- UI ----------------------------------- */
 
     return (
         <>
@@ -263,9 +278,11 @@ export const LeftSidebarView: FC = () => {
             {showInventory && (
                 <InventoryView onClose={() => setShowInventory(false)} />
             )}
+
             {showWantedList && (
                 <WantedListView onClose={() => setShowWantedList(false)} />
             )}
+
             {showCorporations && (
                 <CorporationsView
                     onClose={() => setShowCorporations(false)}

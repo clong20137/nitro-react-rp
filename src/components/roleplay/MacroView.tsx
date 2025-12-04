@@ -436,17 +436,6 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                         </div>
                     </div>
 
-                    {/* Add Macro button */}
-                    <div className="row" style={{ gap: 8 }}>
-                        <button
-                            className="habbo-green-btn small"
-                            type="button"
-                            onClick={openAddModal}
-                        >
-                            + Add
-                        </button>
-                    </div>
-
                     {macros.length === 0 ? (
                         <div className="empty-card">
                             No macros set in{" "}

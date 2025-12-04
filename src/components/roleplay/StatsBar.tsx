@@ -18,7 +18,6 @@ import {
 } from "@nitrots/nitro-renderer";
 import { useMessageEvent } from "../../hooks";
 
-/** ---- onboarding anchor hook (local copy) ---- */
 type AnchorEventDetail = { id: string; el: HTMLElement | null };
 const OB_REGISTER_EVT = "ob-register-anchor";
 function useOnboardingAnchor(
@@ -37,29 +36,9 @@ function useOnboardingAnchor(
         return () => window.removeEventListener("resize", fire);
     }, [id, ref]);
 }
-/** ------------------------------------------- */
 
-type OpponentStats = {
-    userId: number;
-    username: string;
-    figure: string;
-    health: number;
-    maxHealth: number;
-    energy: number;
-    maxEnergy: number;
-    hunger: number;
-    maxHunger: number;
-    aggression: number;
-    xpPercent: number;
-    level: number;
-    healthPercent: number;
-    energyPercent: number;
-    hungerPercent: number;
-};
-
-/** Central profile payload passed into MyProfileView */
 interface ProfileStats {
-    // RP core stats
+    userId?: number;
     kills: number;
     deaths: number;
     punches: number;
@@ -178,9 +157,6 @@ export const StatsBar: FC = () => {
     const [createdAt, setCreatedAt] = useState<string | undefined>(undefined);
     const [lastLogin, setLastLogin] = useState<string | undefined>(undefined);
 
-    const [showCallPoliceInput, setShowCallPoliceInput] = useState(false);
-    const [callPoliceMessage, setCallPoliceMessage] = useState("");
-
     const [isWorking, setIsWorking] = useState(false);
     const [working, setWorking] = useState(false);
 
@@ -202,8 +178,6 @@ export const StatsBar: FC = () => {
     const [showXPTooltip, setShowXPTooltip] = useState(false);
     const [healthlevel, setHealthLevel] = useState(0);
     const [cooldown, setCooldown] = useState(0);
-    const [showCallInput, setShowCallInput] = useState(false);
-    const [callMessage, setCallMessage] = useState("");
 
     // central profile state (me OR opponent)
     const [profileStats, setProfileStats] = useState<ProfileStats | null>(null);
@@ -334,25 +308,6 @@ export const StatsBar: FC = () => {
             );
     }, []);
 
-    // ===== Police cooldown =====
-    useEffect(() => {
-        if (cooldown > 0) {
-            const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
-            return () => clearTimeout(t);
-        }
-    }, [cooldown]);
-
-    const triggerPoliceCall = () => {
-        if (cooldown > 0 || !callMessage.trim()) return;
-        const u = GetSessionDataManager().userName;
-        const a = GetSessionDataManager().figure;
-        SendMessageComposer(new CallPoliceComposer(u, a, callMessage.trim()));
-        setCallMessage("");
-        setShowCallInput(false);
-        setCooldown(30);
-    };
-
-    // ===== Helpers =====
     const percent = (value: number, max: number) =>
         max <= 0
             ? 0
@@ -364,8 +319,8 @@ export const StatsBar: FC = () => {
         : Math.max(0, aggressionInitialMsRef.current - elapsed);
     const aggressionPercent = percent(remainingMs, aggressionWindowMs);
 
-    // Build self profile payload
     const buildSelfProfile = (): ProfileStats => ({
+        userId: GetSessionDataManager().userId,
         kills,
         deaths,
         punches: punches_thrown,
@@ -407,9 +362,6 @@ export const StatsBar: FC = () => {
         createdAt,
         lastLogin,
     });
-
-    // ==== UserProfileEvent hook (Created + Last Login) ====
-    // Request our own profile once so we can hydrate created/last-login + motto.
     useEffect(() => {
         const myId = GetSessionDataManager().userId;
         if (myId > 0) GetUserProfile(myId);
@@ -445,6 +397,7 @@ export const StatsBar: FC = () => {
 
             setProfileStats({
                 // sensible defaults (opponent payload may be sparse)
+                userId: detail.userId,
                 kills: 0,
                 deaths: 0,
                 punches: 0,
@@ -545,7 +498,6 @@ export const StatsBar: FC = () => {
 
                 <div className="avatar-name-wrapper">
                     <div className="avatar-name">{username}</div>
-                    <div className="avatar-level">Level: {level}</div>
                 </div>
             </div>
 

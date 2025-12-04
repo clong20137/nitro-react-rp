@@ -3,16 +3,33 @@ StatsBar.scss (full, updated)
 =========================== */
 
 /* Root container for your HUD (self) */
+.stats-bar-container::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    left: 88px;
+    /* tune to match width of stats-left */
+    width: 1px;
+    background: rgba(0, 0, 0, .55);
+    pointer-events: none;
+}
+
 .stats-bar-container {
     display: flex;
-    align-items: center;
-    padding: 4px;
-    border-radius: 6px;
+    align-items: stretch;
+    border-radius: 10px;
     position: absolute;
     top: 5px;
     left: 5px;
     animation: fadeIn 0.8s;
     z-index: 100;
+
+    /* 🔵 dark shell behind both blue panel + bars */
+    box-shadow:
+        0 6px 16px rgba(0, 0, 0, .35),
+        0 2px 0 rgba(0, 0, 0, .4),
+        inset 0 -2px rgba(255, 255, 255, .04);
 }
 
 /* host that holds your bar + opponent bar side-by-side */
@@ -225,12 +242,33 @@ Opponent styling block
 
 /* Opponent container variant */
 .stats-bar-container.opponent {
+    /* mirror layout so avatar is on the right */
+    flex-direction: row-reverse;
+
     /* ensure perfect vertical alignment and no stray margins */
     top: 0;
     left: auto;
     animation: none;
     /* we handle fade separately below */
     align-items: center;
+}
+
+/* mirror the divider so it sits on the inside edge for opponent */
+.stats-bar-container.opponent::before {
+    left: auto;
+    right: 88px;
+}
+
+/* Flip blue panel rounding for opponent */
+.stats-bar-container.opponent .stats-left {
+    border-radius: 0 8px 8px 0;
+}
+
+/* Flip bars block rounding + padding */
+.stats-bar-container.opponent .stats-right {
+    border-radius: 8px 0 0 8px;
+    padding: 0px 3px 0px 2px;
+    /* mirrored from self */
 }
 
 /* Fade helpers for opponent mount/unmount */
@@ -314,18 +352,51 @@ XP tooltip (shared)
     align-items: center;
     justify-content: center;
 
-    .avatar-name {
-        color: white;
-        margin-top: 6px;
-        font-size: 14px;
-        font-weight: bold;
-        text-align: center;
+    /* 🔵 keep your blue */
+    background: #0d6091;
+    border: 3px solid #2077ab;
+    border-right: none;
+
+    /* 🔵 round only the left side on self */
+    border-radius: 8px 0 0 8px;
+
+    padding: 6px 8px;
+}
+
+.avatar-name {
+    color: white;
+    margin-top: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.avatar-level {
+    font-size: 12px;
+    color: #ffffff;
+    text-shadow: 0 0 2px black;
+}
+
+.fill {
+    height: 100%;
+    width: 0;
+    /* width is overridden inline via React */
+    border-radius: 3px;
+    transition: width .3s ease;
+
+    &.health {
+        background: #ab204b;
+        border: 1px solid #e9708c;
     }
 
-    .avatar-level {
-        font-size: 12px;
-        color: #ffffff;
-        text-shadow: 0 0 2px black;
+    &.energy {
+        background: #e6ac09;
+        border: 1px solid #fde257;
+    }
+
+    &.hunger {
+        background: #156091;
+        border: 1px solid #2d81b4;
     }
 }
 
@@ -371,7 +442,7 @@ XP tooltip (shared)
 
 .xp-ring-background {
     fill: none;
-    stroke: #302e28;
+    stroke: #0d4366;
     border: 1px solid #4c5056;
     stroke-width: 3;
 }
@@ -379,7 +450,6 @@ XP tooltip (shared)
 .xp-ring-progress {
     fill: none;
     stroke: #03a15d;
-
     stroke-width: 3;
     stroke-linecap: round;
     transition: stroke-dasharray .8s ease;
@@ -402,7 +472,7 @@ XP tooltip (shared)
     bottom: -4px;
     right: -4px;
     background-color: #ffcc00;
-    color: #000;
+    color: #2077ab;
     border: 2px solid #fff;
     border-radius: 50%;
     font-size: 10px;
@@ -480,11 +550,28 @@ XP tooltip (shared)
     cursor: pointer;
     z-index: 4;
 
-    .lock-icon {
-        width: 13px;
-        height: 17px;
-        image-rendering: pixelated;
-        pointer-events: none;
+    /* built-in crosshair glyph */
+    &::before,
+    &::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        background: #1b1b1b;
+        border-radius: 1px;
+        transform: translate(-50%, -50%);
+    }
+
+    /* horizontal line */
+    &::before {
+        width: 10px;
+        height: 2px;
+    }
+
+    /* vertical line */
+    &::after {
+        width: 2px;
+        height: 10px;
     }
 
     &.is-locked {
@@ -504,83 +591,19 @@ XP tooltip (shared)
 .stats-right {
     display: flex;
     flex-direction: column;
-    margin-left: -15px;
-    margin-top: -15px;
+    justify-content: center;
+    border: 3px solid #2077ab;
+    margin-left: 0;
+    margin-top: 0;
+
+    background: #0d6091;
+
+    /* small padding so bars sit right against the blue block */
+    padding: 0px 2px 0px 3px;
+    border-radius: 0 8px 8px 0;
 }
 
-.stat {
-    position: relative;
-    display: flex;
-    align-items: center;
-    margin-bottom: 2px;
-}
-
-.bar {
-    position: relative;
-    width: 180px;
-    height: 18px;
-    background: #302e28;
-    border: solid 1px #4c5056;
-    border-radius: 4px;
-    padding: 1px;
-    margin-left: 20px;
-    overflow: hidden;
-
-    &.health-bar {
-        background: #78092d;
-        border: solid 1px #9f4c61;
-
-    }
-
-    &.energy-bar {
-        background: #dd8d0b;
-        border: solid 1px #fdc453;
-
-    }
-
-    &.hunger-bar {
-
-        background: #156091;
-        border: solid 1px #2d81b4;
-    }
-}
-
-.fill {
-    height: 100%;
-    transition: width .3s ease;
-    border-radius: 4px;
-
-    &.health {
-        background: #ab204b;
-        border: solid 1px #e9708c;
-    }
-
-    &.energy {
-        background: #e6ac09;
-        border: solid 1px #fde257;
-    }
-
-    &.hunger {
-        background: #156091;
-        border: solid 1px #2d81b4;
-    }
-}
-
-.bar-text {
-    position: absolute;
-    width: 100%;
-    text-align: center;
-    color: #fff;
-    font-weight: 500;
-    text-shadow: 1px 1px 2px #000;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 12px;
-    line-height: 3;
-    z-index: 3;
-    pointer-events: none;
-}
-
+/* the columns themselves */
 .avatar-column {
     display: flex;
     flex-direction: column;
@@ -593,19 +616,49 @@ XP tooltip (shared)
     display: flex;
     flex-direction: column;
     gap: 6px;
+    flex: 1;
 }
 
-/* Aggression bar */
+/* bars now align flush with the stats-right padding */
+.bar {
+    position: relative;
+    width: 190px;
+    height: 18px;
+    background: #0d4366;
+    border: 1px solid #2077ab;
+    border-radius: 4px;
+    padding: 2px;
+    margin-left: 0;
+    overflow: hidden;
+
+    &.health-bar {
+        background: #78092d;
+        border: solid 1px #9f4c61;
+    }
+
+    &.energy-bar {
+        background: #dd8d0b;
+        border: solid 1px #fdc453;
+    }
+
+    &.hunger-bar {
+        background: #156091;
+        border: solid 1px #2d81b4;
+    }
+}
+
+/* same idea for aggression bar */
 .aggression-bar-wrapper {
-    width: 180px;
+    width: 190px;
     height: 12px;
-    margin-top: 6px;
-    margin-left: 20px;
-    background: #302e28;
-    border: solid 1px #4c5056;
+    margin-top: 12px;
+    margin-left: 0;
+    background: #0d4366;
+    border: 1px solid #2077ab;
     border-radius: 2px;
     overflow: hidden;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 2px 4px rgba(0, 0, 0, .25);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05),
+        0 2px 4px rgba(0, 0, 0, .25);
     transition: all .3s ease;
     position: relative;
 }
@@ -615,6 +668,7 @@ XP tooltip (shared)
     top: 0;
     left: 0;
     height: 100%;
+    border-radius: 8px;
     width: var(--aggression-width, 0%);
     background: #df8e11;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 1px 2px rgba(0, 0, 0, .35);

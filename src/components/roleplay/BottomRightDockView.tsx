@@ -1,7 +1,11 @@
 import { FC, useEffect, useState } from "react";
 import { PhoneView } from "./PhoneView";
-import { ArenaQueueView } from "./ArenaQueueView"; // adjust path if needed
+import { ArenaQueueView } from "./ArenaQueueView";
 import "./BottomRightDockView.scss";
+
+import { CreateLinkEvent, GetSessionDataManager } from "../../api";
+import { LayoutItemCountView } from "../../common";
+import { useInventoryUnseenTracker } from "../../hooks";
 
 export const BottomRightDockView: FC = () => {
     const [phoneOpen, setPhoneOpen] = useState(false);
@@ -10,10 +14,12 @@ export const BottomRightDockView: FC = () => {
     const [notificationCount, setNotificationCount] = useState(0);
     const [shake, setShake] = useState(false);
 
-    // Track current virtual room id (for gating the Arena button)
     const [virtualRoomId, setVirtualRoomId] = useState<number | null>(null);
 
-    // Listen for DoorDash orders list updates
+    const { getFullCount = 0 } = useInventoryUnseenTracker();
+    const isMod = GetSessionDataManager().isModerator;
+
+    /* ---------------- DoorDash notifications ---------------- */
     useEffect(() => {
         const handler = (event: Event) => {
             const custom = event as CustomEvent<any[]>;
@@ -22,7 +28,6 @@ export const BottomRightDockView: FC = () => {
             setNotificationCount((prev) => {
                 const next = list.length;
 
-                // If the count increased, trigger a shake + vibrate
                 if (next > prev) {
                     setShake(true);
 
@@ -45,77 +50,73 @@ export const BottomRightDockView: FC = () => {
         };
 
         window.addEventListener("doordash_orders", handler);
-
-        return () => {
-            window.removeEventListener("doordash_orders", handler);
-        };
+        return () => window.removeEventListener("doordash_orders", handler);
     }, []);
 
-    // Listen for virtual-room changes from the client (ONLY SHOW ARENA IN VROOM 33)
+    /* ---------------- Virtual room id (same as GangClaim) ---------------- */
     useEffect(() => {
-        // NOTE: adjust the event name + detail key to match your existing implementation.
-        // For example, if you already dispatch from Nitro something like:
-        // window.dispatchEvent(new CustomEvent("virtual_room_status", { detail: { virtualRoomId: 33 } }));
-        //
-        // then this handler will pick it up.
         const handler = (event: Event) => {
             const custom = event as CustomEvent<{ virtualRoomId?: number }>;
             const vId = custom.detail?.virtualRoomId;
 
-            if (typeof vId === "number") {
-                setVirtualRoomId(vId);
-            }
+            if (typeof vId === "number") setVirtualRoomId(vId);
         };
 
-        window.addEventListener("virtual_room_status", handler);
+        // Some bridges may use one or the other – listen to both
+        window.addEventListener(
+            "virtual_room_status",
+            handler as EventListener
+        );
+        window.addEventListener(
+            "virtual_room_info_update",
+            handler as EventListener
+        );
 
         return () => {
-            window.removeEventListener("virtual_room_status", handler);
+            window.removeEventListener(
+                "virtual_room_status",
+                handler as EventListener
+            );
+            window.removeEventListener(
+                "virtual_room_info_update",
+                handler as EventListener
+            );
         };
     }, []);
 
-    // If we ever leave vRoom 33, auto-close the arena UI
+    /* auto-close arena UI if we leave vRoom 33 */
     useEffect(() => {
-        if (virtualRoomId !== 20 && arenaOpen) {
-            setArenaOpen(false);
-        }
+        if (virtualRoomId !== 33 && arenaOpen) setArenaOpen(false);
     }, [virtualRoomId, arenaOpen]);
 
     const isArenaRoom = virtualRoomId === 33;
+    const isClothingRoom = virtualRoomId === 26;
 
     return (
         <>
             {phoneOpen && <PhoneView onClose={() => setPhoneOpen(false)} />}
 
-            {/* Arena queue view – only visible when:
-- we are in virtual room 33
-- and the arena dock tile is toggled on */}
             {isArenaRoom && (
                 <ArenaQueueView
                     visible={arenaOpen}
                     onClose={() => setArenaOpen(false)}
-                    // currentUser / leaderboard can be wired later via events if you want
                 />
             )}
 
             <div className="bottom-right-dock">
-                {/* Phone button (existing) */}
+                {/* Phone */}
                 <button
                     className={
-                        "dock-tile phone-tile" + (shake ? " dock-shake" : "")
+                        "dock-tile arena-tile" +
+                        (arenaOpen ? " arena-tile--active" : "")
                     }
-                    onClick={() => setPhoneOpen((prev) => !prev)}
+                    onClick={() => setArenaOpen((prev) => !prev)}
                     title="Phone"
+                    data-label="Phone"
                 >
-                    {/* red notification badge */}
-                    {notificationCount > 0 && (
-                        <span className="dock-notification-badge">
-                            {notificationCount}
-                        </span>
-                    )}
+                    <span className="dock-icon dock-icon-phone" />
                 </button>
-
-                {/* Arena button – ONLY when vRoomId === 33 */}
+                {/* Arena – only in vRoom 33 */}
                 {isArenaRoom && (
                     <button
                         className={
@@ -124,8 +125,61 @@ export const BottomRightDockView: FC = () => {
                         }
                         onClick={() => setArenaOpen((prev) => !prev)}
                         title="Bubble Juice Arena"
+                        data-label="Arena"
                     >
-                        {/* you can style an icon with CSS background-image on .arena-tile */}
+                        <span className="dock-icon dock-icon-arena" />
+                    </button>
+                )}
+
+                {/* Clothing Store – only in vRoom 26 */}
+                {isClothingRoom && (
+                    <button
+                        className="dock-tile clothing-tile"
+                        onClick={() => CreateLinkEvent("avatar-editor/toggle")}
+                        title="Clothing Store"
+                        data-label="Clothing Store"
+                    >
+                        <span className="dock-icon dock-icon-clothing" />
+                    </button>
+                )}
+
+                {/* Catalog (mods only) */}
+                {isMod && (
+                    <button
+                        className="dock-tile catalog-tile"
+                        onClick={() => CreateLinkEvent("catalog/toggle")}
+                        title="Catalog"
+                        data-label="Catalog"
+                    >
+                        <span className="dock-icon icon icon-catalog" />
+                    </button>
+                )}
+
+                {/* Inventory (mods only) */}
+                {isMod && (
+                    <button
+                        className="dock-tile inventory-tile"
+                        onClick={() => CreateLinkEvent("inventory/toggle")}
+                        title="Inventory"
+                        data-label="Inventory"
+                    >
+                        <span className="dock-icon navigation-item icon icon-inventory">
+                            {getFullCount > 0 && (
+                                <LayoutItemCountView count={getFullCount} />
+                            )}
+                        </span>
+                    </button>
+                )}
+
+                {/* Mod Tools (mods only) */}
+                {isMod && (
+                    <button
+                        className="dock-tile modtools-tile"
+                        onClick={() => CreateLinkEvent("mod-tools/toggle")}
+                        title="Mod Tools"
+                        data-label="Mod Tools"
+                    >
+                        <span className="dock-icon icon icon-modtools" />
                     </button>
                 )}
             </div>

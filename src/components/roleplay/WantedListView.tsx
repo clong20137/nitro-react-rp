@@ -24,8 +24,8 @@ const POS_KEY = "wanted-list-pos";
 const SIZE_KEY = "wanted-list-size";
 
 /** star art (replace paths if yours differ) */
-const STAR_FULL = "../../icons/star-full.gif";
-const STAR_EMPTY = "../../icons/star-empty.gif";
+const STAR_FULL = "../../icons/star-full.png";
+const STAR_EMPTY = "../../icons/star-empty.png";
 
 export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
     const [wantedUsers, setWantedUsers] = useState<WantedUser[]>([]);

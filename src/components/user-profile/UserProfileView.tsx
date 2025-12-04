@@ -1,185 +1,70 @@
 import {
-    RelationshipStatusInfoEvent,
-    RelationshipStatusInfoMessageParser,
     RoomEngineObjectEvent,
     RoomObjectCategory,
     RoomObjectType,
-    UserCurrentBadgesComposer,
-    UserCurrentBadgesEvent,
     UserProfileEvent,
-    UserProfileParser,
-    UserRelationshipsComposer,
 } from "@nitrots/nitro-renderer";
-import { FC, useCallback, useState } from "react";
+import { FC } from "react";
 import {
-    CreateLinkEvent,
     GetRoomSession,
     GetSessionDataManager,
     GetUserProfile,
-    LocalizeText,
-    SendMessageComposer,
 } from "../../api";
-import {
-    Column,
-    Flex,
-    Grid,
-    NitroCardContentView,
-    NitroCardHeaderView,
-    NitroCardView,
-    Text,
-} from "../../common";
 import { useMessageEvent, useRoomEngineEvent } from "../../hooks";
-import { BadgesContainerView } from "./views/BadgesContainerView";
-import { FriendsContainerView } from "./views/FriendsContainerView";
-import { GroupsContainerView } from "./views/GroupsContainerView";
-import { UserContainerView } from "./views/UserContainerView";
 
-export const UserProfileView: FC<{}> = (props) => {
-    const [userProfile, setUserProfile] = useState<UserProfileParser>(null);
-    const [userBadges, setUserBadges] = useState<string[]>([]);
-    const [userRelationships, setUserRelationships] =
-        useState<RelationshipStatusInfoMessageParser>(null);
-
-    const onClose = () => {
-        setUserProfile(null);
-        setUserBadges([]);
-        setUserRelationships(null);
-    };
-
-    const onLeaveGroup = useCallback(() => {
-        if (!userProfile || userProfile.id !== GetSessionDataManager().userId)
-            return;
-
-        GetUserProfile(userProfile.id);
-    }, [userProfile]);
-
-    useMessageEvent<UserCurrentBadgesEvent>(UserCurrentBadgesEvent, (event) => {
-        const parser = event.getParser();
-
-        if (!userProfile || parser.userId !== userProfile.id) return;
-
-        setUserBadges(parser.badges);
-    });
-
-    useMessageEvent<RelationshipStatusInfoEvent>(
-        RelationshipStatusInfoEvent,
-        (event) => {
-            const parser = event.getParser();
-
-            if (!userProfile || parser.userId !== userProfile.id) return;
-
-            setUserRelationships(parser);
-        }
-    );
-
+export const UserProfileView: FC<{}> = () => {
+    // 🔹 Listen for the core Habbo UserProfileEvent and forward it to RP UI
     useMessageEvent<UserProfileEvent>(UserProfileEvent, (event) => {
         const parser = event.getParser();
         if (!parser) return;
 
-        // 🔹 NEW: don't open this Nitro profile for **our own** user.
-        // MyProfileView handles the self-profile instead.
         const myId = GetSessionDataManager().userId;
-        if (parser.id === myId) return;
 
-        let isSameProfile = false;
+        // Compact payload for MyProfileView / RP profile system
+        const detail = {
+            userId: parser.id,
+            username: parser.username,
+            figure: parser.figure,
+            motto: parser.motto,
+            registration: parser.registration, // "dd-MM-yyyy"
+            secondsSinceLastVisit: parser.secondsSinceLastVisit,
+            achievementPoints: parser.achievementPoints,
+            friendsCount: parser.friendsCount,
+            isOnline: parser.isOnline,
+            isSelf: parser.id === myId,
+        };
 
-        setUserProfile((prevValue) => {
-            if (prevValue && prevValue.id)
-                isSameProfile = prevValue.id === parser.id;
+        // Optional flag so other code can know RP profile is handling things
+        (window as any).__rpProfileActive = true;
 
-            return parser;
-        });
+        // 🔥 This is what your RP UI / MyProfileView parent should listen for
+        window.dispatchEvent(new CustomEvent("rp_open_profile", { detail }));
 
-        if (!isSameProfile) {
-            setUserBadges([]);
-            setUserRelationships(null);
-        }
-
-        SendMessageComposer(new UserCurrentBadgesComposer(parser.id));
-        SendMessageComposer(new UserRelationshipsComposer(parser.id));
+        // NOTE: we do NOT set any local "userProfile" state and we do NOT
+        // render the Nitro profile window anymore.
     });
 
+    // 🔹 When you click a user in the room, still request their profile,
+    // which will be routed above into rp_open_profile → MyProfileView.
     useRoomEngineEvent<RoomEngineObjectEvent>(
         RoomEngineObjectEvent.SELECTED,
         (event) => {
-            if (!userProfile) return;
-
             if (event.category !== RoomObjectCategory.UNIT) return;
 
-            const userData =
-                GetRoomSession().userDataManager.getUserDataByIndex(
-                    event.objectId
-                );
+            const session = GetRoomSession();
+            if (!session || !session.userDataManager) return;
 
-            if (userData.type !== RoomObjectType.USER) return;
+            const userData = session.userDataManager.getUserDataByIndex(
+                event.objectId
+            );
 
+            if (!userData || userData.type !== RoomObjectType.USER) return;
+
+            // This triggers UserProfileComposer → UserProfileEvent → handler above
             GetUserProfile(userData.webID);
         }
     );
 
-    if (!userProfile) return null;
-
-    return (
-        <NitroCardView
-            uniqueKey="nitro-user-profile"
-            theme="primary-slim"
-            className="user-profile"
-        >
-            <NitroCardHeaderView
-                headerText={LocalizeText("extendedprofile.caption")}
-                onCloseClick={onClose}
-            />
-            <NitroCardContentView overflow="hidden">
-                <Grid fullHeight={false} gap={2}>
-                    <Column size={7} gap={1} className="user-container pe-2">
-                        <UserContainerView userProfile={userProfile} />
-                        <Grid
-                            columnCount={5}
-                            fullHeight
-                            className="bg-muted rounded px-2 py-1"
-                        >
-                            <BadgesContainerView
-                                fullWidth
-                                center
-                                badges={userBadges}
-                            />
-                        </Grid>
-                    </Column>
-                    <Column size={5}>
-                        {userRelationships && (
-                            <FriendsContainerView
-                                relationships={userRelationships}
-                                friendsCount={userProfile.friendsCount}
-                            />
-                        )}
-                    </Column>
-                </Grid>
-                <Flex
-                    alignItems="center"
-                    className="rooms-button-container px-2 py-1"
-                >
-                    <Flex
-                        alignItems="center"
-                        gap={1}
-                        onClick={(event) =>
-                            CreateLinkEvent(
-                                `navigator/search/hotel_view/owner:${userProfile.username}`
-                            )
-                        }
-                    >
-                        <i className="icon icon-rooms" />
-                        <Text bold underline pointer>
-                            {LocalizeText("extendedprofile.rooms")}
-                        </Text>
-                    </Flex>
-                </Flex>
-                <GroupsContainerView
-                    fullWidth
-                    itsMe={userProfile.id === GetSessionDataManager().userId}
-                    groups={userProfile.groups}
-                    onLeaveGroup={onLeaveGroup}
-                />
-            </NitroCardContentView>
-        </NitroCardView>
-    );
+    // ❌ Never show the old Nitro profile UI
+    return null;
 };

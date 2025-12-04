@@ -48,10 +48,10 @@ and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush wi
 /* ---- Sidebar (vertical pill column) ---- */
 .left-sidebar {
   position: relative;
-  width: $sidebar-width;
+  width: 60px;
   padding: 10px 12px;
-  background: #111d2e;
-  border: 2px solid #1b374a;
+  background: #0d6091;
+  border: 3px solid #2077ab;
   border-left: 0;
   border-radius: 0 16px 16px 0;
   box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
@@ -81,16 +81,14 @@ and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush wi
     position: absolute;
     top: 50%;
     right: 0;
-    left: 75px;
+    left: 60px;
     /* tuck under border so it feels unified */
     transform: translateY(-50%);
     width: $arrow-width;
     height: $arrow-height;
     border-radius: 0 10px 10px 0;
-    background: #111d2e;
-
-    /* same bg to blend */
-    border: 2px solid #1b374a;
+    background: #0d6091;
+    border: 2px solid #2077ab;
     box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
       0 2px 0 rgba(0, 0, 0, .25),
       inset 0 -4px rgba(0, 0, 0, .12);
@@ -225,19 +223,23 @@ and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush wi
 }
 
 .chip-gangs .chip-icon {
-  background-image: url('../../icons/gangs.gif');
+  background-image: url('../../icons/gangs.png');
 }
 
 .chip-corps .chip-icon {
-  background-image: url('../../icons/corporations.gif');
+  background-image: url('../../icons/corporations.png');
 }
 
 .chip-chat .chip-icon {
   background-image: url('../../icons/chat.png');
+  width: 32px;
+  height: 44px;
 }
 
 .chip-chat.is-on .chip-icon {
   background-image: url('../../icons/chat2.png');
+  width: 32px;
+  height: 44px;
 }
 
 .chip-macros .chip-icon {
@@ -308,6 +310,7 @@ and the toggle (anchored to the right) fills [0, $arrow-width] — i.e. flush wi
     transform: translateX(-50%);
     z-index: 2200;
     pointer-events: none;
+    top: 35%;
   }
 
   .left-sidebar-container {

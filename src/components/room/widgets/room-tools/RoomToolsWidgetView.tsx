@@ -84,7 +84,7 @@ export const RoomToolsWidgetView: FC<{}> = (props) => {
             if (roomTags !== parser.data.tags) setRoomTags(parser.data.tags);
         }
     );
-   
+
     useEffect(() => {
         setIsOpen(true);
 
@@ -92,82 +92,6 @@ export const RoomToolsWidgetView: FC<{}> = (props) => {
 
         return () => clearTimeout(timeout);
     }, [roomName, roomOwner, roomTags]);
- 
-    return (
-        
-        <Flex className="nitro-room-tools-container" gap={2}>
-            <Column center className="nitro-room-tools p-2">
-                 {/*
-                <Base
-                    pointer
-                    title={LocalizeText("room.settings.button.text")}
-                    className="icon icon-cog"
-                    onClick={() => handleToolClick("settings")}
-                />
-           
-                <Base
-                    pointer
-                    title={LocalizeText("room.zoom.button.text")}
-                    onClick={() => handleToolClick("zoom")}
-                    className={
-                        "icon " +
-                        classNames({
-                            "icon-zoom-less": !isZoomedIn,
-                            "icon-zoom-more": isZoomedIn,
-                        })
-                    }
-                />
 
-                <Base
-                    pointer
-                    title={LocalizeText("room.chathistory.button.text")}
-                    onClick={() => handleToolClick("chat_history")}
-                    className="icon icon-chat-history"
-                />
-                {navigatorData.canRate && (
-                    <Base
-                        pointer
-                        title={LocalizeText("room.like.button.text")}
-                        onClick={() => handleToolClick("like_room")}
-                        className="icon icon-like-room"
-                    />
-                )}
-                */}
-            </Column>
-            <Column justifyContent="center">
-                <TransitionAnimation
-                    type={TransitionAnimationTypes.SLIDE_LEFT}
-                    inProp={isOpen}
-                    timeout={300}
-                >
-                    <Column center>
-                        <Column className="nitro-room-tools-info rounded py-2 px-3">
-                            <Column gap={1}>
-                                <Text wrap variant="white" fontSize={4}>
-                                    {roomName}
-                                </Text>
-                                <Text variant="muted" fontSize={5}>
-                                    {roomOwner}
-                                </Text>
-                            </Column>
-                            {roomTags && roomTags.length > 0 && (
-                                <Flex gap={2}>
-                                    {roomTags.map((tag, index) => (
-                                        <Text
-                                            key={index}
-                                            small
-                                            variant="white"
-                                            className="rounded bg-primary p-1"
-                                        >
-                                            #{tag}
-                                        </Text>
-                                    ))}
-                                </Flex>
-                            )}
-                        </Column>
-                    </Column>
-                </TransitionAnimation>
-            </Column>
-        </Flex>
-    );
+    return <Flex className="nitro-room-tools-container" gap={2}></Flex>;
 };

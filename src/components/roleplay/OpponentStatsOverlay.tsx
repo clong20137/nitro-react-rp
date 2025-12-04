@@ -19,46 +19,46 @@ type OpponentStats = {
 
     aggressionMs?: number;
 
-    level?: number;
+    // xp / stats
     xp?: number;
     maxXP?: number;
+    level?: number;
+    points?: number;
 
-    /** --- COMBAT --- */
     strength?: number;
     stamina?: number;
     defense?: number;
     gathering?: number;
     healthlevel?: number;
 
-    /** --- FIGHTING STATS --- */
-    punches_thrown?: number;
-    damage_inflicted?: number;
-    damage_received?: number;
+    // FIGHTING (canonical names!)
+    punches?: number;
+    damageGiven?: number;
+    damageReceived?: number;
     kills?: number;
     deaths?: number;
 
-    /** --- EMPLOYMENT --- */
+    shiftsWorked?: number;
+    arrests?: number;
+
+    // employment
     jobTitle?: string;
     corporationName?: string;
     corporationIconUrl?: string;
 
-    /** --- GANG --- */
+    // gang
     gangId?: number;
     gangName?: string;
     gangIconKey?: string;
     gangPrimaryColor?: string;
     gangSecondaryColor?: string;
 
-    /** --- PROFILE META --- */
+    // meta
     motto?: string;
     createdAt?: string;
     lastLogin?: string;
     lastSeenAgo?: string;
     isOnline?: boolean;
-
-    /** --- WORK --- */
-    weeklyShifts?: number;
-    totalShifts?: number;
 };
 
 type Props = { onClose: () => void };
@@ -159,6 +159,8 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
         window.dispatchEvent(
             new CustomEvent("open_profile_from_inspect", {
                 detail: {
+                    userId: stats.userId,
+
                     // identity
                     username: stats.username,
                     figure: stats.figure,
@@ -168,27 +170,31 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                     xp: stats.xp ?? 0,
                     maxXP: stats.maxXP ?? 1,
                     level: stats.level ?? 0,
+                    points: stats.points ?? 0,
 
-                    // combat
+                    // core combat stats
                     strength: stats.strength ?? 0,
                     stamina: stats.stamina ?? 0,
                     defense: stats.defense ?? 0,
                     gathering: stats.gathering ?? 0,
                     healthlevel: stats.healthlevel ?? 0,
 
-                    // fighting
-                    punches_thrown: stats.punches_thrown ?? 0,
-                    damage_inflicted: stats.damage_inflicted ?? 0,
-                    damage_received: stats.damage_received ?? 0,
+                    // fighting counters (canonical names)
+                    punches: stats.punches ?? 0,
+                    damageGiven: stats.damageGiven ?? 0,
+                    damageReceived: stats.damageReceived ?? 0,
                     kills: stats.kills ?? 0,
                     deaths: stats.deaths ?? 0,
+
+                    shiftsWorked: stats.shiftsWorked ?? 0,
+                    arrests: stats.arrests ?? 0,
 
                     // employment
                     jobTitle: stats.jobTitle,
                     corporationName: stats.corporationName,
                     corporationIconUrl: stats.corporationIconUrl,
 
-                    // gang
+                    // gang visual data
                     gangId: stats.gangId,
                     gangName: stats.gangName,
                     gangIconKey: stats.gangIconKey,
@@ -200,10 +206,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                     lastLogin: stats.lastLogin,
                     lastSeenAgo: stats.lastSeenAgo,
                     isOnline: stats.isOnline ?? true,
-
-                    // work stats
-                    weeklyShifts: stats.weeklyShifts,
-                    totalShifts: stats.totalShifts,
                 },
             })
         );

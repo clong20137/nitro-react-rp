@@ -5,7 +5,7 @@ import { UpgradeStatComposer } from "@nitrots/nitro-renderer/src/nitro/communica
 import { ProfileAchievementsRequestComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ProfileAchievementsRequestComposer";
 import { FriendlyTime } from "@nitrots/nitro-renderer";
 
-// ⬇️ NEW imports
+// ⬇️ imports for profile + badges
 import {
     UserCurrentBadgesComposer,
     UserCurrentBadgesEvent,
@@ -14,7 +14,7 @@ import {
 import { GetSessionDataManager, GetUserProfile } from "../../api";
 import { useMessageEvent } from "../../hooks";
 import { BadgesContainerView } from "../user-profile/views/BadgesContainerView";
-// ⬆️ NEW imports
+// ⬆️ imports
 
 import { setRPStats } from "./rpStatsCache";
 
@@ -27,6 +27,9 @@ interface RelationshipCounts {
 }
 
 interface StatsProps {
+    /** id of the profile owner (self OR opponent) */
+    userId?: number;
+
     kills: number;
     deaths: number;
     punches: number;
@@ -73,7 +76,7 @@ interface StatsProps {
     lastLogin?: string; // e.g., "3 minutes ago"
     relationships?: RelationshipCounts;
 
-    // NEW: allow badges coming from props if you want
+    // badges (optional)
     badges?: string[];
 }
 
@@ -104,8 +107,8 @@ interface MyProfileViewProps {
     onClose: () => void;
     stats: StatsProps;
     onUpgrade: (stat: UpgradeableStat) => void;
-    isOnline?: boolean; // optional override
-    achievements?: AchievementRow[]; // kept in props for future, but NOT used to overwrite state
+    isOnline?: boolean;
+    achievements?: AchievementRow[];
 }
 
 /* ------------------------------- Component -------------------------------- */
@@ -115,9 +118,23 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
     stats,
     onUpgrade,
     isOnline = stats.isOnline ?? true,
-    achievements, // currently unused for state, but left for future
+    achievements,
 }) => {
-    // ----- local optimistic state (drives the bars immediately) -----
+    // 🔹 Tell the app that the RP profile is active, so Nitro profile should stay closed
+    useEffect(() => {
+        (window as any).__rpProfileActive = true;
+
+        return () => {
+            (window as any).__rpProfileActive = false;
+        };
+    }, []);
+    // ----- which user is this profile for? (self OR opponent) -----
+    const sessionUserId = GetSessionDataManager().userId;
+    const viewedUserId = stats.userId ?? sessionUserId;
+    const targetUserIdRef = useRef<number | null>(viewedUserId ?? null);
+
+    /* ---------- local optimistic state for upgradable stats ---------- */
+
     const [uiStats, setUiStats] = useState(() => ({
         strength: stats.strength ?? 0,
         stamina: stats.stamina ?? 0,
@@ -132,16 +149,14 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
         level: stats.level ?? 1,
     }));
 
-    // 🔹 local achievements state (what the UI will render)
+    // achievements state
     const [achRows, setAchRows] = useState<AchievementRow[]>([]);
-
-    // 🔹 which group is expanded (accordion: one at a time)
     const [openGroup, setOpenGroup] = useState<string | null>(null);
 
-    // 🔹 NEW: badges state for current user
+    // badges for this profile owner
     const [badges, setBadges] = useState<string[]>(stats.badges ?? []);
 
-    // 🔹 NEW: local meta for created / last login
+    // created / last login for this profile owner
     const [meta, setMeta] = useState<{
         createdAt?: string;
         lastLogin?: string;
@@ -150,11 +165,16 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
         lastLogin: stats.lastLogin,
     });
 
-    // 🔹 Listen for achievements from the parser bridge
+    // keep viewed user in ref so event handlers always have the latest
+    useEffect(() => {
+        targetUserIdRef.current = viewedUserId ?? null;
+    }, [viewedUserId]);
+
+    /* ---------------------- Achievements bridge listener --------------------- */
+
     useEffect(() => {
         const onAchievements = (ev: any) => {
             const rows = ev.detail?.achievements || [];
-            console.log("[Profile] achievements update (view):", rows);
             setAchRows(rows);
         };
 
@@ -167,7 +187,8 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
             );
     }, []);
 
-    // when server/parent stats props change, reconcile into optimistic state
+    /* ------------------- reconcile stats props → optimistic ------------------ */
+
     useEffect(() => {
         setUiStats((s) => ({
             ...s,
@@ -196,7 +217,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
         stats.level,
     ]);
 
-    // keep small cache in sync for other overlays
+    // small cache for other overlays
     useEffect(() => {
         setRPStats({
             gathering: uiStats.gathering ?? 1,
@@ -204,32 +225,35 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
         });
     }, [uiStats.gathering, uiStats.level]);
 
-    // 🔹 NEW: on mount, request profile + badges for current user
+    /* ----------- whenever viewedUserId changes, request profile info --------- */
+
     useEffect(() => {
-        const userId = GetSessionDataManager().userId;
+        if (!viewedUserId) return;
 
-        if (!userId) return;
+        // store in ref
+        targetUserIdRef.current = viewedUserId;
 
-        // This will fire UserProfileEvent, which contains creation & last login
-        GetUserProfile(userId);
+        // profile (created / last login)
+        GetUserProfile(viewedUserId);
 
-        // This will fire UserCurrentBadgesEvent with the user's badges
+        // badges
         try {
             GetCommunication().connection.send(
-                new UserCurrentBadgesComposer(userId)
+                new UserCurrentBadgesComposer(viewedUserId)
             );
         } catch (e) {
             console.error("Failed to send UserCurrentBadgesComposer", e);
         }
-    }, []);
+    }, [viewedUserId]);
 
-    // 🔹 NEW: listen for UserProfileEvent to fill createdAt / lastLogin
+    /* -------- UserProfileEvent → createdAt / lastLogin for viewed user ------- */
+
     useMessageEvent<UserProfileEvent>(UserProfileEvent, (event) => {
         const parser = event.getParser();
         if (!parser) return;
 
-        const myId = GetSessionDataManager().userId;
-        if (parser.id !== myId) return;
+        const targetId = targetUserIdRef.current;
+        if (!targetId || parser.id !== targetId) return;
 
         setMeta({
             createdAt: parser.registration ?? "Unknown",
@@ -241,33 +265,33 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                 ) ?? "Unknown",
         });
     });
-    // 🔹 NEW: listen for UserCurrentBadgesEvent to update badges
+
+    /* ------------- UserCurrentBadgesEvent → badges for viewed user ----------- */
+
     useMessageEvent<UserCurrentBadgesEvent>(UserCurrentBadgesEvent, (event) => {
         const parser = event.getParser();
-        const myId = GetSessionDataManager().userId;
+        const targetId = targetUserIdRef.current;
 
-        if (!myId || parser.userId !== myId) return;
+        if (!targetId || parser.userId !== targetId) return;
 
         setBadges(parser.badges || []);
     });
 
-    // initial window position (persisted)
+    /* ---------------------------- position + drag ---------------------------- */
+
     const [position] = useState<{ x: number; y: number }>(() => {
         const stored = localStorage.getItem("profilePos");
         return stored ? JSON.parse(stored) : { x: 100, y: 100 };
     });
 
-    const kdRatio =
-        stats.deaths > 0 ? (stats.kills / stats.deaths).toFixed(2) : "∞";
-
     const posRef = useRef(position);
     const dragRef = useRef<{ dx: number; dy: number } | null>(null);
     const viewRef = useRef<HTMLDivElement>(null);
 
-    // tabs
     const [tab, setTab] = useState<"general" | "achievements">("general");
 
-    // gang visual state (updates live from gang_status_result)
+    /* -------------------------- gang visual state --------------------------- */
+
     const [gangName, setGangName] = useState<string>(stats.gangName ?? "");
     const [gangId, setGangId] = useState<number | undefined>(stats.gangId);
     const [gangIconKey, setGangIconKey] = useState<string>(
@@ -358,23 +382,20 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
         if (uiStats.points <= 0) return;
 
         const currentVal = valueFor(stat);
-        const isCapped = currentVal >= 12; // healthlevel uses same 0..12 scale
+        const isCapped = currentVal >= 12;
 
         if (isCapped) return;
 
-        // optimistic bump (instant bar/points update)
         setUiStats((s) => ({
             ...s,
             [stat]: currentVal + 1,
             points: Math.max(0, s.points - 1),
         }));
 
-        // send packet + notify parent
         GetCommunication().connection.send(new UpgradeStatComposer(stat));
         onUpgrade(stat);
     };
 
-    // helpers
     const pct = (n: number, d: number) =>
         d <= 0 ? 0 : Math.min(100, Math.max(0, (n / d) * 100));
 
@@ -401,7 +422,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
             groups[key].rows.push(row);
         }
 
-        // sort rows inside each group by levelOrder
         Object.values(groups).forEach((g) => {
             g.rows.sort((a, b) => (a.levelOrder ?? 0) - (b.levelOrder ?? 0));
         });
@@ -417,7 +437,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
         [groupedAchievements]
     );
 
-    // when achievements / groups update, auto-open the first group if none is open
     useEffect(() => {
         if (sortedGroupNames.length && !openGroup) {
             setOpenGroup(sortedGroupNames[0]);
@@ -425,7 +444,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
     }, [sortedGroupNames, openGroup]);
 
     const handleToggleGroup = (groupName: string) => {
-        // accordion behavior: only one open at a time
         setOpenGroup((prev) => (prev === groupName ? null : groupName));
     };
 
@@ -451,7 +469,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                 />
             </div>
 
-            {/* Tabs (Navigator look) */}
+            {/* Tabs */}
             <div className="profile-tabs">
                 <button
                     className={`tab-btn ${tab === "general" ? "active" : ""}`}
@@ -466,7 +484,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                     onClick={() => {
                         setTab("achievements");
 
-                        // request achievements from server
                         try {
                             GetCommunication().connection.send(
                                 new ProfileAchievementsRequestComposer()
@@ -525,7 +542,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                         </div>
                                     )}
 
-                                    {/* Gang pill (split color box + icon + name) */}
+                                    {/* Gang pill */}
                                     <div
                                         className="gang-pill"
                                         style={{ marginTop: 2 }}
@@ -562,7 +579,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                         )}
                                     </div>
 
-                                    {/* 🔹 Badges UNDER avatar, max 5 */}
+                                    {/* Badges under avatar */}
                                     {badges && badges.length > 0 && (
                                         <div className="badge-strip">
                                             <BadgesContainerView
@@ -576,7 +593,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                             </div>
                         </div>
 
-                        {/* left-side cards stack */}
+                        {/* left cards */}
                         <div className="info-section">
                             {/* Account */}
                             <div className="info-card">
@@ -631,6 +648,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                             </div>
                         </div>
                     </div>
+
                     {/* RIGHT COLUMN */}
                     <div className="profile-right">
                         {/* Level / XP */}
@@ -792,7 +810,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
 
                                     const isOpen = openGroup === groupName;
 
-                                    // Pretty display name for the group
                                     const prettyName =
                                         groupName === "kills"
                                             ? "Kills"
@@ -850,7 +867,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                                                 }
                                                             />
 
-                                                            {/* title + reward */}
                                                             <div className="ach-line">
                                                                 <div className="ach-title">
                                                                     {a.name}
@@ -862,7 +878,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                                                 </div>
                                                             </div>
 
-                                                            {/* optional description */}
                                                             {a.description && (
                                                                 <div className="ach-text">
                                                                     {
@@ -871,7 +886,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                                                 </div>
                                                             )}
 
-                                                            {/* progress */}
                                                             <div className="ach-progress">
                                                                 <div className="ach-bar">
                                                                     <div
