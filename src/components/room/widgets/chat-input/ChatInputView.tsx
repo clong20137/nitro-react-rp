@@ -297,15 +297,21 @@ export const ChatInputView: FC<{}> = () => {
 
             if (text.length <= maxChatLength) {
                 if (/%CC%/g.test(encodeURIComponent(text))) {
+                    // invalid text → clear everything
                     setChatValue("");
-                } else {
-                    setChatValue(text);
-                    sendChat(text, chatType, recipientName, chatStyleId);
-                    setTimeout(() => setChatValue(""), 0);
+                    return;
                 }
+
+                // send the actual chat text
+                sendChat(text, chatType, recipientName, chatStyleId);
             }
 
-            setChatValue(append);
+            // Keep whisper prefix so whisper mode persists, otherwise clear
+            if (chatType === ChatMessageTypeEnum.CHAT_WHISPER) {
+                setChatValue(append);
+            } else {
+                setChatValue("");
+            }
         },
         [
             chatModeIdWhisper,
@@ -381,7 +387,7 @@ export const ChatInputView: FC<{}> = () => {
 
             if (document.activeElement !== inputRef.current) setInputFocus();
 
-            const value = inputRef.current.value; // <— use the real input
+            const value = inputRef.current.value;
 
             switch (event.key) {
                 case " ":
@@ -563,17 +569,18 @@ export const ChatInputView: FC<{}> = () => {
                             )}
                         </Text>
                     )}
-                </div>
 
-                <button
-                    ref={buttonRef}
-                    className="emoji-button"
-                    title={LocalizeText("insert.emoji") || "Emoji"}
-                    onClick={() => setEmojiOpen((v) => !v)}
-                    type="button"
-                >
-                    {buttonEmoji}
-                </button>
+                    {/* Emoji button overlays on the right side of the input */}
+                    <button
+                        ref={buttonRef}
+                        className="emoji-button"
+                        title={LocalizeText("insert.emoji") || "Emoji"}
+                        onClick={() => setEmojiOpen((v) => !v)}
+                        type="button"
+                    >
+                        {buttonEmoji}
+                    </button>
+                </div>
             </div>
 
             {emojiOpen &&
