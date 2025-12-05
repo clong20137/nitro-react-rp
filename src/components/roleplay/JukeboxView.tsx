@@ -60,7 +60,7 @@ function extractVideoId(s: string): string | null {
     return null;
 }
 
-/** Small, no-deps draggable hook (same pattern as TaxiView) */
+/** Small, no-deps draggable hook (no transform-jump now) */
 function useDraggable<T extends HTMLElement>() {
     const ref = useRef<T | null>(null);
     const dragData = useRef<{
@@ -68,6 +68,8 @@ function useDraggable<T extends HTMLElement>() {
         oy: number;
         sx: number;
         sy: number;
+        w: number;
+        h: number;
     } | null>(null);
 
     const onMouseDown = useCallback((e: React.MouseEvent) => {
@@ -80,6 +82,8 @@ function useDraggable<T extends HTMLElement>() {
             oy: e.clientY,
             sx: rect.left,
             sy: rect.top,
+            w: rect.width,
+            h: rect.height,
         };
 
         const onMove = (ev: MouseEvent) => {
@@ -90,18 +94,22 @@ function useDraggable<T extends HTMLElement>() {
 
             const vw = document.documentElement.clientWidth;
             const vh = document.documentElement.clientHeight;
-            const newLeft = Math.min(
-                Math.max(dragData.current.sx + dx, 8),
-                vw - rect.width - 8
-            );
-            const newTop = Math.min(
-                Math.max(dragData.current.sy + dy, 8),
-                vh - rect.height - 8
-            );
+
+            const rawLeft = dragData.current.sx + dx;
+            const rawTop = dragData.current.sy + dy;
+
+            const minX = 8;
+            const minY = 8;
+            const maxX = vw - dragData.current.w - 8;
+            const maxY = vh - dragData.current.h - 8;
+
+            const newLeft = Math.min(Math.max(rawLeft, minX), maxX);
+            const newTop = Math.min(Math.max(rawTop, minY), maxY);
 
             el.style.left = `${newLeft}px`;
             el.style.top = `${newTop}px`;
-            el.style.transform = `translate(0,0)`;
+            // IMPORTANT: we do NOT touch el.style.transform here,
+            // so no fighting with animations / centering.
         };
 
         const onUp = () => {
@@ -144,14 +152,14 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
     // Hidden player URL (includes start offset + mute flag)
     const [playerUrl, setPlayerUrl] = useState<string | null>(null);
 
-    // drag like TaxiView
+    // drag like TaxiView (but with fixed base position)
     const { ref: dragRef, onMouseDown: startDrag } =
         useDraggable<HTMLDivElement>();
 
     /* ---------- bridges ---------- */
     useEffect(() => {
         // OPEN: fired by furniture click
-        const onOpen = () => {
+        const onOpenEvt = () => {
             setOpen(true);
         };
 
@@ -182,7 +190,7 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
             if (open && e.key === "Escape") doClose();
         };
 
-        window.addEventListener("jukebox_open", onOpen as EventListener);
+        window.addEventListener("jukebox_open", onOpenEvt as EventListener);
         window.addEventListener(
             "jukebox_state_update",
             onState as EventListener
@@ -191,7 +199,10 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
         window.addEventListener("keydown", onEsc);
 
         return () => {
-            window.removeEventListener("jukebox_open", onOpen as EventListener);
+            window.removeEventListener(
+                "jukebox_open",
+                onOpenEvt as EventListener
+            );
             window.removeEventListener(
                 "jukebox_state_update",
                 onState as EventListener
@@ -250,7 +261,6 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
         }
         setSubmitting(true);
         try {
-            // NOTE: Composer now wraps whatever data the server expects
             SendMessageComposer(new JukeboxRequestComposerRef(vid, expedite));
             setInput("");
         } finally {
@@ -312,32 +322,44 @@ This stays mounted even when the jukebox window is closed. */}
                     >
                         <div className="juke-header" onMouseDown={startDrag}>
                             <div className="title">
-                                <i className="ico ico-note" /> Room Jukebox
+                                <span className="juke-icon juke-icon-horn" />
+                                <span className="title-text">Room Jukebox</span>
                             </div>
+
                             <div className="spacer" />
+
                             <button
-                                className={`hb-btn hb-ghost ${
+                                className={`hb-btn hb-ghost mute-btn ${
                                     muted ? "is-muted" : ""
                                 }`}
                                 onClick={toggleMute}
                                 type="button"
                             >
+                                <span
+                                    className={`juke-icon ${
+                                        muted
+                                            ? "juke-icon-nohorn"
+                                            : "juke-icon-music"
+                                    }`}
+                                />
                                 {muted ? "Unmute" : "Mute"}
                             </button>
+
                             <button
-                                className="hb-btn hb-danger"
+                                className="juke-close-button"
                                 onClick={doClose}
                                 aria-label="Close"
                                 type="button"
-                            >
-                                ✕
-                            </button>
+                            />
                         </div>
 
                         <div className="juke-body">
                             <div className="now-card">
                                 <div className="now-row">
-                                    <div className="now-label">Status</div>
+                                    <div className="now-label">
+                                        <span className="juke-icon juke-icon-user-music" />
+                                        Status
+                                    </div>
                                     <div
                                         className={`pill ${
                                             state.isOpen ? "ok" : "bad"
@@ -350,10 +372,12 @@ This stays mounted even when the jukebox window is closed. */}
                                             state.isPlaying ? "ok" : ""
                                         }`}
                                     >
+                                        <span className="juke-icon juke-icon-play-pill" />
                                         {state.isPlaying ? "Playing" : "Idle"}
                                     </div>
                                     {muted && (
                                         <div className="pill muted-pill">
+                                            <span className="juke-icon juke-icon-nohorn-small" />
                                             Muted
                                         </div>
                                     )}
@@ -372,9 +396,14 @@ This stays mounted even when the jukebox window is closed. */}
                                     className="now-title"
                                     title={state.currentTitle || ""}
                                 >
-                                    {state.currentTitle
-                                        ? `Now Playing: ${state.currentTitle}`
-                                        : "No track playing"}
+                                    {state.currentTitle ? (
+                                        <>
+                                            <span className="juke-icon juke-icon-disc" />
+                                            {`Now Playing: ${state.currentTitle}`}
+                                        </>
+                                    ) : (
+                                        "No track playing"
+                                    )}
                                 </div>
                             </div>
 
@@ -404,7 +433,7 @@ This stays mounted even when the jukebox window is closed. */}
                                     >
                                         Add to Queue{" "}
                                         <span className="cost">
-                                            <i className="ico ico-diamond" />{" "}
+                                            <i className="ico-diamond" />{" "}
                                             {state.requestCost}
                                         </span>
                                     </button>
@@ -417,7 +446,7 @@ This stays mounted even when the jukebox window is closed. */}
                                     >
                                         Expedite Next{" "}
                                         <span className="cost">
-                                            <i className="ico ico-diamond" />{" "}
+                                            <i className="ico-diamond" />{" "}
                                             {state.expediteCost}
                                         </span>
                                     </button>
@@ -426,7 +455,10 @@ This stays mounted even when the jukebox window is closed. */}
 
                             <div className="queue">
                                 <div className="q-head">
-                                    <div>Up Next</div>
+                                    <div>
+                                        <span className="juke-icon juke-icon-disc-small" />
+                                        Up Next
+                                    </div>
                                     <div className="muted">
                                         ({state.queue?.length || 0})
                                     </div>

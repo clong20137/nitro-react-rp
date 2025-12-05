@@ -363,10 +363,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                             />
                         )}
                     </div>
-
-                    {stats.level ? (
-                        <div className="avatar-level">Level: {stats.level}</div>
-                    ) : null}
                 </div>
             </div>
         </div>

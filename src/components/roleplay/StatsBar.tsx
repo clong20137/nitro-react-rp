@@ -11,15 +11,12 @@ import { StartWorkComposer } from "@nitrots/nitro-renderer/src/nitro/communicati
 import { CallPoliceComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CallPoliceComposer";
 import { PassiveModeComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PassiveModeComposer";
 import { OpponentStatsOverlay } from "./OpponentStatsOverlay";
-import {
-    FriendlyTime,
-    UserProfileEvent,
-    UserProfileParser,
-} from "@nitrots/nitro-renderer";
+import { FriendlyTime, UserProfileEvent } from "@nitrots/nitro-renderer";
 import { useMessageEvent } from "../../hooks";
 
 type AnchorEventDetail = { id: string; el: HTMLElement | null };
 const OB_REGISTER_EVT = "ob-register-anchor";
+
 function useOnboardingAnchor(
     id: string,
     ref: React.MutableRefObject<HTMLElement | null>
@@ -88,6 +85,9 @@ interface ProfileStats {
     // Profile meta
     createdAt?: string;
     lastLogin?: string;
+
+    // allow opponent overrides
+    [key: string]: any;
 }
 
 export const StatsBar: FC = () => {
@@ -362,6 +362,7 @@ export const StatsBar: FC = () => {
         createdAt,
         lastLogin,
     });
+
     useEffect(() => {
         const myId = GetSessionDataManager().userId;
         if (myId > 0) GetUserProfile(myId);
@@ -425,8 +426,6 @@ export const StatsBar: FC = () => {
                 isOnline: detail.isOnline,
                 createdAt: detail.createdAt,
                 lastLogin: detail.lastLogin,
-                // RP stats override defaults if present
-                killsOverride: undefined,
                 ...detail,
             } as ProfileStats);
             setShowProfile(true);
@@ -504,34 +503,40 @@ export const StatsBar: FC = () => {
             <div className="stats-right">
                 <div className="stat">
                     <div className="icons heart" />
-                    <div className="bar">
+                    <div className="bar health-bar">
                         <div
                             className="fill health"
                             style={{ width: `${percent(health, maxHealth)}%` }}
                         />
-                        <div className="bar-text">{`${health} / ${maxHealth}`}</div>
+                        <div className="bar-value">
+                            {health} / {maxHealth}
+                        </div>
                     </div>
                 </div>
 
                 <div className="stat">
                     <div className="icons bolt" />
-                    <div className="bar">
+                    <div className="bar energy-bar">
                         <div
                             className="fill energy"
                             style={{ width: `${percent(energy, maxEnergy)}%` }}
                         />
-                        <div className="bar-text">{`${energy} / ${maxEnergy}`}</div>
+                        <div className="bar-value">
+                            {energy} / {maxEnergy}
+                        </div>
                     </div>
                 </div>
 
                 <div className="stat">
                     <div className="icons apple" />
-                    <div className="bar">
+                    <div className="bar hunger-bar">
                         <div
                             className="fill hunger"
                             style={{ width: `${percent(hunger, maxHunger)}%` }}
                         />
-                        <div className="bar-text">{`${hunger} / ${maxHunger}`}</div>
+                        <div className="bar-value">
+                            {hunger} / {maxHunger}
+                        </div>
                     </div>
                 </div>
 

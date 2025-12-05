@@ -152,26 +152,8 @@ setMeExpanded={setMeExpanded}
                 <Flex gap={2} alignItems="center">
                     <Flex alignItems="center" gap={2}>
                         {/* ❌ Avatar no longer clickable — removed pointer + onClick */}
-                        <Flex
-                            center
-                            role="button"
-                            aria-label="Avatar"
-                            className="navigation-item item-avatar disabled-avatar"
-                        >
-                            <LayoutAvatarImageView
-                                figure={userFigure}
-                                direction={2}
-                                position="absolute"
-                            />
-
-                            {/* still show unseen badges */}
-                            {getTotalUnseen > 0 && (
-                                <LayoutItemCountView count={getTotalUnseen} />
-                            )}
-                        </Flex>
 
                         {/* Blue Chip Tray (no Me menu anymore) */}
-                        <div className="left-chip-tray"></div>
                     </Flex>
 
                     {/* Chat anchor */}

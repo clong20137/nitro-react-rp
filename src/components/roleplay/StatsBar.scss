@@ -1,6 +1,4 @@
-/* ===========================
-StatsBar.scss (full, updated)
-=========================== */
+/*===========================StatsBar.scss (full, updated)===========================*/
 
 /* Root container for your HUD (self) */
 .stats-bar-container::before {
@@ -377,12 +375,17 @@ XP tooltip (shared)
     text-shadow: 0 0 2px black;
 }
 
+/* Filled segments inside bars */
 .fill {
+    position: absolute;
+    top: 0;
+    left: 0;
     height: 100%;
     width: 0;
     /* width is overridden inline via React */
     border-radius: 3px;
     transition: width .3s ease;
+    z-index: 1;
 
     &.health {
         background: #ab204b;
@@ -398,6 +401,23 @@ XP tooltip (shared)
         background: #156091;
         border: 1px solid #2d81b4;
     }
+}
+
+/* Centered numeric value over each bar */
+.bar-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    /* above fill */
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow:
+        0 1px 0 rgba(0, 0, 0, .85),
+        0 0 2px rgba(0, 0, 0, .9);
+    pointer-events: none;
 }
 
 .stats-avatar-wrapper {
@@ -599,7 +619,7 @@ XP tooltip (shared)
     background: #0d6091;
 
     /* small padding so bars sit right against the blue block */
-    padding: 0px 2px 0px 3px;
+    padding: 0px 2px 0px 8px;
     border-radius: 0 8px 8px 0;
 }
 

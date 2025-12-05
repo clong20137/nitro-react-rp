@@ -9,7 +9,7 @@
     width: 900px; // fixed shell width
     max-width: 95%;
     height: 65px;
-    padding: 0 10px 0 0px;
+    padding: 0 2px 2px 0px;
     background: #0d6091;
     border: 3px solid #2077ab;
     border-radius: 10px;
@@ -20,7 +20,7 @@
         display: flex;
         align-items: center;
         height: 100%;
-        padding: 2px 2px 0 8px;
+        padding: 2px 2px 0 2px;
         position: relative; // so emoji can overlay inside here
 
         input.chat-input {

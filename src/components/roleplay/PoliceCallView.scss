@@ -178,3 +178,121 @@
     padding: 4px 12px;
     font-size: 13px;
 }
+
+/* --- Call log section --- */
+
+.call-log {
+    margin-top: 8px;
+    padding: 6px 8px 8px;
+    background: #f4eee0;
+    border-top: 1px solid #c8b89a;
+    border-radius: 0 0 8px 8px;
+}
+
+.call-log-header {
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #4b3c25;
+    margin-bottom: 4px;
+
+    .count {
+        margin-left: 6px;
+        font-weight: 400;
+        color: #7b6a52;
+    }
+}
+
+.call-log-table {
+    max-height: 140px;
+    overflow-y: auto;
+    border-radius: 6px;
+    border: 1px solid #d3c3a4;
+    background: #fff;
+    box-shadow: inset 0 1px 0 #ffffff;
+}
+
+.call-log-row {
+    display: grid;
+    grid-template-columns: 1.2fr 1.8fr 0.8fr 0.9fr;
+    align-items: center;
+    font-size: 11px;
+    padding: 4px 6px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+
+    &--head {
+        background: #ece0c9;
+        font-weight: 700;
+        text-transform: uppercase;
+        cursor: default;
+    }
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &.is-selected {
+        background: #e0f1ff;
+    }
+
+    &:not(.call-log-row--head):hover {
+        background: #f5f0e5;
+    }
+
+    .col-user {
+        font-weight: 600;
+    }
+
+    .col-room {
+        color: #5a4a30;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .col-time {
+        font-variant-numeric: tabular-nums;
+        color: #444;
+    }
+
+    .col-status {
+        text-align: right;
+    }
+}
+
+.call-log-empty {
+    padding: 8px;
+    text-align: center;
+    font-size: 11px;
+    color: #9b8c72;
+}
+
+/* Status pill */
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    border: 1px solid #b4a58a;
+    background: #f8f2e4;
+}
+
+.status-pending {
+    background: #fff4c2;
+    border-color: #e0c97a;
+    color: #64521a;
+}
+
+.status-accepted {
+    background: #c8f2c8;
+    border-color: #5aa65a;
+    color: #1f5a1f;
+}

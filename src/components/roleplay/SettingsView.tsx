@@ -99,7 +99,7 @@ const EVT_STORE = "settings:chat_bubbles_owned";
 const EVT_ICON_STORE = "settings:name_icons_owned";
 
 /* Assets */
-const BUBBLE_ASSET_BASE = "/nitro/icons/chat/chatbubbles";
+const BUBBLE_ASSET_BASE = "/nitro/icons/chatbubbles/";
 const NAMEICON_ASSET_BASE = "/nitro/icons/nameicons/";
 
 const clamp = (v: number, min: number, max: number) =>
@@ -392,7 +392,7 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
     };
 
     const bubbleImageUrl = (id: number) =>
-        `${BUBBLE_ASSET_BASE}/bubble_${id}.png`;
+        `${BUBBLE_ASSET_BASE}bubble_${id}.png`;
     const iconImageUrl = (id: number) => `${NAMEICON_ASSET_BASE}/${id}.png`;
 
     const handleClose = () => {

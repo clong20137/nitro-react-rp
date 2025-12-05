@@ -1,4 +1,4 @@
-import { FC, useEffect, useRef, useState } from "react";
+import React, { FC, useEffect, useRef, useState } from "react";
 import { SendMessageComposer } from "../../api";
 
 import { ReportPoliceCallComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ReportPoliceCallComposer";
@@ -16,14 +16,31 @@ type PoliceCallPayload = {
 
 type Pos = { left: number; top: number };
 
+type CallStatus = "pending" | "accepted";
+
+type TrackedCall = {
+    id: number; // local id
+    payload: PoliceCallPayload;
+    createdAt: number; // ms
+    status: CallStatus;
+};
+
 const POS_KEY = "police_call_view_pos";
 const MODAL_W = 500;
-const MODAL_H = 220; // visual estimate for initial clamp
+const MODAL_H = 320; // bumped a bit to make room for the log
 
 export const PoliceCallView: FC = () => {
     const [open, setOpen] = useState(false);
+
+    // "Focused" / primary call shown in the top section
     const [data, setData] = useState<PoliceCallPayload | null>(null);
+
+    // Text for the report (if they choose Report)
     const [reportText, setReportText] = useState("");
+
+    // List of calls + ticking clock
+    const [calls, setCalls] = useState<TrackedCall[]>([]);
+    const [nowTs, setNowTs] = useState<number>(Date.now());
 
     // drag state
     const [pos, setPos] = useState<Pos | null>(null);
@@ -66,6 +83,25 @@ export const PoliceCallView: FC = () => {
         return clampPos(left, top);
     };
 
+    const formatElapsed = (createdAt: number): string => {
+        let diffMs = nowTs - createdAt;
+        if (diffMs < 0) diffMs = 0;
+        const totalSec = Math.floor(diffMs / 1000);
+        const minutes = Math.floor(totalSec / 60);
+        const seconds = totalSec % 60;
+        return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+    };
+
+    /* ---------------- timers ---------------- */
+
+    // tick once per second for MM:SS display
+    useEffect(() => {
+        const id = window.setInterval(() => {
+            setNowTs(Date.now());
+        }, 1000);
+        return () => window.clearInterval(id);
+    }, []);
+
     /* ---------------- event wiring ---------------- */
 
     // Listen for: window.dispatchEvent(new CustomEvent('open_police_call', { detail: {...} }))
@@ -74,13 +110,27 @@ export const PoliceCallView: FC = () => {
             const { detail } = e as CustomEvent<PoliceCallPayload>;
             if (!detail) return;
 
-            setData({
+            const normalized: PoliceCallPayload = {
                 username: detail.username ?? "",
                 figure: detail.figure ?? "",
                 message: detail.message ?? "",
                 virtualRoomId: Number(detail.virtualRoomId ?? 0),
                 virtualRoomName: detail.virtualRoomName ?? "",
-            });
+            };
+
+            const now = Date.now();
+            const newCall: TrackedCall = {
+                id: now, // simple local id
+                payload: normalized,
+                createdAt: now,
+                status: "pending",
+            };
+
+            // prepend newest at top
+            setCalls((prev) => [newCall, ...prev]);
+
+            // focus this call in the main panel
+            setData(normalized);
             setReportText("");
             setOpen(true);
             setPos(loadOrCenter());
@@ -176,6 +226,17 @@ export const PoliceCallView: FC = () => {
         } catch (e) {
             console.warn("[PoliceCallView] Accept failed:", e);
         }
+
+        // mark this call as accepted in the local list
+        setCalls((prev) =>
+            prev.map((c) =>
+                c.payload.username === data.username &&
+                c.payload.virtualRoomId === data.virtualRoomId
+                    ? { ...c, status: "accepted" }
+                    : c
+            )
+        );
+
         setOpen(false);
     };
 
@@ -195,7 +256,6 @@ export const PoliceCallView: FC = () => {
         setOpen(false);
     };
 
-    // Inline style to override the center-translate when draggable
     const style: React.CSSProperties | undefined = pos
         ? { position: "fixed", left: pos.left, top: pos.top, transform: "none" }
         : undefined;
@@ -251,6 +311,14 @@ export const PoliceCallView: FC = () => {
                         #{data.virtualRoomId} — {data.virtualRoomName}
                     </div>
 
+                    {/* report textarea (optional) */}
+                    <textarea
+                        className="call-report-input"
+                        placeholder="Optional report / notes..."
+                        value={reportText}
+                        onChange={(e) => setReportText(e.target.value)}
+                    />
+
                     <div className="action-buttons">
                         <div className="police-call-buttons">
                             <button
@@ -273,6 +341,60 @@ export const PoliceCallView: FC = () => {
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* Call log */}
+            <div className="call-log">
+                <div className="call-log-header">
+                    <span>Active Calls</span>
+                    <span className="count">({calls.length})</span>
+                </div>
+
+                <div className="call-log-table">
+                    <div className="call-log-row call-log-row--head">
+                        <div className="col-user">User</div>
+                        <div className="col-room">Location</div>
+                        <div className="col-time">Time</div>
+                        <div className="col-status">Status</div>
+                    </div>
+
+                    {calls.length === 0 && (
+                        <div className="call-log-empty">
+                            No active calls yet.
+                        </div>
+                    )}
+
+                    {calls.map((c) => (
+                        <div
+                            key={c.id}
+                            className={`call-log-row ${
+                                data.username === c.payload.username &&
+                                data.virtualRoomId === c.payload.virtualRoomId
+                                    ? "is-selected"
+                                    : ""
+                            }`}
+                            onClick={() => setData(c.payload)}
+                        >
+                            <div className="col-user">{c.payload.username}</div>
+                            <div className="col-room">
+                                #{c.payload.virtualRoomId} –{" "}
+                                {c.payload.virtualRoomName}
+                            </div>
+                            <div className="col-time">
+                                {formatElapsed(c.createdAt)}
+                            </div>
+                            <div className="col-status">
+                                <span
+                                    className={`status-pill status-${c.status}`}
+                                >
+                                    {c.status === "pending"
+                                        ? "Pending"
+                                        : "Accepted"}
+                                </span>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>

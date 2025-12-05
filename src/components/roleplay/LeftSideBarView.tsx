@@ -36,9 +36,7 @@ export const LeftSidebarView: FC = () => {
         const handleCorporationsList = (event: any) => {
             const corps = event.detail.corporations as CorporationData[];
             setCorporations(corps);
-            // ❌ previously: setShowCorporations((prev) => prev || true);
-            // That can auto-open on login if this event fires.
-            // ✅ Now we only open Corporations when user clicks the chip.
+            // list is cached; we only open when user clicks the chip
         };
 
         window.addEventListener(
@@ -72,7 +70,6 @@ export const LeftSidebarView: FC = () => {
             const detail = (event as CustomEvent).detail as any;
             const inGang = decideFromPayload(detail);
 
-            // ⭐ Only change modes if we are currently "loading"
             setGangMode((prev) => {
                 if (prev !== "loading") return prev;
                 return inGang ? "details" : "create";
@@ -90,12 +87,12 @@ export const LeftSidebarView: FC = () => {
             handleGangStatus as EventListener
         );
 
-        // after create / edit / delete, some stacks fire these bridge events
         const refreshOnBridge = () => {
-            // request status again
             try {
                 SendMessageComposer(new CheckGangStatusComposer());
-            } catch {}
+            } catch {
+                // ignore
+            }
             window.dispatchEvent(new CustomEvent("request_gang_status"));
         };
 
@@ -153,23 +150,15 @@ export const LeftSidebarView: FC = () => {
     const askGangStatus = () => {
         try {
             SendMessageComposer(new CheckGangStatusComposer());
-        } catch {}
-        // for older bridges
+        } catch {
+            // ignore
+        }
         window.dispatchEvent(new CustomEvent("request_gang_status"));
     };
 
-    // ❌ REMOVED: auto gang status on boot that could cause unintended UI opens
-    //
-    // useEffect(() => {
-    // askGangStatus();
-    // }, []);
-    //
-    // ✅ Now we only ask for status when the user actually clicks the Gangs chip.
-
     const onClickGangs = () => {
         setGangMode((m) => {
-            if (m !== "none") return "none"; // close any open gang UI
-            // open flow → show small loading shim then decide
+            if (m !== "none") return "none";
             askGangStatus();
             return "loading";
         });
@@ -199,6 +188,7 @@ export const LeftSidebarView: FC = () => {
                     }`}
                 >
                     <div className="left-sidebar">
+                        {/* Toggle TAB */}
                         <div
                             className="left-sidebar__toggle"
                             role="button"
@@ -210,6 +200,7 @@ export const LeftSidebarView: FC = () => {
                             onClick={() => setSidebarOpen(!sidebarOpen)}
                         />
 
+                        {/* Inventory */}
                         <div
                             className="sidebar-chip chip-inventory"
                             data-tip="Inventory"
@@ -220,6 +211,7 @@ export const LeftSidebarView: FC = () => {
                             <div className="chip-icon" />
                         </div>
 
+                        {/* Wanted List */}
                         <div
                             className="sidebar-chip chip-wanted"
                             data-tip="Wanted List"
@@ -230,6 +222,7 @@ export const LeftSidebarView: FC = () => {
                             <div className="chip-icon" />
                         </div>
 
+                        {/* Gangs */}
                         <div
                             className="sidebar-chip chip-gangs"
                             data-tip="Gangs"
@@ -240,6 +233,7 @@ export const LeftSidebarView: FC = () => {
                             <div className="chip-icon" />
                         </div>
 
+                        {/* Corporations */}
                         <div
                             className="sidebar-chip chip-corps"
                             data-tip="Corporations"
@@ -250,6 +244,7 @@ export const LeftSidebarView: FC = () => {
                             <div className="chip-icon" />
                         </div>
 
+                        {/* Gang Chat Toggle */}
                         <div
                             className={`sidebar-chip chip-chat ${
                                 isGangChatEnabled ? "is-on" : ""
@@ -262,6 +257,7 @@ export const LeftSidebarView: FC = () => {
                             <div className="chip-icon" />
                         </div>
 
+                        {/* Macros */}
                         <div
                             className="sidebar-chip chip-macros"
                             data-tip="Macros"
@@ -291,7 +287,6 @@ export const LeftSidebarView: FC = () => {
             )}
 
             {gangMode === "loading" && (
-                // tiny shim to avoid flicker while we wait for status
                 <div
                     style={{
                         position: "fixed",
@@ -313,6 +308,7 @@ export const LeftSidebarView: FC = () => {
             {gangMode === "create" && (
                 <CreateGangView onClose={() => setGangMode("none")} />
             )}
+
             {gangMode === "details" && (
                 <GangsDetailView onClose={() => setGangMode("none")} />
             )}
