@@ -1,4 +1,4 @@
-.nitro-chat-widget {
+nitro-chat-widget {
     position: absolute;
     display: flex;
     justify-content: center;
@@ -53,19 +53,16 @@
     }
 }
 
+/* =========================================================
+MAIN CHAT BUBBLE CONTAINER
+========================================================= */
+
 .bubble-container {
     position: absolute;
     width: fit-content;
     transition: top 0.2s ease 0s;
     user-select: none;
     pointer-events: all;
-
-    // -webkit-animation-duration: 0.2s;
-    // animation-duration: 0.2s;
-    // -webkit-animation-fill-mode: both;
-    // animation-fill-mode: both;
-    // -webkit-animation-name: bounceIn;
-    // animation-name: bounceIn;
 
     .user-container-bg {
         position: absolute;
@@ -86,32 +83,28 @@
         min-height: 26px;
         font-size: 14px;
 
+        /* default nine-slice, overridden per bubble where needed */
         border-image-slice: 17 6 6 29 fill;
         border-image-width: 17px 6px 6px 29px;
-        border-image-outset: 2px 0px 0px 0px;
-        border-image-repeat: repeat repeat;
+        border-image-outset: 2px 0 0 0;
+        border-image-repeat: stretch stretch;
 
         .pointer {
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
-
             width: 9px;
             height: 6px;
             bottom: -5px;
         }
 
         &.type-0 {
-
-            // normal
             .message {
                 font-weight: 400;
             }
         }
 
         &.type-1 {
-
-            // whisper
             .message {
                 font-weight: 400;
                 font-style: italic;
@@ -120,12 +113,14 @@
         }
 
         &.type-2 {
-
-            // shout
             .message {
                 font-weight: 700;
             }
         }
+
+        /* =====================================================
+BUBBLES 0–42 (mostly stock, original behaviour)
+===================================================== */
 
         &.bubble-0 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_0_transparent.png");
@@ -138,10 +133,9 @@
 
         &.bubble-1 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_1.png");
-
             border-image-slice: 18 6 6 29 fill;
             border-image-width: 18px 6px 6px 29px;
-            border-image-outset: 3px 0px 0px 0px;
+            border-image-outset: 3px 0 0 0;
 
             .user-container {
                 display: none;
@@ -220,10 +214,9 @@
 
         &.bubble-8 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_8.png");
-
             border-image-slice: 20 6 6 27 fill;
             border-image-width: 20px 6px 6px 27px;
-            border-image-outset: 5px 0px 0px 0px;
+            border-image-outset: 5px 0 0 0;
 
             .chat-content {
                 color: #fff;
@@ -236,10 +229,9 @@
 
         &.bubble-9 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_9.png");
-
             border-image-slice: 17 18 12 19 fill;
             border-image-width: 17px 18px 12px 19px;
-            border-image-outset: 7px 7px 0px 9px;
+            border-image-outset: 7px 7px 0 9px;
 
             .chat-content {
                 margin-left: 20px;
@@ -255,7 +247,6 @@
 
         &.bubble-10 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_10.png");
-
             border-image-slice: 29 18 8 37 fill;
             border-image-width: 29px 18px 8px 37px;
             border-image-outset: 12px 7px 1px 5px;
@@ -323,10 +314,9 @@
 
         &.bubble-16 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_16.png");
-
             border-image-slice: 13 6 10 31 fill;
             border-image-width: 13px 6px 10px 31px;
-            border-image-outset: 6px 0px 0px 0px;
+            border-image-outset: 6px 0 0 0;
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_16_pointer.png");
@@ -336,10 +326,9 @@
 
         &.bubble-17 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_17.png");
-
             border-image-slice: 24 6 8 35 fill;
             border-image-width: 24px 6px 8px 35px;
-            border-image-outset: 9px 0px 2px 5px;
+            border-image-outset: 9px 0 2px 5px;
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_17_pointer.png");
@@ -348,7 +337,6 @@
 
         &.bubble-18 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_18.png");
-
             border-image-slice: 7 16 8 16 fill;
             border-image-width: 7px 16px 8px 16px;
             border-image-outset: 3px 10px 2px 11px;
@@ -365,10 +353,9 @@
 
         &.bubble-19 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_19.png");
-
             border-image-slice: 17 6 9 19 fill;
             border-image-width: 17px 6px 9px 19px;
-            border-image-outset: 5px 0px 0px 8px;
+            border-image-outset: 5px 0 0 8px;
 
             .chat-content {
                 margin-left: 20px;
@@ -381,10 +368,9 @@
 
         &.bubble-20 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_20.png");
-
             border-image-slice: 18 6 8 19 fill;
             border-image-width: 18px 6px 8px 19px;
-            border-image-outset: 5px 0px 0px 8px;
+            border-image-outset: 5px 0 0 8px;
 
             .chat-content {
                 margin-left: 20px;
@@ -397,7 +383,6 @@
 
         &.bubble-21 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_21.png");
-
             border-image-slice: 20 6 12 24 fill;
             border-image-width: 20px 6px 12px 24px;
             border-image-outset: 13px 2px 1px 3px;
@@ -414,7 +399,6 @@
 
         &.bubble-22 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_22.png");
-
             border-image-slice: 18 19 11 33 fill;
             border-image-width: 18px 19px 11px 33px;
             border-image-outset: 7px 1px 1px 5px;
@@ -430,10 +414,9 @@
 
         &.bubble-23 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_23.png");
-
             border-image-slice: 16 6 7 32 fill;
             border-image-width: 16px 6px 7px 32px;
-            border-image-outset: 5px 0px 0px 3px;
+            border-image-outset: 5px 0 0 3px;
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_23_37_pointer.png");
@@ -442,10 +425,9 @@
 
         &.bubble-24 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_24.png");
-
             border-image-slice: 23 8 6 40 fill;
             border-image-width: 23px 8px 6px 40px;
-            border-image-outset: 6px 0px 0px 6px;
+            border-image-outset: 6px 0 0 6px;
 
             .chat-content {
                 margin-left: 30px;
@@ -460,7 +442,6 @@
 
         &.bubble-25 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_25.png");
-
             border-image-slice: 10 13 8 28 fill;
             border-image-width: 10px 13px 8px 28px;
             border-image-outset: 6px 3px 2px 0px;
@@ -478,7 +459,6 @@
 
         &.bubble-26 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_26.png");
-
             border-image-slice: 16 9 8 29 fill;
             border-image-width: 16px 9px 8px 29px;
             border-image-outset: 2px 2px 2px 0px;
@@ -497,10 +477,9 @@
 
         &.bubble-27 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_27.png");
-
             border-image-slice: 25 6 5 36 fill;
             border-image-width: 25px 6px 5px 36px;
-            border-image-outset: 8px 0px 0px 5px;
+            border-image-outset: 8px 0 0 5px;
 
             .chat-content {
                 margin-left: 30px;
@@ -514,10 +493,9 @@
 
         &.bubble-28 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_28.png");
-
             border-image-slice: 16 7 7 27 fill;
             border-image-width: 16px 7px 7px 27px;
-            border-image-outset: 3px 0px 0px 0px;
+            border-image-outset: 3px 0 0 0;
 
             .chat-content {
                 margin-left: 25px;
@@ -530,10 +508,9 @@
 
         &.bubble-29 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_29.png");
-
             border-image-slice: 10 7 15 31 fill;
             border-image-width: 10px 7px 15px 31px;
-            border-image-outset: 2px 0px 0px 1px;
+            border-image-outset: 2px 0 0 1px;
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_29_pointer.png");
@@ -556,10 +533,9 @@
 
         &.bubble-32 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_32.png");
-
             border-image-slice: 15 7 7 30 fill;
             border-image-width: 15px 7px 7px 30px;
-            border-image-outset: 2px 0px 0px 0px;
+            border-image-outset: 2px 0 0 0;
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_32_pointer.png");
@@ -568,10 +544,9 @@
 
         &.bubble-33 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_33_34.png");
-
             border-image-slice: 7 6 6 39 fill;
             border-image-width: 7px 6px 6px 39px;
-            border-image-outset: 2px 0px 0px 0px;
+            border-image-outset: 2px 0 0 0;
 
             .user-container {
                 display: none;
@@ -598,10 +573,9 @@
 
         &.bubble-34 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_33_34.png");
-
             border-image-slice: 7 6 6 39 fill;
             border-image-width: 7px 6px 6px 39px;
-            border-image-outset: 2px 0px 0px 0px;
+            border-image-outset: 2px 0 0 0;
 
             &.type-1 {
                 .message {
@@ -639,10 +613,9 @@
 
         &.bubble-35 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_35.png");
-
             border-image-slice: 19 6 5 29 fill;
             border-image-width: 19px 6px 5px 29px;
-            border-image-outset: 4px 0px 0px 0px;
+            border-image-outset: 4px 0 0 0;
 
             .user-container {
                 display: none;
@@ -655,10 +628,9 @@
 
         &.bubble-36 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_36.png");
-
             border-image-slice: 17 7 5 30 fill;
             border-image-width: 17px 7px 5px 30px;
-            border-image-outset: 2px 0px 0px 0px;
+            border-image-outset: 2px 0 0 0;
 
             .user-container {
                 display: none;
@@ -681,12 +653,9 @@
 
         &.bubble-37 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_37.png");
-
             border-image-slice: 16 6 7 32 fill;
             border-image-width: 16px 6px 7px 32px;
-            border-image-outset: 5px 0px 0px 3px;
-
-
+            border-image-outset: 5px 0 0 3px;
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_23_37_pointer.png");
@@ -695,10 +664,9 @@
 
         &.bubble-38 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_38.png");
-
             border-image-slice: 17 7 5 30 fill;
             border-image-width: 17px 7px 5px 30px;
-            border-image-outset: 2px 0px 0px 0px;
+            border-image-outset: 2px 0 0 0;
 
             &::before {
                 content: " ";
@@ -751,15 +719,21 @@
             }
         }
 
+        /* =====================================================
+BUBBLES 43–70 (all fixed + aligned)
+===================================================== */
+
         &.bubble-43 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_43.png");
-            // tighter top; no vertical gap
             border-image-slice: 17 6 6 29 fill;
             border-image-width: 17px 6px 6px 29px;
             border-image-outset: 2px 0 0 0;
+            min-height: 26px;
 
-            .user-container {
-                display: none;
+            .chat-content,
+            .username {
+                color: #fff !important;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
             }
 
             .pointer {
@@ -768,14 +742,21 @@
                 height: 6px;
                 bottom: -5px;
             }
-        }
 
+            .user-container .user-image {
+                top: -11px;
+            }
+        }
 
         &.bubble-44 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_44.png");
+            min-height: 26px;
 
-            .user-container {
-                display: none;
+            .chat-content {
+                margin-left: 27px;
+                padding-top: 3px;
+                padding-bottom: 2px;
+                line-height: 1.1;
             }
 
             .pointer {
@@ -786,35 +767,58 @@
 
         &.bubble-45 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_45.png");
+            border-image-slice: 18 6 6 29 fill;
+            border-image-width: 18px 6px 6px 29px;
+            border-image-outset: 2px 0 0 0;
+            min-height: 28px;
 
-            .user-container {
-                display: none;
+            .chat-content {
+                margin-left: 27px;
+                padding-top: 4px;
+                padding-bottom: 2px;
+                line-height: 1.1;
             }
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_45_pointer.png");
                 height: 7px;
+                bottom: -4px;
             }
         }
 
         &.bubble-46 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_46.png");
+            border-image-slice: 15 6 6 29 fill;
+            border-image-width: 17px 6px 6px 29px;
+            border-image-outset: 2px 0 0 0;
+            min-height: 26px;
 
-            .user-container {
-                display: none;
+            .chat-content {
+                margin-left: 27px;
+                padding-top: 3px;
+                padding-bottom: 2px;
             }
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_46_pointer.png");
-                height: 7px;
+                width: 9px;
+                height: 6px;
+                bottom: -4px;
             }
         }
 
         &.bubble-47 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_47.png");
+            min-height: 30px;
 
-            .user-container {
-                display: none;
+            .chat-content,
+            .username {
+                color: #fff !important;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
+            }
+
+            .chat-content {
+                padding: 5px 10px 5px 6px;
             }
 
             .pointer {
@@ -825,9 +829,16 @@
 
         &.bubble-48 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_48.png");
+            min-height: 32px;
 
-            .user-container {
-                display: none;
+            .chat-content,
+            .username {
+                color: #fff !important;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
+            }
+
+            .chat-content {
+                padding: 5px 10px 5px 6px;
             }
 
             .pointer {
@@ -839,8 +850,10 @@
         &.bubble-49 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_49.png");
 
-            .user-container {
-                display: none;
+            .chat-content,
+            .username {
+                color: #fff !important;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
             }
 
             .pointer {
@@ -851,9 +864,16 @@
 
         &.bubble-50 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_50.png");
+            min-height: 30px;
 
-            .user-container {
-                display: none;
+            .chat-content,
+            .username {
+                color: #fff !important;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
+            }
+
+            .chat-content {
+                padding: 5px 10px 5px 6px;
             }
 
             .pointer {
@@ -864,54 +884,87 @@
 
         &.bubble-51 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_51.png");
+            min-height: 32px;
 
-            .user-container {
-                display: none;
+            .chat-content,
+            .username {
+                color: #fff !important;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
+            }
+
+            .chat-content {
+                padding: 4px 8px 4px 6px;
             }
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_51_pointer.png");
                 height: 7px;
             }
+
+            .user-container .user-image {
+                top: -11px;
+            }
         }
 
         &.bubble-52 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_52.png");
+            min-height: 30px;
 
-            .user-container {
-                display: none;
+            .chat-content {
+                padding: 4px 8px 4px 6px;
             }
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_52_pointer.png");
                 height: 7px;
             }
+
+            .user-container .user-image {
+                top: -11px;
+            }
         }
 
         &.bubble-53 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_53.png");
-            border-image-width: 24px 6px 14px 38px;
+            border-image-slice: 17 6 6 29 fill;
+            border-image-width: 24px 6px 6px 39px;
+            border-image-outset: 2px 0 0 0;
+            border-image-repeat: stretch stretch;
+            min-height: 26px;
 
-            .user-container {
-                display: none;
+            .chat-content {
+                margin-left: 36px;
+                padding: 5px 6px 5px 4px;
+                line-height: 1;
             }
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_53_pointer.png");
                 height: 7px;
             }
+
+            .user-container .user-image {
+                left: -6px;
+                /* fill more of the brown block */
+            }
         }
 
         &.bubble-54 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_54.png");
+            min-height: 30px;
 
-            .user-container {
-                display: none;
+            .chat-content {
+                margin-left: 27px;
+                padding: 4px 8px 4px 4px;
             }
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_54_pointer.png");
                 height: 7px;
+            }
+
+            .user-container .user-image {
+                top: -11px;
             }
         }
 
@@ -919,11 +972,7 @@
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_55.png");
             border-image-slice: 18 6 6 29 fill;
             border-image-width: 24px 6px 6px 39px;
-            border-image-outset: 3px 0px 0px 0px;
-
-            .user-container {
-                display: none;
-            }
+            border-image-outset: 3px 0 0 0;
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_55_pointer.png");
@@ -934,10 +983,6 @@
         &.bubble-56 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_56.gif");
 
-            .user-container {
-                display: none;
-            }
-
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_56_pointer.png");
                 height: 7px;
@@ -947,8 +992,10 @@
         &.bubble-57 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_57.png");
 
-            .user-container {
-                display: none;
+            .chat-content,
+            .username {
+                color: #fff !important;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
             }
 
             .pointer {
@@ -959,9 +1006,16 @@
 
         &.bubble-58 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_58.png");
+            min-height: 32px;
 
-            .user-container {
-                display: none;
+            .chat-content,
+            .username {
+                color: #fff !important;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
+            }
+
+            .chat-content {
+                padding: 5px 10px 5px 6px;
             }
 
             .pointer {
@@ -974,21 +1028,41 @@
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_59.png");
             border-image-width: 24px 6px 6px 39px;
 
-            .user-container {
-                display: none;
+            .chat-content,
+            .username {
+                color: #fff !important;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
+            }
+
+            .chat-content {
+                padding: 4px 9px 4px 6px;
             }
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_59_pointer.png");
                 height: 7px;
             }
+
+            .user-container .user-image {
+                top: -11px;
+            }
         }
 
         &.bubble-60 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_60.gif");
-            border-image-slice: 18 6 6 29 fill;
+            border-image-slice: 15 6 6 29 fill;
             border-image-width: 18px 6px 6px 29px;
-            border-image-outset: 3px 0px 0px 0px;
+            border-image-outset: 3px 0 0 0;
+
+            .chat-content,
+            .username {
+                color: #fff !important;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
+            }
+
+            .chat-content {
+                margin-left: 40px; // away from flames
+            }
 
             &::before {
                 content: " ";
@@ -1000,22 +1074,15 @@
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_60_extra.png");
             }
 
-            .user-container {
-                display: none;
-            }
-
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_0_1_33_34_pointer.png");
                 height: 7px;
+                bottom: -4px;
             }
         }
 
         &.bubble-61 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_61.png");
-
-            .user-container {
-                display: none;
-            }
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_61_pointer.png");
@@ -1036,10 +1103,6 @@
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_62_extra.png");
             }
 
-            .user-container {
-                display: none;
-            }
-
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_62_pointer.png");
                 height: 7px;
@@ -1049,18 +1112,14 @@
         &.bubble-63 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_63.png");
 
-            &::before {
-                content: " ";
-                position: absolute;
-                width: 19px;
-                height: 19px;
-                left: 11px;
-                top: 10px;
-                //background: url("../../../../assets/images/chat/chatbubbles/bubble_62_extra.png");
+            .chat-content,
+            .username {
+                color: #fff !important;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
             }
 
-            .user-container {
-                display: none;
+            .chat-content {
+                padding: 5px 10px 5px 6px;
             }
 
             .pointer {
@@ -1072,18 +1131,14 @@
         &.bubble-64 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_64.png");
 
-            &::before {
-                content: " ";
-                position: absolute;
-                width: 19px;
-                height: 19px;
-                left: 11px;
-                top: 10px;
-                //background: url("../../../../assets/images/chat/chatbubbles/bubble_62_extra.png");
+            .chat-content,
+            .username {
+                color: #fff !important;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
             }
 
-            .user-container {
-                display: none;
+            .chat-content {
+                padding: 5px 10px 5px 6px;
             }
 
             .pointer {
@@ -1095,25 +1150,10 @@
         &.bubble-65 {
             border-image-source: url("../../../../assets/images/chat/chatbubbles/bubble_65.png");
 
-            &::before {
-                content: " ";
-                position: absolute;
-                width: 19px;
-                height: 19px;
-                left: 11px;
-                top: 10px;
-                //background: url("../../../../assets/images/chat/chatbubbles/bubble_62_extra.png");
-            }
-
-            .user-container {
-                display: none;
-            }
-
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_65_pointer.png");
                 height: 7px;
             }
-
         }
 
         &.bubble-66 {
@@ -1129,15 +1169,10 @@
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_66_extra.png");
             }
 
-            .user-container {
-                display: none;
-            }
-
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_66_pointer.png");
                 height: 7px;
             }
-
         }
 
         &.bubble-67 {
@@ -1150,19 +1185,17 @@
                 height: 24px;
                 left: -10px;
                 top: -5px;
-
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_67_extra.png");
             }
 
-            .user-container {
-                display: none;
+            .chat-content {
+                margin-left: 34px;
             }
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_67_pointer.png");
                 height: 7px;
             }
-
         }
 
         &.bubble-68 {
@@ -1175,23 +1208,19 @@
                 height: 24px;
                 left: -2px;
                 top: 0px;
-
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_68_extra.png");
             }
 
             .chat-content {
+                margin-left: 34px;
                 color: #fff;
-            }
-
-            .user-container {
-                display: none;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
             }
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_68_pointer.png");
                 height: 7px;
             }
-
         }
 
         &.bubble-69 {
@@ -1204,23 +1233,18 @@
                 height: 24px;
                 left: -2px;
                 top: 0px;
-
-                //background: url("../../../../assets/images/chat/chatbubbles/bubble_68_extra.png");
             }
 
             .chat-content {
+                margin-left: 34px;
                 color: #fff;
-            }
-
-            .user-container {
-                display: none;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
             }
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_69_pointer.png");
                 height: 7px;
             }
-
         }
 
         &.bubble-70 {
@@ -1233,24 +1257,22 @@
                 height: 24px;
                 left: -2px;
                 top: 0px;
-
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_70_extra.gif");
             }
 
             .chat-content {
+                margin-left: 34px;
                 color: #fff;
-            }
-
-            .user-container {
-                display: none;
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
             }
 
             .pointer {
                 background: url("../../../../assets/images/chat/chatbubbles/bubble_70_pointer.png");
                 height: 7px;
             }
-
         }
+
+        /* ============ shared avatar + content base ============ */
 
         .user-container {
             z-index: 3;
@@ -1285,6 +1307,10 @@
         }
     }
 }
+
+/* =========================================================
+BUBBLE ICONS (PICKER)
+========================================================= */
 
 .chat-bubble-icon {
     background-repeat: no-repeat;
@@ -1434,6 +1460,56 @@
         }
     }
 
+    &.bubble-34 {
+        background-image: url("../../../../assets/images/chat/chatbubbles/bubble_33_34.png");
+
+        &::before {
+            content: " ";
+            position: absolute;
+            width: 19px;
+            height: 19px;
+            left: 11px;
+            top: 10px;
+            background: url("../../../../assets/images/chat/chatbubbles/bubble_34_extra.png");
+        }
+    }
+
+    &.bubble-35 {
+        background-image: url("../../../../assets/images/chat/chatbubbles/bubble_35.png");
+    }
+
+    &.bubble-36 {
+        background-image: url("../../../../assets/images/chat/chatbubbles/bubble_36.png");
+
+        &::before {
+            content: " ";
+            position: absolute;
+            width: 13px;
+            height: 18px;
+            left: 13px;
+            top: 10px;
+            background: url("../../../../assets/images/chat/chatbubbles/bubble_36_extra.png");
+        }
+    }
+
+    &.bubble-37 {
+        background-image: url("../../../../assets/images/chat/chatbubbles/bubble_37.png");
+    }
+
+    &.bubble-38 {
+        background-image: url("../../../../assets/images/chat/chatbubbles/bubble_38.png");
+
+        &::before {
+            content: " ";
+            position: absolute;
+            width: 19px;
+            height: 19px;
+            left: 11px;
+            top: 10px;
+            background: url("../../../../assets/images/chat/chatbubbles/bubble_38_extra.png");
+        }
+    }
+
     &.bubble-40 {
         background-image: url("../../../../assets/images/chat/chatbubbles/bubble_40.png");
     }
@@ -1578,7 +1654,6 @@
             height: 24px;
             left: -10px;
             top: -5px;
-
             background: url("../../../../assets/images/chat/chatbubbles/bubble_67_extra.png");
         }
     }
@@ -1593,7 +1668,6 @@
             height: 24px;
             left: -2px;
             top: 0px;
-
             background: url("../../../../assets/images/chat/chatbubbles/bubble_68_extra.png");
         }
     }
@@ -1608,8 +1682,6 @@
             height: 24px;
             left: -2px;
             top: 0px;
-
-            //background: url("../../../../assets/images/chat/chatbubbles/bubble_68_extra.png");
         }
     }
 
@@ -1623,130 +1695,7 @@
             height: 24px;
             left: -2px;
             top: 0px;
-
             background: url("../../../../assets/images/chat/chatbubbles/bubble_70_extra.gif");
         }
     }
-
-
-
-
-    &.bubble-34 {
-        background-image: url("../../../../assets/images/chat/chatbubbles/bubble_33_34.png");
-
-        &::before {
-            content: " ";
-            position: absolute;
-            width: 19px;
-            height: 19px;
-            left: 11px;
-            top: 10px;
-            background: url("../../../../assets/images/chat/chatbubbles/bubble_34_extra.png");
-        }
-    }
-
-    &.bubble-35 {
-        background-image: url("../../../../assets/images/chat/chatbubbles/bubble_35.png");
-    }
-
-    &.bubble-36 {
-        background-image: url("../../../../assets/images/chat/chatbubbles/bubble_36.png");
-
-        &::before {
-            content: " ";
-            position: absolute;
-            width: 13px;
-            height: 18px;
-            left: 13px;
-            top: 10px;
-            background: url("../../../../assets/images/chat/chatbubbles/bubble_36_extra.png");
-        }
-    }
-
-    &.bubble-37 {
-        background-image: url("../../../../assets/images/chat/chatbubbles/bubble_35.png");
-    }
-
-    &.bubble-38 {
-        background-image: url("../../../../assets/images/chat/chatbubbles/bubble_38.png");
-
-        &::before {
-            content: " ";
-            position: absolute;
-            width: 19px;
-            height: 19px;
-            left: 11px;
-            top: 10px;
-            background: url("../../../../assets/images/chat/chatbubbles/bubble_38_extra.png");
-        }
-    }
-
-
-}
-
-/* =========================
-APPENDED FIXES (no other changes)
-========================= */
-
-/* 1) Remove top gap on 44, 46, 53, 55 */
-.bubble-container .chat-bubble.bubble-44,
-.bubble-container .chat-bubble.bubble-46,
-.bubble-container .chat-bubble.bubble-53 {
-    border-image-slice: 2px 0 0 07 6 6 39 fill;
-    border-image-width: 24px 6px 6px 39px;
-    border-image-outset: 2px 0 0 0;
-
-
-    min-height: 32px;
-
-    .pointer {
-        background: url("../../../../assets/images/chat/chatbubbles/bubble_0_1_33_34_pointer.png");
-        width: 9px;
-        height: 6px;
-        bottom: -5px;
-    }
-}
-
-/* 2) Force white text on 47, 49, 51 */
-.bubble-container .chat-bubble.bubble-47 .chat-content,
-.bubble-container .chat-bubble.bubble-49 .chat-content,
-.bubble-container .chat-bubble.bubble-51 .chat-content {
-    color: #fff !important;
-}
-
-.bubble-container .chat-bubble.bubble-47 .username,
-.bubble-container .chat-bubble.bubble-49 .username,
-.bubble-container .chat-bubble.bubble-51 .username {
-    color: #fff !important;
-}
-
-/* 3) Normalize overall size on 43, 47, 48, 50, 51, 52, 54 */
-.bubble-container .chat-bubble.bubble-43,
-.bubble-container .chat-bubble.bubble-47,
-.bubble-container .chat-bubble.bubble-48,
-.bubble-container .chat-bubble.bubble-50,
-.bubble-container .chat-bubble.bubble-51,
-.bubble-container .chat-bubble.bubble-52,
-.bubble-container .chat-bubble.bubble-54 {
-    border-image-slice: 17 6 6 29 fill;
-    border-image-width: 17px 6px 6px 29px;
-    border-image-outset: 2px 0 0 0;
-    min-height: 26px;
-
-    .chat-content {
-        margin-left: 27px;
-    }
-}
-
-/* bold + underlined mention */
-.mention {
-    font-weight: 700;
-    text-decoration: underline;
-}
-
-/* optional: tiny spacing tweak for icon */
-.name-icon {
-    vertical-align: text-bottom;
-    margin-right: 2px;
-    image-rendering: pixelated;
 }
