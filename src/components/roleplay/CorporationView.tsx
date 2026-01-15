@@ -50,6 +50,36 @@ interface RankMeta {
 type Pos = { x: number; y: number };
 const STORAGE_KEY = "olrp.corporations.pos";
 
+// NEW: filters + persistence
+const FILTERS_KEY = "olrp.corporations.memberFilters";
+
+type MemberFilters = {
+    showWeekly: boolean;
+    showTotal: boolean;
+    showLastOnline: boolean;
+};
+
+const DEFAULT_FILTERS: MemberFilters = {
+    showWeekly: true,
+    showTotal: true,
+    showLastOnline: true,
+};
+
+const formatLastOnlineAgo = (lastOnlineUnix?: number) => {
+    if (!lastOnlineUnix || lastOnlineUnix <= 0) return "";
+
+    const now = Math.floor(Date.now() / 1000);
+    const diff = Math.max(0, now - lastOnlineUnix);
+
+    if (diff < 60) return "Just now";
+    const mins = Math.floor(diff / 60);
+    if (mins < 60) return `${mins}mins ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}hrs ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}days ago`;
+};
+
 export const CorporationsView: FC<CorporationsViewProps> = ({
     onClose,
     currentUserId,
@@ -71,6 +101,29 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
     const [ranksByCorp, setRanksByCorp] = useState<Record<number, RankMeta[]>>(
         {}
     );
+
+    // NEW: show/hide toggles
+    const safeGet = <T,>(key: string): T | null => {
+        try {
+            return JSON.parse(localStorage.getItem(key) || "null");
+        } catch {
+            return null;
+        }
+    };
+    const safeSet = <T,>(key: string, value: T) => {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch {}
+    };
+
+    const [memberFilters, setMemberFilters] = useState<MemberFilters>(() => {
+        const saved = safeGet<MemberFilters>(FILTERS_KEY);
+        return saved ? { ...DEFAULT_FILTERS, ...saved } : DEFAULT_FILTERS;
+    });
+
+    useEffect(() => {
+        safeSet(FILTERS_KEY, memberFilters);
+    }, [memberFilters]);
 
     // search/hire
     const [memberSearch, setMemberSearch] = useState("");
@@ -111,18 +164,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
             y: Math.min(Math.max(0, p.y), maxY),
         };
     };
-    const safeGet = <T,>(key: string): T | null => {
-        try {
-            return JSON.parse(localStorage.getItem(key) || "null");
-        } catch {
-            return null;
-        }
-    };
-    const safeSet = <T,>(key: string, value: T) => {
-        try {
-            localStorage.setItem(key, JSON.stringify(value));
-        } catch {}
-    };
+
     const getIconUrl = (icon?: string) =>
         icon
             ? /^https?:\/\//i.test(icon)
@@ -330,10 +372,60 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
         const onMembers = (ev: Event) => {
             const detail: any = (ev as CustomEvent).detail;
             const raw: any[] = (detail?.members ?? detail ?? []) as any[];
-            const m: CorpMember[] = raw.map((row) => ({
-                ...row,
-                figure: row.figure ?? row.look ?? "",
-            }));
+
+            const m: CorpMember[] = raw.map((row) => {
+                // Normalize keys from server to what UI expects.
+                // weekly_shifts from corporation_members
+                const weekly =
+                    row.weeklyShifts ??
+                    row.weekly_shifts ??
+                    row.weekly ??
+                    undefined;
+
+                // shifts_completed from users_stats
+                const total =
+                    row.totalShifts ??
+                    row.total_shifts ??
+                    row.shiftsCompleted ??
+                    row.shifts_completed ??
+                    undefined;
+
+                // last online (users_stats.last_online or users.last_online)
+                const lastOnline =
+                    row.lastOnline ??
+                    row.last_online ??
+                    row.lastOnlineUnix ??
+                    undefined;
+
+                const weeklyNum =
+                    weekly === undefined || weekly === null
+                        ? undefined
+                        : Number(weekly);
+                const totalNum =
+                    total === undefined || total === null
+                        ? undefined
+                        : Number(total);
+                const lastNum =
+                    lastOnline === undefined || lastOnline === null
+                        ? 0
+                        : Number(lastOnline);
+
+                return {
+                    ...row,
+                    figure: row.figure ?? row.look ?? "",
+                    weeklyShifts: Number.isFinite(weeklyNum as number)
+                        ? (weeklyNum as number)
+                        : undefined,
+                    totalShifts: Number.isFinite(totalNum as number)
+                        ? (totalNum as number)
+                        : undefined,
+                    lastSeenAgo:
+                        row.lastSeenAgo ??
+                        row.last_seen_ago ??
+                        formatLastOnlineAgo(lastNum),
+                };
+            });
+
             setMembers(m);
             setMembersLoading(false);
 
@@ -343,6 +435,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
             setRefreshFlash(true);
             setTimeout(() => setRefreshFlash(false), 180);
         };
+
         window.addEventListener(
             "corporation_members_result",
             onMembers as EventListener
@@ -698,6 +791,59 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                                     </div>
                                 )}
 
+                                {/* NEW: Options / Filters */}
+                                <div className="corp-options">
+                                    <div className="corp-options-title">
+                                        Options
+                                    </div>
+
+                                    <label className="corp-option">
+                                        <input
+                                            type="checkbox"
+                                            checked={memberFilters.showWeekly}
+                                            onChange={(e) =>
+                                                setMemberFilters((p) => ({
+                                                    ...p,
+                                                    showWeekly:
+                                                        e.target.checked,
+                                                }))
+                                            }
+                                        />
+                                        <span>Show weekly shifts</span>
+                                    </label>
+
+                                    <label className="corp-option">
+                                        <input
+                                            type="checkbox"
+                                            checked={memberFilters.showTotal}
+                                            onChange={(e) =>
+                                                setMemberFilters((p) => ({
+                                                    ...p,
+                                                    showTotal: e.target.checked,
+                                                }))
+                                            }
+                                        />
+                                        <span>Show total shifts</span>
+                                    </label>
+
+                                    <label className="corp-option">
+                                        <input
+                                            type="checkbox"
+                                            checked={
+                                                memberFilters.showLastOnline
+                                            }
+                                            onChange={(e) =>
+                                                setMemberFilters((p) => ({
+                                                    ...p,
+                                                    showLastOnline:
+                                                        e.target.checked,
+                                                }))
+                                            }
+                                        />
+                                        <span>Show last online</span>
+                                    </label>
+                                </div>
+
                                 {membersLoading && currentRanks.length === 0 ? (
                                     <div className="members-skeleton">
                                         <div className="skel-card" />
@@ -820,34 +966,40 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                                                                                     }
                                                                                 </span>
                                                                             </div>
+
                                                                             <div className="member-stats">
-                                                                                {typeof m.weeklyShifts ===
-                                                                                    "number" && (
-                                                                                    <span className="stat">
-                                                                                        {
-                                                                                            m.weeklyShifts
-                                                                                        }{" "}
-                                                                                        Weekly
-                                                                                        Shifts
-                                                                                    </span>
-                                                                                )}
-                                                                                {typeof m.totalShifts ===
-                                                                                    "number" && (
-                                                                                    <span className="stat">
-                                                                                        {
-                                                                                            m.totalShifts
-                                                                                        }{" "}
-                                                                                        Total
-                                                                                        Shifts
-                                                                                    </span>
-                                                                                )}
-                                                                                {m.lastSeenAgo && (
-                                                                                    <span className="stat dim">
-                                                                                        {
-                                                                                            m.lastSeenAgo
-                                                                                        }
-                                                                                    </span>
-                                                                                )}
+                                                                                {memberFilters.showWeekly &&
+                                                                                    typeof m.weeklyShifts ===
+                                                                                        "number" && (
+                                                                                        <span className="stat">
+                                                                                            {
+                                                                                                m.weeklyShifts
+                                                                                            }{" "}
+                                                                                            Weekly
+                                                                                            Shifts
+                                                                                        </span>
+                                                                                    )}
+
+                                                                                {memberFilters.showTotal &&
+                                                                                    typeof m.totalShifts ===
+                                                                                        "number" && (
+                                                                                        <span className="stat">
+                                                                                            {
+                                                                                                m.totalShifts
+                                                                                            }{" "}
+                                                                                            Total
+                                                                                            Shifts
+                                                                                        </span>
+                                                                                    )}
+
+                                                                                {memberFilters.showLastOnline &&
+                                                                                    m.lastSeenAgo && (
+                                                                                        <span className="stat dim">
+                                                                                            {
+                                                                                                m.lastSeenAgo
+                                                                                            }
+                                                                                        </span>
+                                                                                    )}
                                                                             </div>
 
                                                                             {showActions && (
