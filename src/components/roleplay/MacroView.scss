@@ -238,26 +238,38 @@ CONTENT
     display: flex;
     align-items: center;
     gap: 8px;
+    width: 100%;
+    min-width: 0; // IMPORTANT so children can shrink
 }
 
 .preset-select {
-    height: 34px;
-    border-radius: 8px;
-    border: 1px solid #c9c9c9;
-    background: #fff;
-    padding: 0 10px;
-    font-weight: 700;
-    min-width: 160px;
-    font-size: 13px;
+    flex: 0 0 140px; // fixed-ish
+    max-width: 160px;
 }
 
 .preset-rename {
-    height: 30px;
-    border-radius: 6px;
-    border: 1px solid #d8d8d8;
-    padding: 4px 8px;
-    background: #f6f6f6;
-    font-size: 12px;
+    flex: 1 1 auto; // this is what should shrink
+    min-width: 0; // IMPORTANT to prevent pushing buttons offscreen
+}
+
+.preset-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+/* Optional: if your module is narrow, allow actions to wrap under */
+@media (max-width: 520px) {
+    .preset-wrap {
+        flex-wrap: wrap;
+    }
+
+    .preset-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
 }
 
 .habbo-link {

@@ -2,7 +2,14 @@ import {
     HabboClubLevelEnum,
     RoomControllerLevel,
 } from "@nitrots/nitro-renderer";
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+    FC,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { createPortal } from "react-dom";
 import {
     ChatMessageTypeEnum,
@@ -43,6 +50,7 @@ const eventToKeyString = (e: KeyboardEvent): string | null => {
         e.key === "Meta"
     )
         return null;
+
     const code = (e.code || e.key) as string;
     return code === " " ? "Space" : code;
 };
@@ -80,6 +88,7 @@ export const ChatInputView: FC<{}> = () => {
         setIsIdle = null,
         sendChat = null,
     } = useChatInputWidget();
+
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Emoji popover
@@ -100,9 +109,11 @@ export const ChatInputView: FC<{}> = () => {
     const hydrateMacros = useCallback(() => {
         const { enabled, macros } = readActiveMacros();
         macrosEnabledRef.current = enabled;
+
         const m = new Map<string, string>();
-        for (const row of macros)
+        for (const row of macros) {
             if (row?.key && row?.command) m.set(row.key, row.command);
+        }
         macrosMapRef.current = m;
 
         perKeyCooldownRef.current = readNumberLS(
@@ -128,8 +139,9 @@ export const ChatInputView: FC<{}> = () => {
                     LS_COOLDOWN_PER_KEY,
                     LS_COOLDOWN_GLOBAL,
                 ].includes(e.key || "")
-            )
+            ) {
                 hydrateMacros();
+            }
         };
 
         const onMacrosChanged = () => hydrateMacros(); // <-- same-tab refresh
@@ -138,6 +150,7 @@ export const ChatInputView: FC<{}> = () => {
             const detail = (ev as CustomEvent)?.detail as
                 | { command?: string }
                 | undefined;
+
             if (detail?.command) {
                 setChatValue(detail.command);
                 sendChatValue(detail.command, false);
@@ -163,6 +176,7 @@ export const ChatInputView: FC<{}> = () => {
                 onMacroRun as EventListener
             );
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hydrateMacros]);
 
     // curated emojis
@@ -209,6 +223,7 @@ export const ChatInputView: FC<{}> = () => {
         ],
         []
     );
+
     const buttonEmoji = useMemo(
         () => EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
         [EMOJIS]
@@ -226,6 +241,7 @@ export const ChatInputView: FC<{}> = () => {
         () => LocalizeText("widgets.chatinput.mode.speak"),
         []
     );
+
     const maxChatLength = useMemo(
         () => GetConfiguration<number>("chat.input.maxlength", 100),
         []
@@ -234,14 +250,25 @@ export const ChatInputView: FC<{}> = () => {
     const anotherInputHasFocus = useCallback(() => {
         const activeElement = document.activeElement;
         if (!activeElement) return false;
+
+        // if our chat input is focused, that's fine
         if (inputRef.current && inputRef.current === activeElement)
             return false;
+
+        // if some other input/textarea is focused, treat it as "another input"
         if (
             !(activeElement instanceof HTMLInputElement) &&
             !(activeElement instanceof HTMLTextAreaElement)
         )
             return false;
+
         return true;
+    }, []);
+
+    const isChatFocused = useCallback(() => {
+        return (
+            !!inputRef.current && document.activeElement === inputRef.current
+        );
     }, []);
 
     const setInputFocus = useCallback(() => {
@@ -337,51 +364,63 @@ export const ChatInputView: FC<{}> = () => {
         [setIsTyping, setIsIdle]
     );
 
-    /* ===== Global keydown: includes macro hotkeys with cooldowns ===== */
+    /* ===== Global keydown: macro hotkeys + normal chat behavior ===== */
     const onKeyDownEvent = useCallback(
         (event: KeyboardEvent) => {
-            // 1) Try macro first — block auto-repeat to avoid spam
-            if (event.repeat) return;
+            // -------------------------
+            // 1) Macros ONLY when chat input is NOT focused
+            // -------------------------
+            if (
+                !event.repeat &&
+                macrosEnabledRef.current &&
+                !floodBlocked &&
+                !anotherInputHasFocus() && // don't trigger while typing in other inputs
+                !isChatFocused() // ✅ the key rule: if chat is focused, ignore macros entirely
+            ) {
+                const k = eventToKeyString(event);
 
-            const k = eventToKeyString(event);
-            if (k && macrosEnabledRef.current) {
-                const macroCmd = macrosMapRef.current.get(k);
-                if (macroCmd && !floodBlocked) {
-                    const now = performance.now();
+                if (k) {
+                    const macroCmd = macrosMapRef.current.get(k);
 
-                    // global cooldown
-                    if (
-                        now - lastGlobalFireRef.current <
-                        globalCooldownRef.current
-                    ) {
+                    if (macroCmd) {
+                        const now = performance.now();
+
+                        // global cooldown
+                        if (
+                            now - lastGlobalFireRef.current <
+                            globalCooldownRef.current
+                        ) {
+                            event.preventDefault();
+                            return;
+                        }
+
+                        // per-key cooldown
+                        const lastForKey = lastKeyFireRef.current.get(k) || 0;
+                        if (now - lastForKey < perKeyCooldownRef.current) {
+                            event.preventDefault();
+                            return;
+                        }
+
+                        // ✅ Only block default if we are actually firing a macro
                         event.preventDefault();
+
+                        lastGlobalFireRef.current = now;
+                        lastKeyFireRef.current.set(k, now);
+
+                        // focus the chat box so user sees what happened
+                        if (inputRef.current) inputRef.current.focus();
+
+                        setChatValue(macroCmd);
+                        sendChatValue(macroCmd, false);
+                        setEmojiOpen(false);
                         return;
                     }
-                    // per-key cooldown
-                    const lastForKey = lastKeyFireRef.current.get(k) || 0;
-                    if (now - lastForKey < perKeyCooldownRef.current) {
-                        event.preventDefault();
-                        return;
-                    }
-
-                    event.preventDefault();
-                    lastGlobalFireRef.current = now;
-                    lastKeyFireRef.current.set(k, now);
-
-                    if (
-                        inputRef.current &&
-                        document.activeElement !== inputRef.current
-                    )
-                        inputRef.current.focus();
-
-                    setChatValue(macroCmd);
-                    sendChatValue(macroCmd, false);
-                    setEmojiOpen(false);
-                    return;
                 }
             }
 
+            // -------------------------
             // 2) Regular input handling
+            // -------------------------
             if (floodBlocked || !inputRef.current || anotherInputHasFocus())
                 return;
 
@@ -394,11 +433,13 @@ export const ChatInputView: FC<{}> = () => {
                 case "Space":
                     checkSpecialKeywordForInput();
                     return;
+
                 case "NumpadEnter":
                 case "Enter":
                     sendChatValue(value, event.shiftKey);
                     setEmojiOpen(false);
                     return;
+
                 case "Backspace":
                     if (value) {
                         const parts = value.split(" ");
@@ -416,6 +457,7 @@ export const ChatInputView: FC<{}> = () => {
         [
             floodBlocked,
             anotherInputHasFocus,
+            isChatFocused,
             setInputFocus,
             checkSpecialKeywordForInput,
             sendChatValue,
@@ -608,7 +650,9 @@ export const ChatInputView: FC<{}> = () => {
                                             el.value.slice(0, start) +
                                             e +
                                             el.value.slice(end);
+
                                         setChatValue(next);
+
                                         requestAnimationFrame(() => {
                                             el.focus();
                                             const pos = start + e.length;

@@ -344,6 +344,7 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                         className="close-button"
                         onClick={onClose}
                         aria-label="Close"
+                        type="button"
                     >
                         ×
                     </button>
@@ -416,23 +417,35 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                                 placeholder="Preset name"
                             />
 
-                            <button
-                                className="habbo-red-btn"
-                                onClick={() =>
-                                    canDeleteThisPreset &&
-                                    activePreset &&
-                                    deletePreset(activePreset.id)
-                                }
-                                disabled={!canDeleteThisPreset}
-                                title={
-                                    canDeleteThisPreset
-                                        ? "Delete preset"
-                                        : "Keep at least one preset"
-                                }
-                                type="button"
-                            >
-                                Delete
-                            </button>
+                            {/* ✅ Wrap buttons so they never push out of view */}
+                            <div className="preset-actions">
+                                <button
+                                    className="habbo-green-btn"
+                                    type="button"
+                                    onClick={openAddModal}
+                                    title="Add macro"
+                                >
+                                    Add
+                                </button>
+
+                                <button
+                                    className="habbo-red-btn"
+                                    onClick={() =>
+                                        canDeleteThisPreset &&
+                                        activePreset &&
+                                        deletePreset(activePreset.id)
+                                    }
+                                    disabled={!canDeleteThisPreset}
+                                    title={
+                                        canDeleteThisPreset
+                                            ? "Delete preset"
+                                            : "Keep at least one preset"
+                                    }
+                                    type="button"
+                                >
+                                    Delete
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -472,6 +485,7 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                                     <button
                                         className="habbo-red-btn"
                                         onClick={() => removeMacro(m.id)}
+                                        type="button"
                                     >
                                         Delete
                                     </button>
@@ -500,6 +514,7 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                                 setCaptureArmed(false);
                             }}
                             aria-label="Close"
+                            type="button"
                         >
                             ×
                         </button>
