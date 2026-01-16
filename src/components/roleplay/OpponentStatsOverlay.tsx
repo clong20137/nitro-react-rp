@@ -69,7 +69,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     const [hiding, setHiding] = useState(false);
     const lastWatchedIdRef = useRef<number>(0);
 
-    const mergeUpdate = (payload: OpponentStats) => {
+    const mergeUpdatefUpdate = (payload: OpponentStats) => {
         setStats((prev) => {
             if (!prev) return { ...payload };
             if (prev.userId !== payload.userId) return { ...payload };
@@ -86,7 +86,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
         } catch {}
     };
 
-    // Listen for inspect update packets
     useEffect(() => {
         const onStats = (e: Event) => {
             const payload = (e as CustomEvent<any>).detail as
@@ -94,7 +93,13 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                 | undefined;
             if (!payload || !payload.userId) return;
 
-            mergeUpdate(payload);
+            // merge
+            setStats((prev) => {
+                if (!prev) return { ...payload };
+                if (prev.userId !== payload.userId) return { ...payload };
+                return { ...prev, ...payload };
+            });
+
             sendWatch(payload.userId);
             setHiding(false);
         };
@@ -152,7 +157,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
         return `https://www.habbo.com/habbo-imaging/avatarimage?figure=${stats.figure}&direction=4&head_direction=4&gesture=sml`;
     }, [stats?.figure]);
 
-    /** 🔥 PATCHED: FULL opponent → MyProfileView payload */
+    /** ONLY open profile when clicking the avatar image (not X/lock) */
     const openProfile = () => {
         if (!stats) return;
 
@@ -161,25 +166,21 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                 detail: {
                     userId: stats.userId,
 
-                    // identity
                     username: stats.username,
                     figure: stats.figure,
                     motto: stats.motto,
 
-                    // xp / level
                     xp: stats.xp ?? 0,
                     maxXP: stats.maxXP ?? 1,
                     level: stats.level ?? 0,
                     points: stats.points ?? 0,
 
-                    // core combat stats
                     strength: stats.strength ?? 0,
                     stamina: stats.stamina ?? 0,
                     defense: stats.defense ?? 0,
                     gathering: stats.gathering ?? 0,
                     healthlevel: stats.healthlevel ?? 0,
 
-                    // fighting counters (canonical names)
                     punches: stats.punches ?? 0,
                     damageGiven: stats.damageGiven ?? 0,
                     damageReceived: stats.damageReceived ?? 0,
@@ -189,19 +190,16 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                     shiftsWorked: stats.shiftsWorked ?? 0,
                     arrests: stats.arrests ?? 0,
 
-                    // employment
                     jobTitle: stats.jobTitle,
                     corporationName: stats.corporationName,
                     corporationIconUrl: stats.corporationIconUrl,
 
-                    // gang visual data
                     gangId: stats.gangId,
                     gangName: stats.gangName,
                     gangIconKey: stats.gangIconKey,
                     gangPrimaryColor: stats.gangPrimaryColor,
                     gangSecondaryColor: stats.gangSecondaryColor,
 
-                    // meta
                     createdAt: stats.createdAt,
                     lastLogin: stats.lastLogin,
                     lastSeenAgo: stats.lastSeenAgo,
@@ -214,22 +212,28 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     if (!stats) return null;
 
     const xpPct = percent(stats.xp ?? 0, stats.maxXP ?? 1);
-    const aggressionPct = percent(stats.aggressionMs ?? 0, 45000);
+    const aggressionPct = percent(stats.aggressionMs ?? 0, 45_000);
 
-    const handleClose = () => {
+    const handleClose = (e: React.MouseEvent) => {
+        e.stopPropagation(); // ✅ prevents openProfile
         setHiding(true);
         setTimeout(() => {
             sendWatch(0);
             setStats(null);
             setLocked(false);
             window.dispatchEvent(new CustomEvent("user_inspect_clear"));
+            onClose?.();
         }, 180);
     };
 
-    const toggleLock = () => {
+    const toggleLock = (e: React.MouseEvent) => {
+        e.stopPropagation(); // ✅ prevents openProfile
         if (!stats) return;
+
         const next = !locked;
         setLocked(next);
+
+        // target lock only — no profile open
         SendMessageComposer(
             new SetTargetComposer(next ? stats.userId : 0, next)
         );
@@ -250,11 +254,11 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                     hiding ? "fade-out" : "fade-in"
                 }`}
             >
-                {/* LEFT: bars */}
+                {/* ✅ LEFT: bars (now actually LEFT due to CSS fix below) */}
                 <div className="stats-right">
                     <div className="stat">
                         <div className="icons heart" />
-                        <div className="bar">
+                        <div className="bar health-bar">
                             <div
                                 className="fill health"
                                 style={{
@@ -264,7 +268,8 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                     )}%`,
                                 }}
                             />
-                            <div className="bar-text">
+                            {/* ✅ use same class as self */}
+                            <div className="bar-value">
                                 {stats.health} / {stats.maxHealth}
                             </div>
                         </div>
@@ -272,7 +277,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
 
                     <div className="stat">
                         <div className="icons bolt" />
-                        <div className="bar">
+                        <div className="bar energy-bar">
                             <div
                                 className="fill energy"
                                 style={{
@@ -282,7 +287,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                     )}%`,
                                 }}
                             />
-                            <div className="bar-text">
+                            <div className="bar-value">
                                 {stats.energy} / {stats.maxEnergy}
                             </div>
                         </div>
@@ -290,7 +295,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
 
                     <div className="stat">
                         <div className="icons apple" />
-                        <div className="bar">
+                        <div className="bar hunger-bar">
                             <div
                                 className="fill hunger"
                                 style={{
@@ -300,7 +305,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                     )}%`,
                                 }}
                             />
-                            <div className="bar-text">
+                            <div className="bar-value">
                                 {stats.hunger} / {stats.maxHunger}
                             </div>
                         </div>
@@ -316,7 +321,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
 
                 {/* RIGHT: avatar + actions */}
                 <div className="stats-left">
-                    <div className="greek-circle" onClick={openProfile}>
+                    <div className="greek-circle">
                         <div className="greek-xp-ring">
                             <svg className="xp-ring-svg" viewBox="0 0 36 36">
                                 <path
@@ -330,25 +335,34 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                 />
                             </svg>
 
+                            {/* ✅ ONLY avatar click opens profile */}
                             <img
                                 className="avatar-head"
                                 src={figureUrl}
                                 alt={stats.username}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    openProfile();
+                                }}
                             />
 
                             {stats.level ? (
                                 <div className="level-badge">{stats.level}</div>
                             ) : null}
 
+                            {/* ✅ X no longer opens profile */}
                             <button
                                 className="circle-close"
                                 onClick={handleClose}
                             />
+
+                            {/* ✅ Lock no longer opens profile */}
                             <button
                                 className={`circle-lock ${
                                     locked ? "is-locked" : ""
                                 }`}
                                 onClick={toggleLock}
+                                aria-label="Lock target"
                             />
                         </div>
                     </div>

@@ -16,6 +16,7 @@
 .stats-bar-container {
     display: flex;
     align-items: stretch;
+    /* was center */
     border-radius: 10px;
     position: absolute;
     top: 5px;
@@ -238,35 +239,50 @@
 Opponent styling block
 ======================= */
 
+/* =======================
+Opponent styling block
+======================= */
+
 /* Opponent container variant */
 .stats-bar-container.opponent {
-    /* mirror layout so avatar is on the right */
-    flex-direction: row-reverse;
+    /* ✅ KEEP normal order so bars are LEFT and avatar is RIGHT */
+    flex-direction: row;
 
-    /* ensure perfect vertical alignment and no stray margins */
     top: 0;
     left: auto;
     animation: none;
-    /* we handle fade separately below */
-    align-items: center;
+    align-items: stretch;
+    /* was center */
 }
 
-/* mirror the divider so it sits on the inside edge for opponent */
+/* divider sits between bars and avatar */
 .stats-bar-container.opponent::before {
-    left: auto;
-    right: 88px;
+    left: 88px;
+    /* same as self divider */
+    right: auto;
 }
 
-/* Flip blue panel rounding for opponent */
+/* Opponent left panel should be on the RIGHT side (avatar block) */
 .stats-bar-container.opponent .stats-left {
+    /* avatar block is still the LEFT column markup, but appears on the RIGHT */
     border-radius: 0 8px 8px 0;
+    border-right: 3px solid #2077ab;
+    border-left: none;
 }
 
-/* Flip bars block rounding + padding */
+/* Opponent bars block should be on the LEFT side */
 .stats-bar-container.opponent .stats-right {
     border-radius: 8px 0 0 8px;
-    padding: 0px 3px 0px 2px;
-    /* mirrored from self */
+    padding: 0px 8px 0px 2px;
+    /* mirror spacing so icons don't cram */
+    border-left: 3px solid #2077ab;
+    border-right: none;
+}
+
+/* Opponent: move level badge to bottom-left */
+.opponent .greek-circle .level-badge {
+    left: -4px;
+    right: auto;
 }
 
 /* Fade helpers for opponent mount/unmount */
@@ -702,6 +718,7 @@ XP tooltip (shared)
 .stats-bar-container.opponent .stats-left,
 .stats-bar-container.opponent .stats-right {
     margin: 0;
+    height: 100%;
 }
 
 .stats-bar-container.opponent {
