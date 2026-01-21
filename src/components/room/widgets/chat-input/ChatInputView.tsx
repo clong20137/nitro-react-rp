@@ -77,6 +77,29 @@ const readActiveMacros = (): ReadMacrosResult => {
     }
 };
 
+/* ===== Emoticon → Emoji autocorrect (caret-safe) ===== */
+const applyEmoteAutocorrect = (raw: string, caret: number) => {
+    // only handle the 3 requested, with common variants
+    const rules: Array<{ re: RegExp; to: string }> = [
+        { re: /:-?\)/g, to: "🙂" }, // :) :-)
+        { re: /:-?\(/g, to: "😟" }, // :( :-(
+        { re: /;-?\)/g, to: "😉" }, // ;) ;-)
+        { re: /:-?[pP]/g, to: "😛" }, // :p :-p :P :-P
+        { re: /:-?D/g, to: "😀" },
+        { re: /:-*/g, to: "😘" },
+    ];
+
+    let text = raw;
+    let caretSlice = raw.slice(0, caret);
+
+    for (const r of rules) {
+        text = text.replace(r.re, r.to);
+        caretSlice = caretSlice.replace(r.re, r.to);
+    }
+
+    return { text, caret: caretSlice.length };
+};
+
 export const ChatInputView: FC<{}> = () => {
     const [chatValue, setChatValue] = useState<string>("");
     const { chatStyleId = 0 } = useSessionInfo();
@@ -145,6 +168,7 @@ export const ChatInputView: FC<{}> = () => {
         };
 
         const onMacrosChanged = () => hydrateMacros(); // <-- same-tab refresh
+
         const onMacroRun = (ev: Event) => {
             // Allow other UIs to trigger a macro directly
             const detail = (ev as CustomEvent)?.detail as
@@ -152,6 +176,7 @@ export const ChatInputView: FC<{}> = () => {
                 | undefined;
 
             if (detail?.command) {
+                // ✅ DO NOT focus the chat input here (prevents macro→typing bug)
                 setChatValue(detail.command);
                 sendChatValue(detail.command, false);
                 setEmojiOpen(false);
@@ -374,8 +399,8 @@ export const ChatInputView: FC<{}> = () => {
                 !event.repeat &&
                 macrosEnabledRef.current &&
                 !floodBlocked &&
-                !anotherInputHasFocus() && // don't trigger while typing in other inputs
-                !isChatFocused() // ✅ the key rule: if chat is focused, ignore macros entirely
+                !anotherInputHasFocus() &&
+                !isChatFocused()
             ) {
                 const k = eventToKeyString(event);
 
@@ -407,9 +432,8 @@ export const ChatInputView: FC<{}> = () => {
                         lastGlobalFireRef.current = now;
                         lastKeyFireRef.current.set(k, now);
 
-                        // focus the chat box so user sees what happened
-                        if (inputRef.current) inputRef.current.focus();
-
+                        // ✅ IMPORTANT FIX:
+                        // Do NOT focus the chat input here, or the next keys will start typing in chat.
                         setChatValue(macroCmd);
                         sendChatValue(macroCmd, false);
                         setEmojiOpen(false);
@@ -595,9 +619,27 @@ export const ChatInputView: FC<{}> = () => {
                             )}
                             value={chatValue}
                             maxLength={maxChatLength}
-                            onChange={(event) =>
-                                updateChatInput(event.target.value)
-                            }
+                            onChange={(event) => {
+                                const el = event.target as HTMLInputElement;
+                                const caret =
+                                    el.selectionStart ?? el.value.length;
+
+                                const { text, caret: nextCaret } =
+                                    applyEmoteAutocorrect(el.value, caret);
+
+                                updateChatInput(text);
+
+                                // keep caret stable after replacements
+                                requestAnimationFrame(() => {
+                                    if (!inputRef.current) return;
+                                    try {
+                                        inputRef.current.setSelectionRange(
+                                            nextCaret,
+                                            nextCaret
+                                        );
+                                    } catch {}
+                                });
+                            }}
                             onMouseDown={() => setInputFocus()}
                         />
                     )}

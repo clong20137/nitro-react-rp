@@ -67,23 +67,59 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     const [stats, setStats] = useState<OpponentStats | null>(null);
     const [locked, setLocked] = useState(false);
     const [hiding, setHiding] = useState(false);
+
+    // prevents re-sending StartInspect for same user unless we reset it
     const lastWatchedIdRef = useRef<number>(0);
 
-    const mergeUpdatefUpdate = (payload: OpponentStats) => {
-        setStats((prev) => {
-            if (!prev) return { ...payload };
-            if (prev.userId !== payload.userId) return { ...payload };
-            return { ...prev, ...payload };
-        });
-    };
+    // IMPORTANT: these refs keep the latest values inside event listeners
+    const lockedRef = useRef<boolean>(false);
+    const lockedUserIdRef = useRef<number>(0);
+    const currentStatsUserIdRef = useRef<number>(0);
+
+    useEffect(() => {
+        lockedRef.current = locked;
+        lockedUserIdRef.current = locked
+            ? stats?.userId ?? lockedUserIdRef.current
+            : 0;
+    }, [locked, stats?.userId]);
+
+    useEffect(() => {
+        currentStatsUserIdRef.current = stats?.userId ?? 0;
+    }, [stats?.userId]);
 
     const sendWatch = (targetId: number) => {
+        // if we cleared it, allow the same ID to be watched again
+        if (targetId === 0) {
+            lastWatchedIdRef.current = 0;
+            return;
+        }
+
         if (lastWatchedIdRef.current === targetId) return;
         lastWatchedIdRef.current = targetId;
 
         try {
             SendMessageComposer(new StartInspectComposer(targetId));
         } catch {}
+    };
+
+    const clearOverlay = (alsoClearTarget: boolean) => {
+        setHiding(true);
+
+        // allow re-open of same player after close
+        lastWatchedIdRef.current = 0;
+
+        if (alsoClearTarget) {
+            try {
+                SendMessageComposer(new SetTargetComposer(0, false));
+            } catch {}
+        }
+
+        setTimeout(() => {
+            sendWatch(0);
+            setStats(null);
+            setLocked(false);
+            setHiding(false);
+        }, 180);
     };
 
     useEffect(() => {
@@ -93,7 +129,15 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                 | undefined;
             if (!payload || !payload.userId) return;
 
-            // merge
+            // ✅ If locked, do NOT allow a different user to override the overlay
+            if (lockedRef.current) {
+                const lockedId =
+                    lockedUserIdRef.current || currentStatsUserIdRef.current;
+                if (lockedId > 0 && payload.userId !== lockedId) {
+                    return;
+                }
+            }
+
             setStats((prev) => {
                 if (!prev) return { ...payload };
                 if (prev.userId !== payload.userId) return { ...payload };
@@ -105,12 +149,10 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
         };
 
         const onClear = () => {
-            setHiding(true);
-            setTimeout(() => {
-                setStats(null);
-                setLocked(false);
-                sendWatch(0);
-            }, 180);
+            // If the server tries to clear while locked, ignore it
+            // (locking means "keep this target/overlay pinned until user unlocks/closes")
+            if (lockedRef.current) return;
+            clearOverlay(false);
         };
 
         window.addEventListener("user_inspect_stats", onStats as EventListener);
@@ -215,28 +257,36 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     const aggressionPct = percent(stats.aggressionMs ?? 0, 45_000);
 
     const handleClose = (e: React.MouseEvent) => {
-        e.stopPropagation(); // ✅ prevents openProfile
-        setHiding(true);
-        setTimeout(() => {
-            sendWatch(0);
-            setStats(null);
-            setLocked(false);
+        e.stopPropagation();
+
+        // ✅ If we close while locked: remove target lock
+        const wasLocked = lockedRef.current;
+
+        // also clear the server inspect state if you want,
+        // but do NOT rely on it for local cleanup
+        try {
             window.dispatchEvent(new CustomEvent("user_inspect_clear"));
-            onClose?.();
-        }, 180);
+        } catch {}
+
+        clearOverlay(wasLocked);
+        onClose?.();
     };
 
     const toggleLock = (e: React.MouseEvent) => {
-        e.stopPropagation(); // ✅ prevents openProfile
+        e.stopPropagation();
         if (!stats) return;
 
         const next = !locked;
         setLocked(next);
 
-        // target lock only — no profile open
-        SendMessageComposer(
-            new SetTargetComposer(next ? stats.userId : 0, next)
-        );
+        // keep the locked id pinned (prevents override)
+        lockedUserIdRef.current = next ? stats.userId : 0;
+
+        try {
+            SendMessageComposer(
+                new SetTargetComposer(next ? stats.userId : 0, next)
+            );
+        } catch {}
     };
 
     const gangSquareStyle = stats.gangPrimaryColor
@@ -254,7 +304,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                     hiding ? "fade-out" : "fade-in"
                 }`}
             >
-                {/* ✅ LEFT: bars (now actually LEFT due to CSS fix below) */}
+                {/* LEFT: bars */}
                 <div className="stats-right">
                     <div className="stat">
                         <div className="icons heart" />
@@ -268,7 +318,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                     )}%`,
                                 }}
                             />
-                            {/* ✅ use same class as self */}
                             <div className="bar-value">
                                 {stats.health} / {stats.maxHealth}
                             </div>
@@ -335,7 +384,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                 />
                             </svg>
 
-                            {/* ✅ ONLY avatar click opens profile */}
                             <img
                                 className="avatar-head"
                                 src={figureUrl}
@@ -350,13 +398,11 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                 <div className="level-badge">{stats.level}</div>
                             ) : null}
 
-                            {/* ✅ X no longer opens profile */}
                             <button
                                 className="circle-close"
                                 onClick={handleClose}
                             />
 
-                            {/* ✅ Lock no longer opens profile */}
                             <button
                                 className={`circle-lock ${
                                     locked ? "is-locked" : ""

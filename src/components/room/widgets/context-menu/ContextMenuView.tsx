@@ -302,6 +302,19 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         FADE_TIME = 1;
     }, []);
 
+    /**
+     * ✅ FIX:
+     * When you close the overlay, COLLAPSED may remain true (module-level).
+     * Then the next time you click a user, the context menu remounts already collapsed,
+     * hiding the stats button so you can’t open it again.
+     *
+     * Reset collapsed state whenever this menu opens for a user/object again.
+     */
+    useEffect(() => {
+        setIsCollapsed(false);
+        COLLAPSED = false;
+    }, [objectId, category]);
+
     // 🔥 REMOVED: the auto-fire inspect effect so it DOES NOT trigger on hover
     //
     // useEffect(() => {
