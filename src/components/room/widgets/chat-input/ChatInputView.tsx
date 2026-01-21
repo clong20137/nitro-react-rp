@@ -77,29 +77,6 @@ const readActiveMacros = (): ReadMacrosResult => {
     }
 };
 
-/* ===== Emoticon → Emoji autocorrect (caret-safe) ===== */
-const applyEmoteAutocorrect = (raw: string, caret: number) => {
-    // only handle the 3 requested, with common variants
-    const rules: Array<{ re: RegExp; to: string }> = [
-        { re: /:-?\)/g, to: "🙂" }, // :) :-)
-        { re: /:-?\(/g, to: "😟" }, // :( :-(
-        { re: /;-?\)/g, to: "😉" }, // ;) ;-)
-        { re: /:-?[pP]/g, to: "😛" }, // :p :-p :P :-P
-        { re: /:-?D/g, to: "😀" },
-        { re: /:-*/g, to: "😘" },
-    ];
-
-    let text = raw;
-    let caretSlice = raw.slice(0, caret);
-
-    for (const r of rules) {
-        text = text.replace(r.re, r.to);
-        caretSlice = caretSlice.replace(r.re, r.to);
-    }
-
-    return { text, caret: caretSlice.length };
-};
-
 export const ChatInputView: FC<{}> = () => {
     const [chatValue, setChatValue] = useState<string>("");
     const { chatStyleId = 0 } = useSessionInfo();
@@ -148,111 +125,6 @@ export const ChatInputView: FC<{}> = () => {
             DEFAULT_GLOBAL_MS
         );
     }, []);
-
-    // Initial load + cross-tab sync + same-tab custom signal
-    useEffect(() => {
-        hydrateMacros();
-
-        const onStorage = (e: StorageEvent) => {
-            if (
-                [
-                    LS_PRESETS,
-                    LS_ACTIVE,
-                    LS_ENABLED,
-                    LS_COOLDOWN_PER_KEY,
-                    LS_COOLDOWN_GLOBAL,
-                ].includes(e.key || "")
-            ) {
-                hydrateMacros();
-            }
-        };
-
-        const onMacrosChanged = () => hydrateMacros(); // <-- same-tab refresh
-
-        const onMacroRun = (ev: Event) => {
-            // Allow other UIs to trigger a macro directly
-            const detail = (ev as CustomEvent)?.detail as
-                | { command?: string }
-                | undefined;
-
-            if (detail?.command) {
-                // ✅ DO NOT focus the chat input here (prevents macro→typing bug)
-                setChatValue(detail.command);
-                sendChatValue(detail.command, false);
-                setEmojiOpen(false);
-            }
-        };
-
-        window.addEventListener("storage", onStorage);
-        window.addEventListener(
-            "olrp_macros_changed",
-            onMacrosChanged as EventListener
-        );
-        window.addEventListener("macro_run", onMacroRun as EventListener);
-
-        return () => {
-            window.removeEventListener("storage", onStorage);
-            window.removeEventListener(
-                "olrp_macros_changed",
-                onMacrosChanged as EventListener
-            );
-            window.removeEventListener(
-                "macro_run",
-                onMacroRun as EventListener
-            );
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hydrateMacros]);
-
-    // curated emojis
-    const EMOJIS = useMemo(
-        () => [
-            "😀",
-            "😂",
-            "😊",
-            "😉",
-            "😍",
-            "🤩",
-            "😘",
-            "😎",
-            "😇",
-            "😭",
-            "😤",
-            "😴",
-            "🤔",
-            "😅",
-            "🤠",
-            "😜",
-            "🥳",
-            "😈",
-            "🤓",
-            "😬",
-            "👍",
-            "👎",
-            "👏",
-            "🙌",
-            "🔥",
-            "💯",
-            "❤️",
-            "💙",
-            "💚",
-            "💛",
-            "💜",
-            "🩷",
-            "✨",
-            "🌟",
-            "🍀",
-            "⚡",
-            "🎯",
-            "🎉",
-        ],
-        []
-    );
-
-    const buttonEmoji = useMemo(
-        () => EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
-        [EMOJIS]
-    );
 
     const chatModeIdWhisper = useMemo(
         () => LocalizeText("widgets.chatinput.mode.whisper"),
@@ -387,6 +259,111 @@ export const ChatInputView: FC<{}> = () => {
             setChatValue(value);
         },
         [setIsTyping, setIsIdle]
+    );
+
+    // Initial load + cross-tab sync + same-tab custom signal
+    useEffect(() => {
+        hydrateMacros();
+
+        const onStorage = (e: StorageEvent) => {
+            if (
+                [
+                    LS_PRESETS,
+                    LS_ACTIVE,
+                    LS_ENABLED,
+                    LS_COOLDOWN_PER_KEY,
+                    LS_COOLDOWN_GLOBAL,
+                ].includes(e.key || "")
+            ) {
+                hydrateMacros();
+            }
+        };
+
+        const onMacrosChanged = () => hydrateMacros(); // <-- same-tab refresh
+
+        const onMacroRun = (ev: Event) => {
+            // Allow other UIs to trigger a macro directly
+            const detail = (ev as CustomEvent)?.detail as
+                | { command?: string }
+                | undefined;
+
+            if (detail?.command) {
+                // ✅ DO NOT focus the chat input here (prevents macro→typing bug)
+                setChatValue(detail.command);
+                sendChatValue(detail.command, false);
+                setEmojiOpen(false);
+            }
+        };
+
+        window.addEventListener("storage", onStorage);
+        window.addEventListener(
+            "olrp_macros_changed",
+            onMacrosChanged as EventListener
+        );
+        window.addEventListener("macro_run", onMacroRun as EventListener);
+
+        return () => {
+            window.removeEventListener("storage", onStorage);
+            window.removeEventListener(
+                "olrp_macros_changed",
+                onMacrosChanged as EventListener
+            );
+            window.removeEventListener(
+                "macro_run",
+                onMacroRun as EventListener
+            );
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hydrateMacros]);
+
+    // curated emojis
+    const EMOJIS = useMemo(
+        () => [
+            "😀",
+            "😂",
+            "😊",
+            "😉",
+            "😍",
+            "🤩",
+            "😘",
+            "😎",
+            "😇",
+            "😭",
+            "😤",
+            "😴",
+            "🤔",
+            "😅",
+            "🤠",
+            "😜",
+            "🥳",
+            "😈",
+            "🤓",
+            "😬",
+            "👍",
+            "👎",
+            "👏",
+            "🙌",
+            "🔥",
+            "💯",
+            "❤️",
+            "💙",
+            "💚",
+            "💛",
+            "💜",
+            "🩷",
+            "✨",
+            "🌟",
+            "🍀",
+            "⚡",
+            "🎯",
+            "🎉",
+        ],
+        []
+    );
+
+    const buttonEmoji = useMemo(
+        () => EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
+        [EMOJIS]
     );
 
     /* ===== Global keydown: macro hotkeys + normal chat behavior ===== */
@@ -619,27 +596,9 @@ export const ChatInputView: FC<{}> = () => {
                             )}
                             value={chatValue}
                             maxLength={maxChatLength}
-                            onChange={(event) => {
-                                const el = event.target as HTMLInputElement;
-                                const caret =
-                                    el.selectionStart ?? el.value.length;
-
-                                const { text, caret: nextCaret } =
-                                    applyEmoteAutocorrect(el.value, caret);
-
-                                updateChatInput(text);
-
-                                // keep caret stable after replacements
-                                requestAnimationFrame(() => {
-                                    if (!inputRef.current) return;
-                                    try {
-                                        inputRef.current.setSelectionRange(
-                                            nextCaret,
-                                            nextCaret
-                                        );
-                                    } catch {}
-                                });
-                            }}
+                            onChange={(event) =>
+                                updateChatInput(event.target.value)
+                            }
                             onMouseDown={() => setInputFocus()}
                         />
                     )}
