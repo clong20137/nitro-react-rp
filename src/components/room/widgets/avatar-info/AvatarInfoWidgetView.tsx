@@ -38,10 +38,6 @@ import { AvatarInfoWidgetOwnPetView } from "./menu/AvatarInfoWidgetOwnPetView";
 import { AvatarInfoWidgetPetView } from "./menu/AvatarInfoWidgetPetView";
 import { AvatarInfoWidgetRentableBotView } from "./menu/AvatarInfoWidgetRentableBotView";
 
-// If you also use a server request composer for stats polling, import it:
-// import { RequestUserInspectStatsComposer } from '@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/RequestUserInspectStatsComposer';
-
-// NEW: Target lock composer
 import { SetTargetComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/SetTargetComposer";
 
 type OpponentStats = {
@@ -90,8 +86,11 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
     // polling timer
     const pollTimerRef = useRef<number | null>(null);
 
-    // NEW: lock state (when locked, ignore other clicks and keep UI up)
+    // lock state
     const lockedUserIdRef = useRef<number | null>(null);
+
+    // ✅ NEW: track whether opponent overlay is currently visible
+    const opponentVisibleRef = useRef<boolean>(false);
 
     const stopPolling = () => {
         if (pollTimerRef.current !== null) {
@@ -103,13 +102,9 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
     const startPolling = (userId: number) => {
         stopPolling();
         pollTimerRef.current = window.setInterval(() => {
-            // Fire your light request event (backend listens and responds by pushing user_inspect_stats)
             window.dispatchEvent(
                 new CustomEvent("user_inspect_request", { detail: { userId } })
             );
-
-            // Or use a composer if you have one:
-            // SendMessageComposer(new RequestUserInspectStatsComposer(userId));
         }, 1000);
     };
 
@@ -136,7 +131,21 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
         (event) => setRentableBotChatEvent(event)
     );
 
-    /* ---------------- lock/unlock events from OpponentStatsOverlay ---------------- */
+    /* ✅ NEW: if overlay closes/clears itself, mark it hidden so re-click reopens */
+    useEffect(() => {
+        const onOpponentClear = () => {
+            opponentVisibleRef.current = false;
+            stopPolling();
+            // NOTE: do NOT wipe lastPeerUserIdRef here — we want to remember the last target,
+            // but still allow reopening when the same user is clicked again.
+        };
+
+        window.addEventListener("user_inspect_clear", onOpponentClear);
+        return () =>
+            window.removeEventListener("user_inspect_clear", onOpponentClear);
+    }, []);
+
+    /* ---------------- lock/unlock events ---------------- */
 
     useEffect(() => {
         const onLock = (e: Event) => {
@@ -150,38 +159,36 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
 
             lockedUserIdRef.current = userId;
 
-            // tell server we’re locking onto this user
             try {
                 SendMessageComposer(new SetTargetComposer(userId, true));
             } catch {}
 
-            // make sure overlay is showing that user (emit stub if needed)
-            if (lastPeerUserIdRef.current !== userId) {
-                window.dispatchEvent(
-                    new CustomEvent("user_inspect_stats", {
-                        detail: {
-                            userId,
-                            username: ce.detail?.username || "",
-                            figure: ce.detail?.figure || "",
-                            health: 0,
-                            maxHealth: 100,
-                            energy: 0,
-                            maxEnergy: 100,
-                            hunger: 0,
-                            maxHunger: 100,
-                            aggression: 0,
-                            xpPercent: 0,
-                            level: 0,
-                            healthPercent: 0,
-                            energyPercent: 0,
-                            hungerPercent: 0,
-                        } as OpponentStats,
-                    })
-                );
-                lastPeerUserIdRef.current = userId;
-            }
+            // ensure overlay shows the locked user
+            window.dispatchEvent(
+                new CustomEvent("user_inspect_stats", {
+                    detail: {
+                        userId,
+                        username: ce.detail?.username || "",
+                        figure: ce.detail?.figure || "",
+                        health: 0,
+                        maxHealth: 100,
+                        energy: 0,
+                        maxEnergy: 100,
+                        hunger: 0,
+                        maxHunger: 100,
+                        aggression: 0,
+                        xpPercent: 0,
+                        level: 0,
+                        healthPercent: 0,
+                        energyPercent: 0,
+                        hungerPercent: 0,
+                    } as OpponentStats,
+                })
+            );
 
-            // keep polling even if user clicks elsewhere
+            opponentVisibleRef.current = true;
+            lastPeerUserIdRef.current = userId;
+
             startPolling(userId);
         };
 
@@ -191,8 +198,7 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
             try {
                 SendMessageComposer(new SetTargetComposer(0, false));
             } catch {}
-            // keep the panel up after unlock (until user closes or picks someone else)
-            // keep polling the last selected peer if there is one
+
             if (previouslyLocked) startPolling(previouslyLocked);
         };
 
@@ -211,7 +217,7 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
     /* ---------------- opponent emitters (CLICK ONLY) ---------------- */
 
     const clearOpponent = () => {
-        lastPeerUserIdRef.current = null;
+        opponentVisibleRef.current = false;
         stopPolling();
         window.dispatchEvent(new CustomEvent("user_inspect_clear"));
     };
@@ -223,7 +229,13 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
         if (lockedUserIdRef.current && lockedUserIdRef.current !== userId)
             return;
 
-        if (lastPeerUserIdRef.current !== userId) {
+        const sameUser = lastPeerUserIdRef.current === userId;
+
+        // ✅ KEY FIX:
+        // Re-emit if:
+        // - different user than last time OR
+        // - same user BUT overlay is currently hidden (clicked off then clicked back)
+        if (!sameUser || !opponentVisibleRef.current) {
             lastPeerUserIdRef.current = userId;
 
             const payload: OpponentStats = {
@@ -247,16 +259,14 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
             window.dispatchEvent(
                 new CustomEvent("user_inspect_stats", { detail: payload })
             );
+
+            opponentVisibleRef.current = true;
         }
 
         startPolling(userId);
     };
 
-    // IMPORTANT CHANGE:
-    // Do NOT clear the opponent panel just because avatarInfo becomes null or a non‑peer.
-    // We keep it visible unless the user clicks Close or selects a different peer (and not locked).
     useEffect(() => {
-        // still handle cleanup when component unmounts
         return () => stopPolling();
     }, []);
 
@@ -277,7 +287,6 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
             switch (avatarInfo.type) {
                 case AvatarInfoFurni.FURNI: {
                     const info = avatarInfo as AvatarInfoFurni;
-                    // don’t auto-clear opponent panel
                     if (!isDecorating) return null;
 
                     return (
@@ -293,7 +302,6 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
                     if (info.isSpectatorMode) return null;
 
                     if (info.isOwnUser) {
-                        // clicking self: do not clear the opponent panel automatically
                         if (RoomEnterEffect.isRunning()) return null;
 
                         return (
@@ -306,7 +314,7 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
                         );
                     }
 
-                    // CLICKED A PEER (allowed unless locked onto someone else)
+                    // CLICKED A PEER
                     emitOpponentForPeer(info);
 
                     return (
