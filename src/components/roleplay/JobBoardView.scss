@@ -1,19 +1,23 @@
-/*=====Theme=====*/
-$jb-bg: #dedede;
-$jb-header-grad: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
-$jb-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+/*=========================== OlympusRP — Job Board (Match other modules / Wanted header) ===========================*/
+
+/* ===== Tokens (match Wanted / toast header look) ===== */
+$header-blue: #1e7295;
+$border: #fff;
+$shadow: 0 0 rgba(0, 0, 0, .4),
+    0 0 rgba(0, 0, 0, .3),
+    inset 0 -4px rgba(0, 0, 0, .2);
 
 /* ===== Root container ===== */
 .jobboard-view {
     position: absolute;
     z-index: 1200;
+    display: flex;
+    flex-direction: column;
+
     background: #dfdfdf;
-    border: 2px solid #ffffff;
+    border: 2px solid $border;
     border-radius: 10px;
-    box-shadow:
-        $jb-shadow,
-        0 0 rgba(0, 0, 0, 0.3),
-        inset 0 -4px rgba(0, 0, 0, 0.2);
+    box-shadow: $shadow;
     overflow: hidden;
     transform-origin: bottom right;
 
@@ -27,7 +31,7 @@ $jb-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     animation: slideInBR 300ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
 }
 
-/* slide OUT toward bottom-right (use when closing if you want) */
+/* slide OUT toward bottom-right */
 .jobboard-view.exit-br {
     animation: slideOutBR 220ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
 }
@@ -56,70 +60,89 @@ $jb-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     }
 }
 
-/* ===== Header / drag handle ===== */
+/* ===== Header / drag handle (Wanted style) ===== */
 .jobboard-header {
+    background: $header-blue;
+    color: #fff;
+
     display: flex;
     align-items: center;
     justify-content: center;
-    position: relative;
-    background: $jb-header-grad;
-    color: #fff;
-    padding: 8px 10px;
-    font-size: 18px;
+
+    padding: 8px 12px;
     font-weight: 700;
+    font-size: 18px;
+
+    border-radius: 8px 8px 0 0;
     cursor: grab;
     user-select: none;
-    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+    position: relative;
+
+    text-shadow:
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000;
+
+    filter: drop-shadow(0 0 1px black);
+    box-shadow:
+        0 0 #0000001a,
+        0 0 #0000001a,
+        inset 0 -3px #00000017;
 }
 
 .jobboard-title {
     pointer-events: none;
+    user-select: none;
 }
 
-/* ===== Close button (same as your other UIs) ===== */
-.close-button {
+/* ===== Close button (Wanted style, supports <div class="close-button" />) ===== */
+.jobboard-view .close-button {
     position: absolute;
     top: 6px;
     right: 8px;
     width: 24px;
     height: 24px;
+
+    /* make div act like button */
+    cursor: pointer;
     border: 2px solid #921911;
     background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
     border-radius: 4px;
-    box-shadow:
-        0 0 0 1.6px #fff,
-        0 2px 0 rgba(0, 0, 0, 0.22);
-    cursor: pointer;
-    padding: 0;
-    outline: none;
+    box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
+    z-index: 5;
+}
 
-    &:before,
-    &:after {
-        content: "";
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        width: 12px;
-        height: 2px;
-        background: #fff;
-        border-radius: 1px;
-        transform-origin: center;
-    }
+.jobboard-view .close-button:hover {
+    filter: brightness(1.05);
+}
 
-    &:before {
-        transform: translate(-50%, -50%) rotate(45deg);
-    }
+.jobboard-view .close-button:active {
+    transform: translateY(1px);
+}
 
-    &:after {
-        transform: translate(-50%, -50%) rotate(-45deg);
-    }
+/* white X */
+.jobboard-view .close-button::before,
+.jobboard-view .close-button::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 12px;
+    height: 2px;
+    background: #fff;
+    border-radius: 1px;
+    transform-origin: center;
+    margin-left: -6px;
+    margin-top: -1px;
+}
 
-    &:active {
-        transform: translateY(1px);
-        box-shadow:
-            0 0 0 1.6px #fff,
-            0 1px 0 rgba(0, 0, 0, 0.22);
-    }
+.jobboard-view .close-button::before {
+    transform: rotate(45deg);
+}
+
+.jobboard-view .close-button::after {
+    transform: rotate(-45deg);
 }
 
 /* ===== Content wrapper ===== */
@@ -136,9 +159,9 @@ $jb-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 /* summary */
 .jobboard-summary {
     font-size: 12px;
-    padding: 4px 6px;
-    border-radius: 6px;
-    background: linear-gradient(180deg, #f6f6f6, #e2e2e2);
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .85);
     border: 1px solid #b4b4b4;
     box-shadow:
         inset 0 1px 0 #ffffff,
@@ -149,11 +172,35 @@ $jb-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     }
 }
 
+/* manager create row */
+.jobboard-create {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+
+    .jobboard-input {
+        padding: 4px 6px;
+        border-radius: 6px;
+        border: 1px solid #a3a3a3;
+        font-size: 12px;
+        background: #f5f5f5;
+        box-shadow: inset 0 1px 0 #fff;
+    }
+
+    .rank-select {
+        min-width: 150px;
+    }
+
+    .slots-input {
+        width: 70px;
+    }
+}
+
 /* ===== Table wrapper ===== */
 .jobboard-table-wrapper {
     flex: 1 1 auto;
     border: 1px solid #a3a3a3;
-    border-radius: 6px;
+    border-radius: 8px;
     background: #ececec;
     overflow: auto;
     box-shadow:
@@ -173,7 +220,7 @@ $jb-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     border-bottom: 1px solid #a3a3a3;
 
     th {
-        padding: 4px 8px;
+        padding: 6px 8px;
         text-align: left;
         font-size: 11px;
         text-transform: uppercase;
@@ -182,21 +229,6 @@ $jb-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     }
 }
 
-.col-title {
-    width: 55%;
-}
-
-.col-slots {
-    width: 20%;
-    text-align: right;
-}
-
-.col-act {
-    width: 25%;
-    text-align: right;
-}
-
-/* body rows */
 .jobboard-table tbody tr {
     background: #f5f5f5;
 }
@@ -210,23 +242,18 @@ $jb-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 }
 
 .jobboard-table td {
-    padding: 4px 8px;
+    padding: 6px 8px;
     border-top: 1px solid #d0d0d0;
     vertical-align: middle;
     font-size: 12px;
 }
 
 /* title + chips */
-.job-title-text {
-    font-weight: 600;
-    color: #111;
-}
-
 .job-chip {
     display: inline-block;
-    margin-left: 4px;
-    padding: 1px 5px;
-    border-radius: 8px;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 999px;
     font-size: 10px;
     text-transform: uppercase;
 
@@ -236,7 +263,7 @@ $jb-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     }
 }
 
-/* empty state row */
+/* empty state */
 .jobboard-empty-cell {
     text-align: center;
     padding: 16px 8px;
@@ -246,23 +273,18 @@ $jb-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 
 /* ===== Buttons ===== */
 .jobboard-btn {
-    padding: 3px 8px;
-    border-radius: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
     border: 1px solid #888;
     cursor: pointer;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4);
 
     &.btn-apply {
         background: #2e9c32;
         border-color: #1f6f24;
-        color: #fff;
-    }
-
-    &.btn-open {
-        background: #0067b3;
-        border-color: #005da3;
         color: #fff;
     }
 
@@ -272,30 +294,18 @@ $jb-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
         color: #fff;
     }
 
+    &.btn-create {
+        background: #0067b3;
+        border-color: #005da3;
+        color: #fff;
+    }
+
     &:disabled {
         background: #b0b0b0;
         border-color: #888;
         color: #eee;
         cursor: default;
         opacity: 0.75;
-    }
-}
-
-.jobboard-create {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 6px;
-
-    .jobboard-input {
-        padding: 4px 6px;
-        border-radius: 4px;
-        border: 1px solid #a3a3a3;
-        font-size: 12px;
-        background: #f5f5f5;
-    }
-
-    .rank-select {
-        min-width: 150px;
     }
 }
 

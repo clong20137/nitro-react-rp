@@ -584,7 +584,7 @@ XP tooltip (shared)
     cursor: pointer;
     z-index: 4;
     /* 🔒 default = UNLOCKED icon */
-    background-image: url("../../icons/lock.png");
+    background-image: url("../../icons/unlock.png");
     background-repeat: no-repeat;
     background-position: center;
     background-size: 13px 17px;
@@ -594,7 +594,7 @@ XP tooltip (shared)
 
 /* 🔐 LOCKED state */
 .circle-lock.is-locked {
-    background-image: url("../../icons/unlock.png");
+    background-image: url("../../icons/lock.png");
 }
 
 
