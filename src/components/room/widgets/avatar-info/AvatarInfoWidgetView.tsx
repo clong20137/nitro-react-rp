@@ -109,20 +109,17 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
         }, 1000);
     };
 
+    /**
+     * ✅ ONLY clears the HARD lock, not soft target.
+     * This must send (0, true) per your SetTargetEvent.
+     */
     const clearLockedTarget = () => {
-        const lockedId = lockedUserIdRef.current;
-        if (!lockedId) return;
+        if (!lockedUserIdRef.current) return;
 
         lockedUserIdRef.current = null;
 
-        // ✅ unlock server-side
         try {
             SendMessageComposer(new SetTargetComposer(0, true)); // (0, true) = clear lock
-        } catch {}
-
-        // ✅ keep any other UI pieces in sync if they listen to this
-        try {
-            window.dispatchEvent(new CustomEvent("opponent_target_clear"));
         } catch {}
     };
 
@@ -155,16 +152,27 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
             opponentVisibleRef.current = false;
             stopPolling();
 
-            // ✅ IMPORTANT: if user closes the UI while locked, unlock it
+            // ✅ IMPORTANT: if UI closes while locked, clear the hard target on server
             clearLockedTarget();
 
             // NOTE: do NOT wipe lastPeerUserIdRef here.
-            // We still remember the last clicked target for soft-target usage.
+            // Soft targeting should persist until you click a different user.
         };
 
         window.addEventListener("user_inspect_clear", onOpponentClear);
         return () =>
             window.removeEventListener("user_inspect_clear", onOpponentClear);
+    }, []);
+
+    /**
+     * ✅ ALSO clear lock on unmount (room change / reload / etc.)
+     * This prevents stale hard target if the widget disappears without emitting user_inspect_clear.
+     */
+    useEffect(() => {
+        return () => {
+            stopPolling();
+            clearLockedTarget();
+        };
     }, []);
 
     /* ---------------- lock/unlock events ---------------- */
@@ -215,8 +223,12 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
             startPolling(userId);
         };
 
+        /**
+         * ✅ When your UI explicitly “unlocks”, we clear hard lock.
+         * IMPORTANT: do NOT dispatch opponent_target_clear from clearLockedTarget(),
+         * otherwise you'd loop back into this handler.
+         */
         const onUnlock = () => {
-            // if something else triggers unlock (like your lock UI)
             clearLockedTarget();
         };
 
@@ -243,6 +255,7 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
         }
 
         // ✅ set SOFT target server-side on click
+        // This is what makes “click someone else” update your target.
         try {
             SendMessageComposer(new SetTargetComposer(userId, false)); // false = soft
         } catch {}
@@ -280,10 +293,6 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
 
         startPolling(userId);
     };
-
-    useEffect(() => {
-        return () => stopPolling();
-    }, []);
 
     /* ---------------- original widget rendering ---------------- */
 
