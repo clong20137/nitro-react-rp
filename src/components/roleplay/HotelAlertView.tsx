@@ -25,6 +25,7 @@ type AlertItem = {
 const DEFAULT_TITLE = "Hotel Alert";
 const DEFAULT_ICON = "../../icons/alert.png";
 const DEFAULT_SOUND = "../../icons/audio/ping.mp3";
+
 const DEFAULT_DURATION = 15000; // 15 seconds
 const MAX_VISIBLE = 3;
 
