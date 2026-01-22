@@ -575,47 +575,33 @@ XP tooltip (shared)
     position: absolute;
     bottom: -6px;
     right: -6px;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
+    width: 13px;
+    height: 17px;
     background: linear-gradient(180deg, #f5f2e7, #d8d5cb);
-    border: 2px solid #000;
-    box-shadow: 0 1px 0 #fff, 0 2px 0 rgba(0, 0, 0, .4);
     display: grid;
     place-items: center;
     padding: 0;
     cursor: pointer;
     z-index: 4;
+    /* 🔒 default = UNLOCKED icon */
+    background-image: url("../../icons/lock.png");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 13px 17px;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
 
-    /* built-in crosshair glyph */
-    &::before,
-    &::after {
-        content: "";
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        background: #1b1b1b;
-        border-radius: 1px;
-        transform: translate(-50%, -50%);
+/* 🔐 LOCKED state */
+.circle-lock.is-locked {
+    background-image: url("../../icons/unlock.png");
+}
 
-    }
 
-    /* horizontal line */
-    &::before {
-        width: 10px;
-        height: 2px;
-    }
-
-    /* vertical line */
-    &::after {
-        width: 2px;
-        height: 10px;
-    }
-
-    &.is-locked {
-        background: linear-gradient(180deg, #9fe39a, #3c8f34);
-        border-color: #0b3104;
-    }
+/* ❌ remove crosshair glyph entirely */
+.circle-lock::before,
+.circle-lock::after {
+    content: none !important;
 }
 
 /* ensure avatar image stays below action buttons */
@@ -639,6 +625,17 @@ XP tooltip (shared)
     /* small padding so bars sit right against the blue block */
     padding: 0px 2px 0px 8px;
     border-radius: 0 8px 8px 0;
+}
+
+/* ✅ Opponent aggression should NOT use the shared CSS variable */
+.opponent .aggression-fill {
+    width: auto !important;
+    /* allow inline width to win */
+}
+
+/* Optional: make a dedicated class so it never conflicts */
+.opponent .aggression-fill.opponent-aggression {
+    width: auto !important;
 }
 
 /* the columns themselves */
@@ -718,11 +715,12 @@ XP tooltip (shared)
 .stats-bar-container.opponent .stats-left,
 .stats-bar-container.opponent .stats-right {
     margin: 0;
-    height: 100%;
+    height: auto;
+    align-self: stretch;
 }
 
 .stats-bar-container.opponent {
-    align-items: center;
+    align-items: stretch;
 }
 
 /* ===== Misc ===== */

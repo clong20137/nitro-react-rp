@@ -22,7 +22,7 @@ type AlertItem = {
     durationMs?: number;
 };
 
-const DEFAULT_TITLE = "Hotel Alert";
+const DEFAULT_TITLE = "Announcement";
 const DEFAULT_ICON = "../../icons/alert.png";
 const DEFAULT_SOUND = "../../icons/audio/ping.mp3";
 

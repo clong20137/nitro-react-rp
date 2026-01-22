@@ -1,5 +1,4 @@
-/* OlympusRP — Hotel Alert Toasts */
-
+/*===========================OlympusRP — Hotel Alert Toasts (Wanted-style header + proper close)===========================*/
 .hotel-toast-region {
     position: fixed;
     top: 16px;
@@ -11,42 +10,32 @@
     align-items: center;
     gap: 8px;
     pointer-events: none;
-    /* only toasts catch clicks */
 }
 
-/* Base token colors (align with your old theme) */
-$bg: #426e8f;
-$bg-soft: #3c5e78;
-$border: #22425d;
-$shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -2px rgba(0, 0, 0, .12);
-
-$accent-info: #9dd1ff;
-$accent-success: #9ae6b4;
-$accent-warning: #ffd280;
-$accent-danger: #ff9aa2;
+/* ===== Tokens (match Wanted) ===== */
+$header-blue: #1e7295;
+$border: #fff;
+$shadow: 0 0 rgba(0, 0, 0, .4),
+    0 0 rgba(0, 0, 0, .3),
+    inset 0 -4px rgba(0, 0, 0, .2);
 
 .hotel-toast {
     pointer-events: auto;
-
     display: flex;
     flex-direction: column;
-    row-gap: 6px;
 
     max-width: 420px;
     width: calc(100vw - 40px);
 
-    background: #0c456d;
-    color: #fff;
-    border: 2px solid #3685ad;
+    background: #dfdfdf;
+    border: 2px solid $border;
     border-radius: 10px;
     box-shadow: $shadow;
-    padding: 12px 14px 12px 14px;
-    position: relative;
     overflow: hidden;
+    position: relative;
 
-    /* slide DOWN from the top when appearing */
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translateY(-18px);
     animation: toastIn 180ms ease-out forwards;
     animation-delay: calc((var(--delay-index, 0)) * 70ms);
 
@@ -55,123 +44,163 @@ $accent-danger: #ff9aa2;
     }
 }
 
-/* When leaving, slide back UP */
 .hotel-toast--leaving {
     animation: toastOut 180ms ease-in forwards;
 }
 
-/* Variants = tiny left border + subtle glow */
+/* ✅ REMOVE the left accent bar completely */
 .hotel-toast::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 8px;
-    bottom: 8px;
-    width: 3px;
-    border-radius: 2px;
-    background: #cfe9ff;
-    /* default (info) fallback */
-    opacity: .9;
+    content: none !important;
 }
 
-.variant-info::before {
-    background: $accent-info;
-}
-
-.variant-success::before {
-    background: $accent-success;
-}
-
-.variant-warning::before {
-    background: $accent-warning;
-}
-
-.variant-danger::before {
-    background: $accent-danger;
-}
-
-/* Header: icon + title aligned vertically center */
+/* ===== Header (same style as Wanted) ===== */
 .hotel-toast__header {
-    display: flex;
-    align-items: center;
-    column-gap: 8px;
-}
-
-.hotel-toast__icon {
-    width: 28px;
-    height: 28px;
+    background: $header-blue;
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: 2px;
+
+    padding: 8px 12px;
+    font-weight: 700;
+    font-size: 18px;
+
+    border-radius: 8px 8px 0 0;
+    cursor: default;
+    position: relative;
+
+    text-shadow:
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000;
+
+    filter: drop-shadow(0 0 1px black);
+    box-shadow: 0 0 #0000001a,
+        0 0 #0000001a,
+        inset 0 -3px #00000017;
+}
+
+/* Header title */
+.hotel-toast__title {
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Optional icon (kept) */
+.hotel-toast__icon {
+    position: absolute;
+    left: 10px;
+    width: 41px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     img {
-        width: 24px;
-        height: 24px;
+        width: 41px;
+        height: 44px;
+        object-fit: contain;
+        display: block;
     }
 }
 
-.hotel-toast__title {
-    font-weight: 800;
-    font-size: 14px;
-    letter-spacing: .2px;
-    line-height: 1;
-    opacity: .95;
-}
-
-/* Message is now full width under the header */
-.hotel-toast__message {
-    font-size: 16px;
-    line-height: 1.25;
-    background: #0e1c2c;
-    border-radius: 6px;
-    padding: 8px;
-    opacity: .95;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-/* Close button in top-right corner */
-.hotel-toast__close {
+/* ✅ FORCE Wanted-style close button to apply to either class name:
+- <button class="close-button">
+- <button class="hotel-toast__close">
+*/
+.hotel-toast .close-button,
+.hotel-toast .hotel-toast__close {
     position: absolute;
     top: 6px;
     right: 8px;
     width: 24px;
     height: 24px;
+
+    /* kill native button look + the "x" text */
+    appearance: none;
+    -webkit-appearance: none;
     border: 2px solid #921911;
     background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
     border-radius: 4px;
     box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
     cursor: pointer;
     padding: 0;
-
-    &:hover {
-        filter: brightness(1.05);
-    }
-
-    &:active {
-        transform: translateY(1px);
-    }
+    font-size: 0;
+    /* ✅ hides the literal "x" */
+    line-height: 0;
+    color: transparent;
+    z-index: 5;
 }
 
-/* Thin progress bar at the very bottom (fills left→right) */
+.hotel-toast .close-button:hover,
+.hotel-toast .hotel-toast__close:hover {
+    filter: brightness(1.05);
+}
+
+.hotel-toast .close-button:active,
+.hotel-toast .hotel-toast__close:active {
+    transform: translateY(1px);
+}
+
+/* Draw the white X (Wanted-style) */
+.hotel-toast .close-button::before,
+.hotel-toast .close-button::after,
+.hotel-toast .hotel-toast__close::before,
+.hotel-toast .hotel-toast__close::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 12px;
+    height: 2px;
+    background: #fff;
+    border-radius: 1px;
+    transform-origin: center;
+    margin-left: -6px;
+    margin-top: -1px;
+}
+
+.hotel-toast .close-button::before,
+.hotel-toast .hotel-toast__close::before {
+    transform: rotate(45deg);
+}
+
+.hotel-toast .close-button::after,
+.hotel-toast .hotel-toast__close::after {
+    transform: rotate(-45deg);
+}
+
+/* ===== Body ===== */
+.hotel-toast__message {
+    background: rgba(255, 255, 255, .85);
+    margin: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    color: #000;
+    font-size: 15px;
+    line-height: 1.3;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ===== Progress Bar ===== */
 .hotel-toast__progress {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
     height: 3px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, .5), rgba(255, 255, 255, .9));
+    background: linear-gradient(90deg, rgba(0, 0, 0, .25), rgba(0, 0, 0, .45));
     transform-origin: left center;
-    animation-name: toastProgress;
-    animation-timing-function: linear;
+    animation: toastProgress linear;
 }
 
-/* Animations */
+/* ===== Animations ===== */
 @keyframes toastIn {
     from {
         opacity: 0;
-        transform: translateY(-20px);
+        transform: translateY(-18px);
     }
 
     to {
@@ -188,7 +217,7 @@ $accent-danger: #ff9aa2;
 
     to {
         opacity: 0;
-        transform: translateY(-20px);
+        transform: translateY(-18px);
     }
 }
 
@@ -202,34 +231,18 @@ $accent-danger: #ff9aa2;
     }
 }
 
-/* Mobile tweaks */
+/* ===== Mobile ===== */
 @media (max-width: 420px) {
-    .hotel-toast-region {
-        top: 10px;
-        gap: 6px;
-    }
-
     .hotel-toast {
         max-width: 360px;
-        padding: 10px;
     }
 
     .hotel-toast__message {
-        font-size: 12.5px;
-        padding: 6px;
+        font-size: 13px;
+        padding: 8px;
     }
 
-    .hotel-toast__title {
-        font-size: 13.5px;
-    }
-
-    .hotel-toast__icon {
-        width: 26px;
-        height: 26px;
-
-        img {
-            width: 22px;
-            height: 22px;
-        }
+    .hotel-toast__header {
+        font-size: 16px;
     }
 }

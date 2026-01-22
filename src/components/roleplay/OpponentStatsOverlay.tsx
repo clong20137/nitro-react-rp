@@ -71,10 +71,13 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     // prevents re-sending StartInspect for same user unless we reset it
     const lastWatchedIdRef = useRef<number>(0);
 
-    // IMPORTANT: these refs keep the latest values inside event listeners
+    // latest values inside event listeners
     const lockedRef = useRef<boolean>(false);
     const lockedUserIdRef = useRef<number>(0);
     const currentStatsUserIdRef = useRef<number>(0);
+
+    // polling timer
+    const pollTimerRef = useRef<number | null>(null);
 
     useEffect(() => {
         lockedRef.current = locked;
@@ -102,11 +105,44 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
         } catch {}
     };
 
+    const forceWatch = (targetId: number) => {
+        // unlike sendWatch, this ALWAYS requests an update
+        if (targetId <= 0) return;
+        try {
+            SendMessageComposer(new StartInspectComposer(targetId));
+        } catch {}
+    };
+
+    const stopPolling = () => {
+        if (pollTimerRef.current !== null) {
+            window.clearInterval(pollTimerRef.current);
+            pollTimerRef.current = null;
+        }
+    };
+
+    const startPolling = (targetId: number) => {
+        stopPolling();
+        if (targetId <= 0) return;
+
+        // ✅ Update frequently without spamming too hard
+        // You can tune this to 250–1000ms depending on server cost.
+        pollTimerRef.current = window.setInterval(() => {
+            // if locked, always poll locked target
+            const id = lockedRef.current
+                ? lockedUserIdRef.current
+                : currentStatsUserIdRef.current;
+
+            if (id > 0) forceWatch(id);
+        }, 600);
+    };
+
     const clearOverlay = (alsoClearTarget: boolean) => {
         setHiding(true);
 
         // allow re-open of same player after close
         lastWatchedIdRef.current = 0;
+
+        stopPolling();
 
         if (alsoClearTarget) {
             try {
@@ -127,6 +163,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
             const payload = (e as CustomEvent<any>).detail as
                 | OpponentStats
                 | undefined;
+
             if (!payload || !payload.userId) return;
 
             // ✅ If locked, do NOT allow a different user to override the overlay
@@ -140,17 +177,27 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
 
             setStats((prev) => {
                 if (!prev) return { ...payload };
-                if (prev.userId !== payload.userId) return { ...payload };
-                return { ...prev, ...payload };
+                if (prev.userId !== payload.userId)
+                    return { aggressionMs: 0, ...payload };
+                return {
+                    ...prev,
+                    ...payload,
+                    aggressionMs:
+                        payload.aggressionMs ?? prev.aggressionMs ?? 0,
+                };
             });
 
+            // initial watch request only once
             sendWatch(payload.userId);
+
+            // ✅ keep polling current target so it updates constantly
+            startPolling(payload.userId);
+
             setHiding(false);
         };
 
         const onClear = () => {
             // If the server tries to clear while locked, ignore it
-            // (locking means "keep this target/overlay pinned until user unlocks/closes")
             if (lockedRef.current) return;
             clearOverlay(false);
         };
@@ -183,12 +230,19 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                 "user_inspect_clear",
                 onClear as EventListener
             );
+
+            stopPolling();
             sendWatch(0);
         };
     }, []);
 
     useEffect(() => {
-        if (stats?.userId) sendWatch(stats.userId);
+        if (stats?.userId) {
+            sendWatch(stats.userId);
+            startPolling(stats.userId);
+        }
+        // stop polling if stats disappear
+        if (!stats?.userId) stopPolling();
     }, [stats?.userId]);
 
     const percent = (v: number, m: number) =>
@@ -259,11 +313,8 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     const handleClose = (e: React.MouseEvent) => {
         e.stopPropagation();
 
-        // ✅ If we close while locked: remove target lock
         const wasLocked = lockedRef.current;
 
-        // also clear the server inspect state if you want,
-        // but do NOT rely on it for local cleanup
         try {
             window.dispatchEvent(new CustomEvent("user_inspect_clear"));
         } catch {}
@@ -279,7 +330,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
         const next = !locked;
         setLocked(next);
 
-        // keep the locked id pinned (prevents override)
+        // keep the locked id pinned
         lockedUserIdRef.current = next ? stats.userId : 0;
 
         try {
@@ -287,6 +338,9 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                 new SetTargetComposer(next ? stats.userId : 0, next)
             );
         } catch {}
+
+        // ✅ keep updates flowing whether locked or not
+        startPolling(stats.userId);
     };
 
     const gangSquareStyle = stats.gangPrimaryColor
@@ -362,7 +416,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
 
                     <div className="aggression-bar-wrapper">
                         <div
-                            className="aggression-fill"
+                            className="aggression-fill opponent-aggression"
                             style={{ width: `${aggressionPct}%` }}
                         />
                     </div>
@@ -403,12 +457,24 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                 onClick={handleClose}
                             />
 
-                            <button
+                            {/* ✅ NOT a button anymore - acts like a badge */}
+                            <div
                                 className={`circle-lock ${
                                     locked ? "is-locked" : ""
                                 }`}
-                                onClick={toggleLock}
+                                role="button"
+                                tabIndex={0}
                                 aria-label="Lock target"
+                                onClick={toggleLock}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        // synthesize click
+                                        toggleLock(
+                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                            { stopPropagation() {} } as any
+                                        );
+                                    }
+                                }}
                             />
                         </div>
                     </div>
