@@ -38,7 +38,6 @@ import { AvatarInfoWidgetOwnPetView } from "./menu/AvatarInfoWidgetOwnPetView";
 import { AvatarInfoWidgetPetView } from "./menu/AvatarInfoWidgetPetView";
 import { AvatarInfoWidgetRentableBotView } from "./menu/AvatarInfoWidgetRentableBotView";
 
-// must match server packet: (int targetId, boolean isLock)
 import { SetTargetComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/SetTargetComposer";
 
 type OpponentStats = {
@@ -82,16 +81,16 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
 
     const { roomSession = null } = useRoom();
 
-    // last peer we emitted a stub for
+    // last peer we emitted for
     const lastPeerUserIdRef = useRef<number | null>(null);
 
     // polling timer
     const pollTimerRef = useRef<number | null>(null);
 
-    // lock state (when locked, ignore other clicks)
+    // locked target (client-side mirror)
     const lockedUserIdRef = useRef<number | null>(null);
 
-    // overlay visible state (so clicking same user reopens)
+    // opponent overlay visibility
     const opponentVisibleRef = useRef<boolean>(false);
 
     const stopPolling = () => {
@@ -108,6 +107,23 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
                 new CustomEvent("user_inspect_request", { detail: { userId } })
             );
         }, 1000);
+    };
+
+    const clearLockedTarget = () => {
+        const lockedId = lockedUserIdRef.current;
+        if (!lockedId) return;
+
+        lockedUserIdRef.current = null;
+
+        // ✅ unlock server-side
+        try {
+            SendMessageComposer(new SetTargetComposer(0, true)); // (0, true) = clear lock
+        } catch {}
+
+        // ✅ keep any other UI pieces in sync if they listen to this
+        try {
+            window.dispatchEvent(new CustomEvent("opponent_target_clear"));
+        } catch {}
     };
 
     /* ---------------- engine/session hooks ---------------- */
@@ -133,12 +149,17 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
         (event) => setRentableBotChatEvent(event)
     );
 
-    /* If overlay clears itself, mark hidden (so re-click reopens) */
+    /* ---------------- CLOSE / CLEAR overlay ---------------- */
     useEffect(() => {
         const onOpponentClear = () => {
             opponentVisibleRef.current = false;
             stopPolling();
-            // do NOT wipe lastPeerUserIdRef; we want to remember last target for reopen behavior
+
+            // ✅ IMPORTANT: if user closes the UI while locked, unlock it
+            clearLockedTarget();
+
+            // NOTE: do NOT wipe lastPeerUserIdRef here.
+            // We still remember the last clicked target for soft-target usage.
         };
 
         window.addEventListener("user_inspect_clear", onOpponentClear);
@@ -146,8 +167,7 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
             window.removeEventListener("user_inspect_clear", onOpponentClear);
     }, []);
 
-    /* ---------------- lock/unlock events (coming from your overlay buttons) ---------------- */
-
+    /* ---------------- lock/unlock events ---------------- */
     useEffect(() => {
         const onLock = (e: Event) => {
             const ce = e as CustomEvent<{
@@ -155,37 +175,38 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
                 username?: string;
                 figure?: string;
             }>;
+
             const userId = ce?.detail?.userId;
             if (!userId) return;
 
             lockedUserIdRef.current = userId;
 
-            // tell server "LOCK this target"
+            // ✅ lock server-side
             try {
-                SendMessageComposer(new SetTargetComposer(userId, true));
+                SendMessageComposer(new SetTargetComposer(userId, true)); // true = lock
             } catch {}
 
-            // force overlay to show locked user
-            const payload: OpponentStats = {
-                userId,
-                username: ce.detail?.username || "",
-                figure: ce.detail?.figure || "",
-                health: 0,
-                maxHealth: 100,
-                energy: 0,
-                maxEnergy: 100,
-                hunger: 0,
-                maxHunger: 100,
-                aggression: 0,
-                xpPercent: 0,
-                level: 0,
-                healthPercent: 0,
-                energyPercent: 0,
-                hungerPercent: 0,
-            };
-
+            // ensure overlay shows the locked user
             window.dispatchEvent(
-                new CustomEvent("user_inspect_stats", { detail: payload })
+                new CustomEvent("user_inspect_stats", {
+                    detail: {
+                        userId,
+                        username: ce.detail?.username || "",
+                        figure: ce.detail?.figure || "",
+                        health: 0,
+                        maxHealth: 100,
+                        energy: 0,
+                        maxEnergy: 100,
+                        hunger: 0,
+                        maxHunger: 100,
+                        aggression: 0,
+                        xpPercent: 0,
+                        level: 0,
+                        healthPercent: 0,
+                        energyPercent: 0,
+                        hungerPercent: 0,
+                    } as OpponentStats,
+                })
             );
 
             opponentVisibleRef.current = true;
@@ -195,12 +216,8 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
         };
 
         const onUnlock = () => {
-            lockedUserIdRef.current = null;
-
-            // tell server "CLEAR LOCK ONLY"
-            try {
-                SendMessageComposer(new SetTargetComposer(0, true)); // 0 + true => clear lock
-            } catch {}
+            // if something else triggers unlock (like your lock UI)
+            clearLockedTarget();
         };
 
         window.addEventListener("opponent_target_set", onLock as EventListener);
@@ -215,23 +232,24 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
         };
     }, []);
 
-    /* ---------------- peer click handler ---------------- */
+    /* ---------------- opponent emitters (CLICK ONLY) ---------------- */
 
     const emitOpponentForPeer = (info: AvatarInfoUser) => {
         const userId = info.webID;
 
-        // If locked to someone else, ignore the click completely (including server)
-        if (lockedUserIdRef.current && lockedUserIdRef.current !== userId)
+        // If locked to someone, ignore other clicks
+        if (lockedUserIdRef.current && lockedUserIdRef.current !== userId) {
             return;
+        }
 
-        // ✅ tell server "SOFT TARGET this user"
+        // ✅ set SOFT target server-side on click
         try {
-            SendMessageComposer(new SetTargetComposer(userId, false));
+            SendMessageComposer(new SetTargetComposer(userId, false)); // false = soft
         } catch {}
 
         const sameUser = lastPeerUserIdRef.current === userId;
 
-        // re-emit if different user OR overlay currently hidden
+        // re-emit if new user OR overlay hidden
         if (!sameUser || !opponentVisibleRef.current) {
             lastPeerUserIdRef.current = userId;
 
@@ -256,13 +274,16 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
             window.dispatchEvent(
                 new CustomEvent("user_inspect_stats", { detail: payload })
             );
+
             opponentVisibleRef.current = true;
         }
 
         startPolling(userId);
     };
 
-    useEffect(() => () => stopPolling(), []);
+    useEffect(() => {
+        return () => stopPolling();
+    }, []);
 
     /* ---------------- original widget rendering ---------------- */
 
@@ -308,7 +329,7 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
                         );
                     }
 
-                    // CLICKED A PEER
+                    // clicked a PEER
                     emitOpponentForPeer(info);
 
                     return (
@@ -422,14 +443,16 @@ export const AvatarInfoWidgetView: FC<{}> = () => {
                 ))}
 
             {productBubbles.length > 0 &&
-                productBubbles.map((item, index) => (
-                    <AvatarInfoUseProductView
-                        key={item.id}
-                        item={item}
-                        updateConfirmingProduct={updateConfirmingProduct}
-                        onClose={() => removeProductBubble(index)}
-                    />
-                ))}
+                productBubbles.map((item, index) => {
+                    return (
+                        <AvatarInfoUseProductView
+                            key={item.id}
+                            item={item}
+                            updateConfirmingProduct={updateConfirmingProduct}
+                            onClose={() => removeProductBubble(index)}
+                        />
+                    );
+                })}
 
             {rentableBotChatEvent && (
                 <AvatarInfoRentableBotChatView
