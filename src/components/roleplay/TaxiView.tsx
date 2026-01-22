@@ -23,7 +23,6 @@ type TaxiDestination = {
 };
 
 type TaxiOpenListDetailNew = {
-    // NEW parser shape
     currentRoomId: number;
     currentVrid: number;
     destinations: {
@@ -37,13 +36,12 @@ type TaxiOpenListDetailNew = {
 };
 
 type TaxiOpenListDetailOld = {
-    // OLD shape (back-compat)
     destinations: {
         roomId: number;
         virtualRoomId: number;
         roomName?: string;
-        virtualName?: string; // preferred
-        displayName?: string; // fallback
+        virtualName?: string;
+        displayName?: string;
         thumbnailUrl?: string;
         occupants?: number;
     }[];
@@ -87,6 +85,7 @@ function useDraggable<T extends HTMLElement>() {
 
             const vw = document.documentElement.clientWidth;
             const vh = document.documentElement.clientHeight;
+
             const newLeft = Math.min(
                 Math.max(dragData.current.sx + dx, 8),
                 vw - rect.width - 8
@@ -118,12 +117,12 @@ export const TaxiView: React.FC = () => {
     const [open, setOpen] = useState(false);
     const [destinations, setDestinations] = useState<TaxiDestination[]>([]);
     const [query, setQuery] = useState("");
-    const [grid, setGrid] = useState(true);
     const [current, setCurrent] = useState<{
         roomId: number;
         virtualRoomId: number;
         virtualName?: string;
     } | null>(null);
+
     const { ref: dragRef, onMouseDown: startDrag } =
         useDraggable<HTMLDivElement>();
 
@@ -132,7 +131,6 @@ export const TaxiView: React.FC = () => {
             const ev = e as CustomEvent<TaxiOpenListDetail>;
             const d = ev.detail;
 
-            // Normalize NEW vs OLD payloads
             const isNew = (x: any): x is TaxiOpenListDetailNew =>
                 typeof (x as TaxiOpenListDetailNew)?.currentRoomId ===
                     "number" &&
@@ -146,7 +144,6 @@ export const TaxiView: React.FC = () => {
             } | null = null;
 
             if (isNew(d)) {
-                // NEW FORMAT
                 cur = { roomId: d.currentRoomId, virtualRoomId: d.currentVrid };
                 list = (d.destinations || []).map((it) => ({
                     roomId: it.roomId,
@@ -160,7 +157,6 @@ export const TaxiView: React.FC = () => {
                             : undefined,
                 }));
             } else {
-                // OLD FORMAT
                 const old = d as TaxiOpenListDetailOld;
                 if (old.current) {
                     cur = {
@@ -195,6 +191,7 @@ export const TaxiView: React.FC = () => {
 
         window.addEventListener("taxi_open_list", onOpen as EventListener);
         window.addEventListener("keydown", onKey);
+
         return () => {
             window.removeEventListener(
                 "taxi_open_list",
@@ -257,57 +254,25 @@ export const TaxiView: React.FC = () => {
             >
                 <div className="taxi-header" onMouseDown={startDrag}>
                     <div className="title">Call a Taxi</div>
-                    <div className="header-actions">
-                        <button
-                            className={`toggle ${grid ? "active" : ""}`}
-                            title="Tile view"
-                            aria-pressed={grid}
-                            onClick={() => setGrid(true)}
-                        >
-                            ▦
-                        </button>
-                        <button
-                            className={`toggle {!grid ? "active" : ""}`}
-                            title="List view"
-                            aria-pressed={!grid}
-                            onClick={() => setGrid(false)}
-                        >
-                            ☰
-                        </button>
-                        <button
-                            className="close"
-                            onClick={() => setOpen(false)}
-                            aria-label="Close"
-                        >
-                            ×
-                        </button>
-                    </div>
+
+                    <button
+                        className="close-button"
+                        onClick={() => setOpen(false)}
+                        aria-label="Close"
+                        title="Close"
+                    >
+                        x
+                    </button>
                 </div>
 
                 <div className="taxi-toolbar">
                     <input
                         className="search"
-                        placeholder="Search virtual rooms, room names, or IDs…"
+                        placeholder="Search destinations..."
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         autoFocus
                     />
-                    {/* Current location chip */}
-                    {current && (
-                        <div
-                            className="you-are-here"
-                            title="Your current location"
-                        >
-                            You are here:{" "}
-                            <b>
-                                {current.virtualName ||
-                                    `v${current.virtualRoomId}`}
-                            </b>
-                        </div>
-                    )}
-                    <div className="count">
-                        {filtered.length}/{destinations.length}
-                    </div>
                 </div>
 
                 <div className="taxi-body">
@@ -315,121 +280,58 @@ export const TaxiView: React.FC = () => {
                         <div className="empty">No matching destinations.</div>
                     )}
 
-                    {grid ? (
-                        <div className="taxi-grid" role="list">
-                            {filtered.map((d, idx) => {
-                                const src = THUMB_RESOLVER(d);
-                                const here = isHere(d);
-                                return (
-                                    <button
-                                        role="listitem"
-                                        key={`${d.roomId}:${d.virtualRoomId}:${idx}`}
-                                        className={`tile${here ? " here" : ""}`}
-                                        // ⬇ Tooltip now shows virtual room id
-                                        title={`${d.name} — v${d.virtualRoomId}`}
-                                        onClick={() => onPick(d)}
-                                    >
-                                        {here && (
-                                            <div className="badge">
-                                                You are here
-                                            </div>
-                                        )}
-                                        {typeof d.occupants === "number" && (
-                                            <div className="count-badge">
-                                                {d.occupants}
-                                            </div>
-                                        )}
+                    <div className="taxi-grid" role="list">
+                        {filtered.map((d, idx) => {
+                            const src = THUMB_RESOLVER(d);
+                            const here = isHere(d);
 
-                                        <div className="thumbWrap">
-                                            <img
-                                                className="thumb"
-                                                src={src}
-                                                loading="lazy"
-                                                alt=""
-                                                onError={(e) => {
-                                                    (
-                                                        e.target as HTMLImageElement
-                                                    ).style.display = "none";
-                                                    const host = (
-                                                        e.target as HTMLElement
-                                                    ).parentElement;
-                                                    host?.classList.add(
-                                                        "thumb-fallback"
-                                                    );
-                                                    host?.setAttribute(
-                                                        "data-initials",
-                                                        initials(d.name)
-                                                    );
-                                                }}
-                                            />
+                            return (
+                                <button
+                                    role="listitem"
+                                    key={`${d.roomId}:${d.virtualRoomId}:${idx}`}
+                                    className={`tile${here ? " here" : ""}`}
+                                    title={d.name}
+                                    onClick={() => onPick(d)}
+                                >
+                                    {here && (
+                                        <div className="badge">
+                                            You are here
                                         </div>
-                                        <div className="label">
-                                            <span className="name">
-                                                {d.name}
-                                            </span>
-                                            <span className="meta">
-                                                {/* ⬇ Show virtual room id instead of physical room id */}
-                                                {d.roomName
-                                                    ? d.roomName
-                                                    : ""}{" "}
-                                                v{d.virtualRoomId}
-                                            </span>
+                                    )}
+
+                                    {typeof d.occupants === "number" && (
+                                        <div className="count-badge">
+                                            {d.occupants}
                                         </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <ul className="taxi-list">
-                            {filtered.map((d, idx) => {
-                                const here = isHere(d);
-                                return (
-                                    <li
-                                        key={`${d.roomId}:${d.virtualRoomId}:${idx}`}
-                                        className={`taxi-row${
-                                            here ? " here" : ""
-                                        }`}
-                                        onClick={() => onPick(d)}
-                                        // ⬇ Tooltip uses virtual room id
-                                        title={`${d.name} — v${d.virtualRoomId}`}
-                                    >
-                                        <div className="row-left">
-                                            <div className="name">
-                                                {d.name}
-                                                {here && (
-                                                    <span className="here-pill">
-                                                        You are here
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="meta">
-                                                {/* ⬇ Meta line shows VRID */}
-                                                {d.roomName
-                                                    ? d.roomName
-                                                    : "Zone"}{" "}
-                                                v{d.virtualRoomId}
-                                                {typeof d.occupants ===
-                                                    "number" && (
-                                                    <> • {d.occupants} online</>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="row-right">
-                                            <button
-                                                className="call-btn"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onPick(d);
-                                                }}
-                                            >
-                                                Take me
-                                            </button>
-                                        </div>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    )}
+                                    )}
+
+                                    <div className="thumbWrap">
+                                        <img
+                                            className="thumb"
+                                            src={src}
+                                            loading="lazy"
+                                            alt=""
+                                            onError={(e) => {
+                                                (
+                                                    e.target as HTMLImageElement
+                                                ).style.display = "none";
+                                                const host = (
+                                                    e.target as HTMLElement
+                                                ).parentElement;
+                                                host?.classList.add(
+                                                    "thumb-fallback"
+                                                );
+                                                host?.setAttribute(
+                                                    "data-initials",
+                                                    initials(d.name)
+                                                );
+                                            }}
+                                        />
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
                 <div className="taxi-footer">
