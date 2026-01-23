@@ -1,19 +1,19 @@
-import React, {
-    FC,
-    useEffect,
-    useRef,
-    useState,
-    useCallback,
-    useLayoutEffect,
-} from "react";
+import React, { FC, useEffect, useRef, useState, useLayoutEffect } from "react";
 import "./WantedListView.scss";
+
+type Charge = {
+    text: string;
+};
 
 interface WantedUser {
     userId: number;
     username: string;
     figure: string;
     wantedLevel: number;
-    charges: string[]; // normalized to array in state
+    charges: Charge[];
+
+    // ONE timer per user (derived from composer field #5)
+    timerExpiresAt?: number; // unix ms
 }
 
 interface WantedListViewProps {
@@ -23,9 +23,14 @@ interface WantedListViewProps {
 const POS_KEY = "wanted-list-pos";
 const SIZE_KEY = "wanted-list-size";
 
-/** star art (replace paths if yours differ) */
 const STAR_FULL = "../../icons/star-full.png";
-const STAR_EMPTY = "../../icons/star-empty.png";
+
+const formatTime = (ms: number) => {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+};
 
 export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
     const [wantedUsers, setWantedUsers] = useState<WantedUser[]>([]);
@@ -54,6 +59,14 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
         h: 420,
     });
 
+    // ticking clock for timers
+    const [now, setNow] = useState<number>(() => Date.now());
+
+    useEffect(() => {
+        const id = window.setInterval(() => setNow(Date.now()), 1000);
+        return () => window.clearInterval(id);
+    }, []);
+
     // load persisted pos/size
     useLayoutEffect(() => {
         try {
@@ -78,15 +91,13 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
                 });
             }
         } catch {
-            // ignore bad localStorage values
+            // ignore
         }
     }, []);
 
-    // request a fresh snapshot on mount (best-effort, safe if not available)
+    // request a fresh snapshot on mount
     useEffect(() => {
         try {
-            // If you have a real composer, use it here:
-            // GetConnection().send(new WantedListRequestComposer());
             const anyWin = window as any;
             if (
                 anyWin?.Nitro?.connection &&
@@ -96,47 +107,102 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
                     new anyWin.WantedListRequestComposer()
                 );
             } else {
-                // Optional: broadcast a request event your app shell can intercept
                 window.dispatchEvent(new CustomEvent("wanted_list_request"));
             }
-        } catch {
-            /* no-op */
-        }
+        } catch {}
     }, []);
 
-    // listen for wanted list updates (from parser / server)
+    // normalize incoming charges (string list from parser)
+    const normalizeCharges = (u: any): Charge[] => {
+        const rawArr = Array.isArray(u?.chargesList)
+            ? u.chargesList
+            : Array.isArray(u?.charges)
+            ? u.charges
+            : null;
+
+        if (rawArr) {
+            return rawArr
+                .map((c: any) => {
+                    if (!c) return null;
+
+                    if (typeof c === "object") {
+                        const text = String(
+                            c.text ?? c.charge ?? c.name ?? ""
+                        ).trim();
+                        if (!text) return null;
+                        return { text };
+                    }
+
+                    if (typeof c === "string") {
+                        const text = c.trim();
+                        if (!text) return null;
+                        return { text };
+                    }
+
+                    return null;
+                })
+                .filter(Boolean) as Charge[];
+        }
+
+        if (typeof u?.charges === "string" && u.charges.length) {
+            return u.charges
+                .split(/[|,]/g)
+                .map((s: string) => s.trim())
+                .filter(Boolean)
+                .map((text: string) => ({ text }));
+        }
+
+        return [];
+    };
+
+    // listen for updates
     useEffect(() => {
         const onUpdate = (e: Event) => {
             const raw = (e as CustomEvent).detail as any[] | undefined;
             if (!Array.isArray(raw)) return;
 
-            const normalizeCharges = (u: any): string[] => {
-                // Prefer already parsed array from parser
-                if (Array.isArray(u.chargesList))
-                    return u.chargesList.filter(Boolean);
+            const nowMs = Date.now();
 
-                // Accept array under 'charges'
-                if (Array.isArray(u.charges)) return u.charges.filter(Boolean);
+            // Keep previous timers if a refresh comes in with 0 seconds
+            setWantedUsers((prev) => {
+                const prevById = new Map<number, WantedUser>();
+                for (const p of prev) prevById.set(p.userId, p);
 
-                // Fall back to string in either comma- or pipe-delimited form
-                if (typeof u.charges === "string" && u.charges.length) {
-                    return u.charges
-                        .split(/[|,]/g)
-                        .map((s: string) => s.trim())
-                        .filter(Boolean);
-                }
-                return [];
-            };
+                const mapped: WantedUser[] = raw
+                    .map((u) => {
+                        const userId = Number(u?.userId) || 0;
+                        if (userId <= 0) return null;
 
-            const mapped: WantedUser[] = raw.map((u) => ({
-                userId: Number(u.userId) || 0,
-                username: String(u.username || ""),
-                figure: String(u.figure || ""),
-                wantedLevel: Number(u.wantedLevel) || 0,
-                charges: normalizeCharges(u),
-            }));
+                        // your parser field name:
+                        const incomingSecs = Number(u?.maxRemainingSeconds);
+                        const maxRemainingSeconds = Number.isFinite(
+                            incomingSecs
+                        )
+                            ? Math.max(0, incomingSecs)
+                            : 0;
 
-            setWantedUsers(mapped);
+                        const prevUser = prevById.get(userId);
+
+                        const nextTimerExpiresAt =
+                            maxRemainingSeconds > 0
+                                ? nowMs + maxRemainingSeconds * 1000
+                                : prevUser?.timerExpiresAt; // ✅ KEEP OLD TIMER if new packet says 0
+
+                        return {
+                            userId,
+                            username: String(u?.username || ""),
+                            figure: String(u?.figure || ""),
+                            wantedLevel: Number(u?.wantedLevel) || 0,
+                            charges: normalizeCharges(u),
+                            timerExpiresAt: nextTimerExpiresAt,
+                        };
+                    })
+                    .filter(Boolean) as WantedUser[];
+
+                // Optional: don't drop rows just because charges list momentarily empty
+                // Only hide truly invalid items
+                return mapped.filter((u) => u.userId > 0);
+            });
         };
 
         window.addEventListener(
@@ -262,7 +328,7 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
         } catch {}
     };
 
-    // global listeners (drag/resize)
+    // global listeners
     useEffect(() => {
         const mm = (e: MouseEvent) => {
             onMouseMove(e);
@@ -297,37 +363,69 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
 
     const handleClose = () => setClosing(true);
 
-    const renderStars = (level: number) => (
-        <div
-            className="wanted-stars"
-            role="img"
-            aria-label={`${level} out of 5`}
-        >
-            {[...Array(5)].map((_, i) => (
-                <img
-                    key={i}
-                    className={`star ${i < level ? "filled" : "empty"}`}
-                    src={i < level ? STAR_FULL : STAR_EMPTY}
-                    alt=""
-                    aria-hidden="true"
-                    draggable={false}
-                />
-            ))}
-        </div>
-    );
+    const renderStars = (level: number) => {
+        const n = Math.max(0, Math.min(5, level));
+        if (n === 0) return null;
 
-    const renderCharges = (charges: string[]) => {
+        return (
+            <div className="wanted-stars" role="img" aria-label={`${n} stars`}>
+                {Array.from({ length: n }).map((_, i) => (
+                    <img
+                        key={i}
+                        className="star filled"
+                        src={STAR_FULL}
+                        alt=""
+                        aria-hidden="true"
+                        draggable={false}
+                    />
+                ))}
+            </div>
+        );
+    };
+
+    const groupCharges = (charges: Charge[]) => {
+        const map = new Map<string, { text: string; count: number }>();
+
+        for (const c of charges) {
+            const text = (c?.text || "").trim();
+            if (!text) continue;
+
+            const key = text.toLowerCase();
+            const existing = map.get(key);
+
+            if (!existing) map.set(key, { text, count: 1 });
+            else existing.count++;
+        }
+
+        return Array.from(map.values()).sort((a, b) =>
+            a.text.localeCompare(b.text)
+        );
+    };
+
+    const renderCharges = (charges: Charge[]) => {
         const list = Array.isArray(charges) ? charges : [];
-        if (list.length === 0)
+        const grouped = groupCharges(list);
+
+        if (grouped.length === 0)
             return <div className="charges charges--empty">No charges</div>;
 
         return (
             <ul className="charges">
-                {list.map((c, i) => (
-                    <li key={i}>{c}</li>
+                {grouped.map((c) => (
+                    <li key={c.text}>
+                        <span className="charge-text">{c.text}</span>
+                        {c.count > 1 && (
+                            <span className="charge-mult"> x{c.count}</span>
+                        )}
+                    </li>
                 ))}
             </ul>
         );
+    };
+
+    const getRemainingMs = (u: WantedUser) => {
+        if (!u.timerExpiresAt) return 0;
+        return Math.max(0, u.timerExpiresAt - now);
     };
 
     return (
@@ -373,6 +471,10 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
                     wantedUsers.map((u, idx) => {
                         const hue = (idx * 47) % 360;
                         const accent = `hsl(${hue} 70% 46%)`;
+
+                        const remainMs = getRemainingMs(u);
+                        const showTimer = remainMs > 0;
+
                         return (
                             <div
                                 className="wanted-entry colorized"
@@ -385,8 +487,23 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
                                         alt={u.username}
                                     />
                                 </div>
+
                                 <div className="wanted-info">
-                                    <div className="username">{u.username}</div>
+                                    <div className="wanted-top">
+                                        <div className="username">
+                                            {u.username}
+                                        </div>
+
+                                        {showTimer && (
+                                            <div
+                                                className="wanted-timer"
+                                                title="Time remaining"
+                                            >
+                                                {formatTime(remainMs)}
+                                            </div>
+                                        )}
+                                    </div>
+
                                     {renderCharges(u.charges)}
                                     {renderStars(u.wantedLevel)}
                                 </div>

@@ -83,8 +83,10 @@ export const LiveFeed: FC = () => {
             const newMsg: FeedMessage = {
                 id: messageId++,
 
-                // Show only a generic label for police calls:
+                // show label for police calls
                 text: isPoliceCall ? "Police Call" : d.message,
+
+                // ✅ keep raw message for the modal
                 fullText: d.message,
 
                 username: d.username,
@@ -115,12 +117,11 @@ export const LiveFeed: FC = () => {
             }
         };
 
+        // ✅ only one event source
         window.addEventListener("live_feed_event", handleEvent);
-        window.addEventListener("police_call_event", handleEvent);
 
         return () => {
             window.removeEventListener("live_feed_event", handleEvent);
-            window.removeEventListener("police_call_event", handleEvent);
         };
     }, []);
 
@@ -172,7 +173,7 @@ export const LiveFeed: FC = () => {
                 >
                     <img
                         className="avatar-head"
-                        src={`https://www.habbo.com/habbo-imaging/avatarimage?figure=${msg.figure}&direction=2&headonly=1&size=m`}
+                        src={`https://imager.olympusrp.pw/?figure=${msg.figure}&direction=2&headonly=1&size=m`}
                         alt={`${msg.username}'s avatar`}
                     />
 

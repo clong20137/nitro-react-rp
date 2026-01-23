@@ -1,9 +1,7 @@
 import React, { FC, useEffect, useRef, useState } from "react";
 import { SendMessageComposer } from "../../api";
-
 import { ReportPoliceCallComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ReportPoliceCallComposer";
 import { AcceptPoliceCallComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/AcceptPoliceCallComposer";
-
 import "./PoliceCallView.scss";
 
 type PoliceCallPayload = {
@@ -15,34 +13,28 @@ type PoliceCallPayload = {
 };
 
 type Pos = { left: number; top: number };
-
-type CallStatus = "pending" | "accepted";
+type CallStatus = "pending" | "accepted" | "closed";
 
 type TrackedCall = {
-    id: number; // local id
+    id: number;
     payload: PoliceCallPayload;
-    createdAt: number; // ms
+    createdAt: number;
     status: CallStatus;
 };
 
 const POS_KEY = "police_call_view_pos";
 const MODAL_W = 500;
-const MODAL_H = 320; // bumped a bit to make room for the log
+const MODAL_H = 320;
+
+const CALL_TTL_MS = 5 * 60 * 1000; // ✅ 5 minutes
 
 export const PoliceCallView: FC = () => {
     const [open, setOpen] = useState(false);
-
-    // "Focused" / primary call shown in the top section
     const [data, setData] = useState<PoliceCallPayload | null>(null);
-
-    // Text for the report (if they choose Report)
     const [reportText, setReportText] = useState("");
-
-    // List of calls + ticking clock
     const [calls, setCalls] = useState<TrackedCall[]>([]);
     const [nowTs, setNowTs] = useState<number>(Date.now());
 
-    // drag state
     const [pos, setPos] = useState<Pos | null>(null);
     const rootRef = useRef<HTMLDivElement | null>(null);
     const dragState = useRef<{ on: boolean; dx: number; dy: number }>({
@@ -50,8 +42,6 @@ export const PoliceCallView: FC = () => {
         dx: 0,
         dy: 0,
     });
-
-    /* ---------------- helpers ---------------- */
 
     const clampPos = (left: number, top: number) => {
         const el = rootRef.current;
@@ -77,7 +67,6 @@ export const PoliceCallView: FC = () => {
                 return clampPos(parsed.left, parsed.top);
             }
         } catch {}
-        // center fallback
         const left = Math.round(window.innerWidth / 2 - MODAL_W / 2);
         const top = Math.round(window.innerHeight / 2 - MODAL_H / 2);
         return clampPos(left, top);
@@ -92,44 +81,64 @@ export const PoliceCallView: FC = () => {
         return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
     };
 
-    /* ---------------- timers ---------------- */
-
-    // tick once per second for MM:SS display
+    // tick for elapsed + TTL checks
     useEffect(() => {
-        const id = window.setInterval(() => {
-            setNowTs(Date.now());
-        }, 1000);
+        const id = window.setInterval(() => setNowTs(Date.now()), 1000);
         return () => window.clearInterval(id);
     }, []);
 
-    /* ---------------- event wiring ---------------- */
+    // ✅ mark calls closed after 5 min
+    useEffect(() => {
+        setCalls((prev) =>
+            prev.map((c) => {
+                if (
+                    c.status === "pending" &&
+                    nowTs - c.createdAt > CALL_TTL_MS
+                ) {
+                    return { ...c, status: "closed" as CallStatus };
+                }
+                return c;
+            })
+        );
 
-    // Listen for: window.dispatchEvent(new CustomEvent('open_police_call', { detail: {...} }))
+        // if currently open call is now expired, close the modal
+        if (open && data) {
+            const match = calls.find(
+                (c) =>
+                    c.payload.username === data.username &&
+                    c.createdAt && // just in case
+                    c.payload.virtualRoomId === data.virtualRoomId
+            );
+            if (match && match.status === "closed") {
+                setOpen(false);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nowTs]);
+
+    // ✅ open from LiveFeed button
     useEffect(() => {
         const onOpen = (e: Event) => {
-            const { detail } = e as CustomEvent<PoliceCallPayload>;
+            const { detail } = e as CustomEvent<any>;
             if (!detail) return;
 
             const normalized: PoliceCallPayload = {
-                username: detail.username ?? "",
-                figure: detail.figure ?? "",
-                message: detail.message ?? "",
-                virtualRoomId: Number(detail.virtualRoomId ?? 0),
-                virtualRoomName: detail.virtualRoomName ?? "",
+                username: String(detail.username ?? ""),
+                figure: String(detail.figure ?? ""),
+                message: String(detail.message ?? ""),
+                virtualRoomId: Number(detail.virtualRoomId) || 0,
+                virtualRoomName: String(detail.virtualRoomName || ""),
             };
 
             const now = Date.now();
             const newCall: TrackedCall = {
-                id: now, // simple local id
+                id: now,
                 payload: normalized,
                 createdAt: now,
                 status: "pending",
             };
 
-            // prepend newest at top
             setCalls((prev) => [newCall, ...prev]);
-
-            // focus this call in the main panel
             setData(normalized);
             setReportText("");
             setOpen(true);
@@ -137,15 +146,14 @@ export const PoliceCallView: FC = () => {
         };
 
         window.addEventListener("open_police_call", onOpen as EventListener);
-        return () => {
+        return () =>
             window.removeEventListener(
                 "open_police_call",
                 onOpen as EventListener
             );
-        };
     }, []);
 
-    // Re-clamp on resize so the window never gets lost offscreen
+    // Re-clamp on resize
     useEffect(() => {
         const onResize = () => {
             if (!pos) return;
@@ -158,8 +166,6 @@ export const PoliceCallView: FC = () => {
     }, [pos]);
 
     if (!open || !data) return null;
-
-    /* ---------------- drag (mouse + touch) ---------------- */
 
     const startDragAt = (clientX: number, clientY: number) => {
         const el = rootRef.current;
@@ -212,26 +218,24 @@ export const PoliceCallView: FC = () => {
     };
     const onTouchEnd = () => stopDrag();
 
-    /* ---------------- actions ---------------- */
-
-    const accept = () => {
+    const acceptCall = (payload: PoliceCallPayload) => {
         try {
             SendMessageComposer(
                 new AcceptPoliceCallComposer(
-                    data.username,
-                    data.virtualRoomId,
-                    data.virtualRoomName
+                    payload.username,
+                    payload.virtualRoomId,
+                    payload.virtualRoomName
                 )
             );
         } catch (e) {
             console.warn("[PoliceCallView] Accept failed:", e);
         }
 
-        // mark this call as accepted in the local list
         setCalls((prev) =>
             prev.map((c) =>
-                c.payload.username === data.username &&
-                c.payload.virtualRoomId === data.virtualRoomId
+                c.payload.username === payload.username &&
+                c.payload.virtualRoomId === payload.virtualRoomId &&
+                c.status === "pending"
                     ? { ...c, status: "accepted" }
                     : c
             )
@@ -269,7 +273,6 @@ export const PoliceCallView: FC = () => {
             aria-label="Police Call"
             style={style}
         >
-            {/* Header (drag handle) */}
             <div
                 className="module-header"
                 onMouseDown={onMouseDown}
@@ -284,12 +287,9 @@ export const PoliceCallView: FC = () => {
                         setOpen(false);
                     }}
                     aria-label="Close"
-                >
-                    ✕
-                </button>
+                />
             </div>
 
-            {/* Body */}
             <div className="call-body">
                 <img
                     className="full-avatar"
@@ -304,14 +304,15 @@ export const PoliceCallView: FC = () => {
                     <div className="username_request">{data.username}</div>
                     <div className="message_request">{data.message}</div>
 
+                    {/* ✅ show the CALLER’s VR info (must come from packet) */}
                     <div
                         className="room-link"
-                        title={`Virtual Room #${data.virtualRoomId}`}
+                        title={`Virtual Room #${data.virtualRoomId || "?"}`}
                     >
-                        #{data.virtualRoomId} — {data.virtualRoomName}
+                        #{data.virtualRoomId || "?"} —{" "}
+                        {data.virtualRoomName || "Unknown"}
                     </div>
 
-                    {/* report textarea (optional) */}
                     <textarea
                         className="call-report-input"
                         placeholder="Optional report / notes..."
@@ -325,7 +326,7 @@ export const PoliceCallView: FC = () => {
                                 className="habbo-action-button green"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    accept();
+                                    acceptCall(data);
                                 }}
                             >
                                 Accept
@@ -344,7 +345,6 @@ export const PoliceCallView: FC = () => {
                 </div>
             </div>
 
-            {/* Call log */}
             <div className="call-log">
                 <div className="call-log-header">
                     <span>Active Calls</span>
@@ -359,12 +359,6 @@ export const PoliceCallView: FC = () => {
                         <div className="col-status">Status</div>
                     </div>
 
-                    {calls.length === 0 && (
-                        <div className="call-log-empty">
-                            No active calls yet.
-                        </div>
-                    )}
-
                     {calls.map((c) => (
                         <div
                             key={c.id}
@@ -378,20 +372,48 @@ export const PoliceCallView: FC = () => {
                         >
                             <div className="col-user">{c.payload.username}</div>
                             <div className="col-room">
-                                #{c.payload.virtualRoomId} –{" "}
-                                {c.payload.virtualRoomName}
+                                #{c.payload.virtualRoomId || "?"} –{" "}
+                                {c.payload.virtualRoomName || "Unknown"}
                             </div>
                             <div className="col-time">
                                 {formatElapsed(c.createdAt)}
                             </div>
-                            <div className="col-status">
+
+                            <div
+                                className="col-status"
+                                style={{
+                                    display: "flex",
+                                    gap: 8,
+                                    justifyContent: "flex-end",
+                                    alignItems: "center",
+                                }}
+                            >
                                 <span
                                     className={`status-pill status-${c.status}`}
                                 >
                                     {c.status === "pending"
                                         ? "Pending"
-                                        : "Accepted"}
+                                        : c.status === "accepted"
+                                        ? "Accepted"
+                                        : "Closed"}
                                 </span>
+
+                                {/* ✅ Respond button next to Pending */}
+                                {c.status === "pending" && (
+                                    <button
+                                        className="habbo-action-button green"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            acceptCall(c.payload);
+                                        }}
+                                        style={{
+                                            padding: "2px 8px",
+                                            fontSize: 11,
+                                        }}
+                                    >
+                                        Respond
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ))}

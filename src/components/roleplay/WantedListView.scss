@@ -83,7 +83,6 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     cursor: pointer;
     padding: 0;
 
-
     &:before,
     &:after {
         content: "";
@@ -154,7 +153,6 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     position: relative;
     display: flex;
     align-items: center;
-    /* removed divider line */
     padding: 10px 10px;
     gap: 10px;
     border-radius: 8px;
@@ -180,28 +178,88 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     }
 }
 
-.avatar img {
-    width: 40px;
-    height: 40px;
-    border: 1px solid #999;
-    background: #eee;
-    border-radius: 6px;
+/* ✅ Remove avatar border/frame completely */
+.avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+        width: 40px;
+        height: 40px;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        border-radius: 6px;
+        image-rendering: pixelated;
+    }
 }
 
 .wanted-info {
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+/* ✅ NEW: username + timer row */
+.wanted-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
 }
 
 .username {
     font-weight: bold;
-    margin-bottom: 4px;
+    margin: 0;
     color: #000;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
+/* ✅ NEW: single red timer on right */
+.wanted-timer {
+    font-size: 12px;
+    font-weight: 800;
+    color: #ff3b30;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .35);
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+/* ✅ Bigger charges font + multiplier style */
 .charges {
     color: #444;
-    font-size: 13px;
+    font-size: 14px;
+    /* bumped */
+    line-height: 1.15;
+    margin: 0 0 4px 0;
+    padding-left: 16px;
+
+    li {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+    }
+
+    .charge-text {
+        /* keeps your spacing clean */
+    }
+
+    .charge-mult {
+        font-weight: 800;
+        opacity: 0.9;
+    }
+}
+
+.charges--empty {
+    font-size: 14px;
+    color: #666;
     margin-bottom: 4px;
 }
 
@@ -217,17 +275,8 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
         image-rendering: pixelated;
         user-select: none;
         pointer-events: none;
-        /* purely visual */
         transition: transform .12s ease, filter .12s ease;
-    }
-
-    /* fun: wiggle stars a bit on row hover */
-    .star {
         filter: drop-shadow(0 0 0 transparent);
-    }
-
-    .star.filled {
-        /* you can tweak glow on hover below */
     }
 }
 
@@ -278,12 +327,16 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
         height: 36px;
     }
 
+    .wanted-top {
+        width: 100%;
+    }
+
     .username {
         font-size: 14px;
     }
 
     .charges {
-        font-size: 12px;
+        font-size: 13px;
     }
 
     .wanted-stars .star {
