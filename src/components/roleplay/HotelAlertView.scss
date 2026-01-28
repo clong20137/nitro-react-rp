@@ -1,47 +1,62 @@
-/* PoliceCallView.scss */
-/* ===== Tokens (match Hotel Alert / Wanted) ===== */
+/*===========================OlympusRP — Hotel Alert Toasts (Wanted-style header + proper close)===========================*/
+.hotel-toast-region {
+    position: fixed;
+    top: 16px;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+}
+
+/* ===== Tokens (match Wanted) ===== */
 $header-blue: #1e7295;
 $border: #fff;
-$shadow: 0 0 rgba(0, 0, 0, 0.4), 0 0 rgba(0, 0, 0, 0.3),
-    inset 0 -4px rgba(0, 0, 0, 0.2);
+$shadow: 0 0 rgba(0, 0, 0, .4),
+    0 0 rgba(0, 0, 0, .3),
+    inset 0 -4px rgba(0, 0, 0, .2);
 
-.police-call-view {
-    position: fixed;
-    /* you already override inline when pos exists */
+.hotel-toast {
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+
+    max-width: 420px;
+    width: calc(100vw - 40px);
+
     background: #dfdfdf;
     border: 2px solid $border;
     border-radius: 10px;
     box-shadow: $shadow;
     overflow: hidden;
-    z-index: 1000;
-    box-sizing: border-box;
+    position: relative;
 
-    width: 500px;
-    max-width: calc(100vw - 24px);
-
-    /* smooth pop like alert */
     opacity: 0;
-    transform: translateY(-10px);
-    animation: policeIn 180ms ease-out forwards;
-}
+    transform: translateY(-18px);
+    animation: toastIn 180ms ease-out forwards;
+    animation-delay: calc((var(--delay-index, 0)) * 70ms);
 
-@keyframes policeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-14px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    &.paused .hotel-toast__progress {
+        animation-play-state: paused;
     }
 }
 
-/* ===== Header (same as hotel toast) ===== */
-.police-call-view .module-header {
+.hotel-toast--leaving {
+    animation: toastOut 180ms ease-in forwards;
+}
+
+/* ✅ REMOVE the left accent bar completely */
+.hotel-toast::before {
+    content: none !important;
+}
+
+/* ===== Header (same style as Wanted) ===== */
+.hotel-toast__header {
     background: $header-blue;
     color: #fff;
-
     display: flex;
     align-items: center;
     justify-content: center;
@@ -51,59 +66,88 @@ $shadow: 0 0 rgba(0, 0, 0, 0.4), 0 0 rgba(0, 0, 0, 0.3),
     font-size: 18px;
 
     border-radius: 8px 8px 0 0;
-    cursor: move;
+    cursor: default;
     position: relative;
 
-    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
+    text-shadow:
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
         1px 1px 0 #000;
 
     filter: drop-shadow(0 0 1px black);
-    box-shadow: 0 0 #0000001a, 0 0 #0000001a, inset 0 -3px #00000017;
+    box-shadow: 0 0 #0000001a,
+        0 0 #0000001a,
+        inset 0 -3px #00000017;
 }
 
-.police-call-view .module-header>span {
+/* Header title */
+.hotel-toast__title {
     pointer-events: none;
     user-select: none;
 }
 
-/* ===== Close button (Wanted/Hotel style) ===== */
-.police-call-view .close-btn {
+/* Optional icon (kept) */
+.hotel-toast__icon {
+    position: absolute;
+    left: 10px;
+    width: 41px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+        width: 41px;
+        height: 44px;
+        object-fit: contain;
+        display: block;
+    }
+}
+
+/* ✅ FORCE Wanted-style close button to apply to either class name:
+- <button class="close-button">
+- <button class="hotel-toast__close">
+*/
+.hotel-toast .close-button,
+.hotel-toast .hotel-toast__close {
     position: absolute;
     top: 6px;
     right: 8px;
     width: 24px;
     height: 24px;
 
+    /* kill native button look + the "x" text */
     appearance: none;
     -webkit-appearance: none;
-
     border: 2px solid #921911;
     background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
     border-radius: 4px;
-    box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, 0.22);
-
+    box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
     cursor: pointer;
     padding: 0;
-
-    /* hide the literal "✕" text */
     font-size: 0;
+    /* ✅ hides the literal "x" */
     line-height: 0;
     color: transparent;
-
     z-index: 5;
 }
 
-.police-call-view .close-btn:hover {
+.hotel-toast .close-button:hover,
+.hotel-toast .hotel-toast__close:hover {
     filter: brightness(1.05);
 }
 
-.police-call-view .close-btn:active {
+.hotel-toast .close-button:active,
+.hotel-toast .hotel-toast__close:active {
     transform: translateY(1px);
 }
 
-/* draw the white X */
-.police-call-view .close-btn::before,
-.police-call-view .close-btn::after {
+/* Draw the white X (Wanted-style) */
+.hotel-toast .close-button::before,
+.hotel-toast .close-button::after,
+.hotel-toast .hotel-toast__close::before,
+.hotel-toast .hotel-toast__close::after {
     content: "";
     position: absolute;
     left: 50%;
@@ -117,233 +161,88 @@ $shadow: 0 0 rgba(0, 0, 0, 0.4), 0 0 rgba(0, 0, 0, 0.3),
     margin-top: -1px;
 }
 
-.police-call-view .close-btn::before {
+.hotel-toast .close-button::before,
+.hotel-toast .hotel-toast__close::before {
     transform: rotate(45deg);
 }
 
-.police-call-view .close-btn::after {
+.hotel-toast .close-button::after,
+.hotel-toast .hotel-toast__close::after {
     transform: rotate(-45deg);
 }
 
-/* ===== Body layout ===== */
-.call-body {
-    display: grid;
-    grid-template-columns: 72px 1fr;
-    gap: 12px;
-    padding: 12px;
-}
-
-.full-avatar {
-    width: 64px;
-    height: 85px;
-    object-fit: contain;
-    background: hsla(0, 0%, 52.5%, 0.25);
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, .15);
-}
-
-.call-info {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.username_request {
-    font-weight: 800;
-    font-size: 16px;
-    color: #000;
-    margin-bottom: 4px;
-}
-
-.message_request {
-    font-size: 13px;
-    color: #000;
-    margin-bottom: 8px;
-    word-break: break-word;
+/* ===== Body ===== */
+.hotel-toast__message {
     background: rgba(255, 255, 255, .85);
-    border: 1px solid rgba(0, 0, 0, .12);
+    margin: 10px;
+    padding: 10px;
     border-radius: 8px;
-    padding: 8px;
-    box-shadow: inset 0 1px 0 #fff;
+    color: #000;
+    font-size: 15px;
+    line-height: 1.3;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
-/* room link badge style (still clickable) */
-.room-link {
-    align-self: flex-start;
-    font-size: 12px;
-    font-weight: 700;
-    color: #1b4f66;
-    background: rgba(255, 255, 255, .75);
-    border: 1px solid rgba(0, 0, 0, .12);
-    border-radius: 8px;
-    padding: 4px 8px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    user-select: none;
+/* ===== Progress Bar ===== */
+.hotel-toast__progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: linear-gradient(90deg, rgba(0, 0, 0, .25), rgba(0, 0, 0, .45));
+    transform-origin: left center;
+    animation: toastProgress linear;
 }
 
-/* report box */
-.call-report-input {
-    width: 100%;
-    min-height: 64px;
-    resize: none;
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, .18);
-    background: rgba(255, 255, 255, .9);
-    padding: 8px;
-    font-size: 12px;
-    outline: none;
-    box-shadow: inset 0 1px 0 #fff;
-}
+/* ===== Animations ===== */
+@keyframes toastIn {
+    from {
+        opacity: 0;
+        transform: translateY(-18px);
+    }
 
-.call-report-input:focus {
-    border-color: rgba(30, 114, 149, .65);
-    box-shadow: inset 0 1px 0 #fff, 0 0 0 2px rgba(30, 114, 149, .15);
-}
-
-/* buttons row (keep your existing habbo-action-button classes) */
-.action-buttons {
-    margin-top: 10px;
-    display: flex;
-    justify-content: center;
-}
-
-.police-call-buttons {
-    display: flex;
-    gap: 12px;
-}
-
-/* If you want the buttons to match Habbo-style more: */
-.habbo-action-button {
-    padding: 6px 14px;
-    font-size: 13px;
-    font-weight: 800;
-    border-radius: 6px;
-    cursor: pointer;
-    border: 2px solid rgba(0, 0, 0, .2);
-    box-shadow: 0 2px 0 rgba(0, 0, 0, .2), inset 0 1px 0 rgba(255, 255, 255, .6);
-}
-
-.habbo-action-button.green {
-    background: #4caf50;
-    border-color: #adf26c;
-    color: #fff;
-}
-
-.habbo-action-button.red {
-    background: #e53935;
-    border-color: #ff9b9b;
-    color: #fff;
-}
-
-.habbo-action-button:active {
-    transform: translateY(1px);
-}
-
-/* ===== Call log (keep your section look, but align with theme) ===== */
-.call-log {
-    margin-top: 4px;
-    padding: 8px 10px 10px;
-    background: #f4eee0;
-    border-top: 1px solid #c8b89a;
-}
-
-.call-log-header {
-    display: flex;
-    align-items: center;
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    color: #4b3c25;
-    margin-bottom: 6px;
-
-    .count {
-        margin-left: 6px;
-        font-weight: 500;
-        color: #7b6a52;
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-.call-log-table {
-    max-height: 150px;
-    overflow-y: auto;
-    border-radius: 8px;
-    border: 1px solid #d3c3a4;
-    background: #fff;
-    box-shadow: inset 0 1px 0 #ffffff;
-}
-
-.call-log-row {
-    display: grid;
-    grid-template-columns: 1.2fr 1.8fr 0.8fr 0.9fr;
-    align-items: center;
-    font-size: 11px;
-    padding: 6px 8px;
-    border-bottom: 1px solid #eee;
-    cursor: pointer;
-
-    &--head {
-        background: #ece0c9;
-        font-weight: 800;
-        text-transform: uppercase;
-        cursor: default;
+@keyframes toastOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
     }
 
-    &:last-child {
-        border-bottom: none;
-    }
-
-    &.is-selected {
-        background: #e0f1ff;
-    }
-
-    &:not(.call-log-row--head):hover {
-        background: #f5f0e5;
-    }
-
-    .col-user {
-        font-weight: 700;
-    }
-
-    .col-room {
-        color: #5a4a30;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .col-time {
-        font-variant-numeric: tabular-nums;
-        color: #444;
-    }
-
-    .col-status {
-        text-align: right;
+    to {
+        opacity: 0;
+        transform: translateY(-18px);
     }
 }
 
-/* status pill matches your current style */
-.status-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1px 8px;
-    border-radius: 10px;
-    font-size: 10px;
-    text-transform: uppercase;
-    font-weight: 800;
-    border: 1px solid #b4a58a;
-    background: #f8f2e4;
+@keyframes toastProgress {
+    from {
+        transform: scaleX(0);
+    }
+
+    to {
+        transform: scaleX(1);
+    }
 }
 
-.status-pending {
-    background: #fff4c2;
-    border-color: #e0c97a;
-    color: #64521a;
-}
+/* ===== Mobile ===== */
+@media (max-width: 420px) {
+    .hotel-toast {
+        max-width: 360px;
+    }
 
-.status-accepted {
-    background: #c8f2c8;
-    border-color: #5aa65a;
-    color: #1f5a1f;
+    .hotel-toast__message {
+        font-size: 13px;
+        padding: 8px;
+    }
+
+    .hotel-toast__header {
+        font-size: 16px;
+    }
 }

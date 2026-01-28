@@ -1,6 +1,6 @@
 import React, { FC, useEffect, useMemo, useRef, useState } from "react";
 import "./StatsBar.scss";
-import { SendMessageComposer } from "../../api";
+import { SendMessageComposer, GetSessionDataManager } from "../../api";
 import { SetTargetComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/SetTargetComposer";
 import { StartInspectComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/StartInspectComposer";
 
@@ -68,6 +68,8 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     const [locked, setLocked] = useState(false);
     const [hiding, setHiding] = useState(false);
 
+    const myUserId = GetSessionDataManager().userId;
+
     // prevents re-sending StartInspect for same user unless we reset it
     const lastWatchedIdRef = useRef<number>(0);
 
@@ -91,7 +93,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     }, [stats?.userId]);
 
     const sendWatch = (targetId: number) => {
-        // if we cleared it, allow the same ID to be watched again
         if (targetId === 0) {
             lastWatchedIdRef.current = 0;
             return;
@@ -106,7 +107,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     };
 
     const forceWatch = (targetId: number) => {
-        // unlike sendWatch, this ALWAYS requests an update
         if (targetId <= 0) return;
         try {
             SendMessageComposer(new StartInspectComposer(targetId));
@@ -124,10 +124,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
         stopPolling();
         if (targetId <= 0) return;
 
-        // ✅ Update frequently without spamming too hard
-        // You can tune this to 250–1000ms depending on server cost.
         pollTimerRef.current = window.setInterval(() => {
-            // if locked, always poll locked target
             const id = lockedRef.current
                 ? lockedUserIdRef.current
                 : currentStatsUserIdRef.current;
@@ -139,7 +136,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     const clearOverlay = (alsoClearTarget: boolean) => {
         setHiding(true);
 
-        // allow re-open of same player after close
         lastWatchedIdRef.current = 0;
 
         stopPolling();
@@ -163,16 +159,21 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
             const payload = (e as CustomEvent<any>).detail as
                 | OpponentStats
                 | undefined;
-
             if (!payload || !payload.userId) return;
+
+            // ✅ CRITICAL FIX:
+            // Never allow your own stats to populate the opponent overlay.
+            // (This is the bug you’re seeing when combat packets reuse the same event name.)
+            if (payload.userId === myUserId) {
+                // If you're locked on someone else, ignore self updates too.
+                return;
+            }
 
             // ✅ If locked, do NOT allow a different user to override the overlay
             if (lockedRef.current) {
                 const lockedId =
                     lockedUserIdRef.current || currentStatsUserIdRef.current;
-                if (lockedId > 0 && payload.userId !== lockedId) {
-                    return;
-                }
+                if (lockedId > 0 && payload.userId !== lockedId) return;
             }
 
             setStats((prev) => {
@@ -187,17 +188,15 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                 };
             });
 
-            // initial watch request only once
+            // ensure we're watching the current opponent (idempotent)
             sendWatch(payload.userId);
 
-            // ✅ keep polling current target so it updates constantly
             startPolling(payload.userId);
 
             setHiding(false);
         };
 
         const onClear = () => {
-            // If the server tries to clear while locked, ignore it
             if (lockedRef.current) return;
             clearOverlay(false);
         };
@@ -234,6 +233,8 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
             stopPolling();
             sendWatch(0);
         };
+        // myUserId is stable per session; if you hot-swap sessions, add it here.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -241,7 +242,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
             sendWatch(stats.userId);
             startPolling(stats.userId);
         }
-        // stop polling if stats disappear
         if (!stats?.userId) stopPolling();
     }, [stats?.userId]);
 
@@ -250,10 +250,9 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
 
     const figureUrl = useMemo(() => {
         if (!stats?.figure) return "";
-        return `https://www.habbo.com/habbo-imaging/avatarimage?figure=${stats.figure}&direction=4&head_direction=4&gesture=sml`;
+        return `https://imager.olympusrp.pw/?figure=${stats.figure}&direction=4&head_direction=4&gesture=sml`;
     }, [stats?.figure]);
 
-    /** ONLY open profile when clicking the avatar image (not X/lock) */
     const openProfile = () => {
         if (!stats) return;
 
@@ -261,7 +260,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
             new CustomEvent("open_profile_from_inspect", {
                 detail: {
                     userId: stats.userId,
-
                     username: stats.username,
                     figure: stats.figure,
                     motto: stats.motto,
@@ -330,7 +328,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
         const next = !locked;
         setLocked(next);
 
-        // keep the locked id pinned
         lockedUserIdRef.current = next ? stats.userId : 0;
 
         try {
@@ -339,7 +336,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
             );
         } catch {}
 
-        // ✅ keep updates flowing whether locked or not
         startPolling(stats.userId);
     };
 
@@ -358,7 +354,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                     hiding ? "fade-out" : "fade-in"
                 }`}
             >
-                {/* LEFT: bars */}
                 <div className="stats-right">
                     <div className="stat">
                         <div className="icons heart" />
@@ -422,7 +417,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                     </div>
                 </div>
 
-                {/* RIGHT: avatar + actions */}
                 <div className="stats-left">
                     <div className="greek-circle">
                         <div className="greek-xp-ring">
@@ -457,7 +451,6 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                 onClick={handleClose}
                             />
 
-                            {/* ✅ NOT a button anymore - acts like a badge */}
                             <div
                                 className={`circle-lock ${
                                     locked ? "is-locked" : ""
@@ -468,11 +461,9 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                                 onClick={toggleLock}
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" || e.key === " ") {
-                                        // synthesize click
-                                        toggleLock(
-                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                            { stopPropagation() {} } as any
-                                        );
+                                        toggleLock({
+                                            stopPropagation() {},
+                                        } as any);
                                     }
                                 }}
                             />

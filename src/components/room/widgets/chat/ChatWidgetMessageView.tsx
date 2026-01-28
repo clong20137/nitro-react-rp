@@ -22,6 +22,14 @@ const MENTION_PING_URL = "/assets/sounds/mention-ping.mp3";
 const escapeAngles = (s: string) =>
     s.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+/**
+ * Mention regex (FIXED):
+ * - supports back-to-back: @A@B@C
+ * - DOES NOT "eat" the next '@'
+ * - stops at whitespace or end or next '@'
+ */
+const MENTION_RE = /@([A-Za-z0-9_-]+)(?=@|\s|$)/g;
+
 export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
     props
 ) => {
@@ -58,8 +66,8 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
 
     /** Build icon (if provided by server) */
     const nameIconUrl =
-        chat.showNameIcon && chat.nameIconKey
-            ? `${NAME_ICON_BASE}/${chat.nameIconKey}.png`
+        (chat as any).showNameIcon && (chat as any).nameIconKey
+            ? `${NAME_ICON_BASE}/${(chat as any).nameIconKey}.png`
             : null;
 
     const usernameHtmlCore = `${chat.username}: `;
@@ -68,53 +76,67 @@ export const ChatWidgetMessageView: FC<ChatWidgetMessageViewProps> = (
             ? `<img class="name-icon" src="${nameIconUrl}" alt="" aria-hidden="true" draggable="false" /> `
             : "") + usernameHtmlCore;
 
-    /** Does this message contain *any* @mention (for bubble style)? */
+    /** Does this message contain ANY mention (for bolding spans)? */
     const hasAnyMention = useMemo(() => {
         const txt = chat?.formattedText || "";
-        return /@([A-Za-z0-9_-]+)/.test(txt);
+        if (!txt) return false;
+        MENTION_RE.lastIndex = 0;
+        return MENTION_RE.test(txt);
     }, [chat?.formattedText]);
 
-    /** Detect if THIS message mentions *me* (for ping) */
+    /** Detect if THIS message mentions *me* (for ping + special bubble ONLY for me) */
     const thisMentionsMe = useMemo(() => {
         const txt = chat?.formattedText || "";
         const me = myNameLower;
         if (!txt || !me) return false;
 
-        const scanRe = /@([A-Za-z0-9_-]+)/g;
+        MENTION_RE.lastIndex = 0;
         let m: RegExpExecArray | null;
-        while ((m = scanRe.exec(txt)) !== null) {
+
+        while ((m = MENTION_RE.exec(txt)) !== null) {
             if ((m[1] || "").toLowerCase() === me) return true;
         }
+
         return false;
     }, [chat?.formattedText, myNameLower]);
 
     /**
      * Format with mention spans.
-     * IMPORTANT: we operate on the *raw* formattedText and do NOT escape < >
-     * here, so all the Nitro <font> tags & colors still work.
+     * - @Name is ALWAYS bold via .mention CSS
+     * - Fixed regex prevents losing the first '@' in @A@B@C
+     * - We preserve Nitro <font> tags by not escaping here
      */
     const formattedWithMentions = useMemo(() => {
         const raw = chat?.formattedText || "";
         if (!raw) return "";
 
-        const re = /@([A-Za-z0-9_-]+)/g;
+        if (!hasAnyMention) return raw;
 
-        // replace each @name with a span, preserving all other markup
-        return raw.replace(re, (_match, p1: string) => {
+        // reset before replace when using /g in some browsers
+        MENTION_RE.lastIndex = 0;
+
+        return raw.replace(MENTION_RE, (_match, p1: string) => {
+            // Always bold the @Name portion
             return `<span class="mention">@${p1}</span>`;
         });
-    }, [chat?.formattedText]);
+    }, [chat?.formattedText, hasAnyMention]);
 
-    /** Bubble style:
+    /**
+     * Bubble style RULE (FIXED):
      * - roleplay keeps style 4
-     * - any @mention → style 25 (mention bubble)
-     * - otherwise use server style
+     * - ONLY the tagged user sees the special bubble (style 25)
+     * - everyone else sees the normal server bubble
      */
     const bubbleStyleId = useMemo(() => {
         if (isRoleplay) return 4;
-        if (hasAnyMention) return 25;
+
+        // If your ChatWidgetView already set (chat as any).isTaggedForMe, honor it:
+        const taggedForMe = !!(chat as any).isTaggedForMe;
+
+        if (taggedForMe || thisMentionsMe) return 25;
+
         return chat.styleId;
-    }, [isRoleplay, hasAnyMention, chat.styleId]);
+    }, [isRoleplay, thisMentionsMe, chat.styleId, chat]);
 
     /** Measure / place bubble */
     useEffect(() => {

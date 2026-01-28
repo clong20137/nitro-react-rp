@@ -1,5 +1,3 @@
-/* ==== Window ========================================================= */
-
 .inventory-module {
     position: absolute;
     top: 100px;
@@ -63,18 +61,28 @@
 
 .inventory-header {
     position: relative;
+    display: flex;
+    align-items: center;
+
+    /* ✅ Push title left and reserve space for buttons (prevents overlap) */
+    justify-content: flex-start;
+    padding-right: 74px;
+    /* room for delete + close */
+    padding-left: 14px;
+
     color: #fff;
     background: #1e7295;
     font-weight: bold;
-    text-align: center;
+    text-align: left;
     font-size: 20px;
-    padding: 8px 12px;
+    padding-top: 8px;
+    padding-bottom: 8px;
     border-radius: 8px 8px 0 0;
     width: 100%;
     margin-bottom: 10px;
     text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
     box-shadow: 0 0 #0000001a, 0 0 #0000001a, inset 0 -3px #00000017;
-    Filter: drop-shadow(0 0 1px black);
+    filter: drop-shadow(0 0 1px black);
 
     user-select: none;
     cursor: grab;
@@ -84,11 +92,20 @@
     cursor: grabbing;
 }
 
-/* Close button is a real button for a11y */
-.inventory-close {
+/* Header buttons: keep on same line, right side */
+.inventory-header-buttons {
     position: absolute;
     top: 6px;
     right: 8px;
+
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1;
+}
+
+/* Close button is a real button for a11y */
+.inventory-close {
     width: 24px;
     height: 24px;
     border: 2px solid #921911;
@@ -97,6 +114,8 @@
     box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
     cursor: pointer;
     padding: 0;
+
+    position: relative;
 }
 
 .inventory-close::before,
@@ -105,12 +124,22 @@
     position: absolute;
     left: 50%;
     top: 50%;
+
+
     width: 12px;
+
+
     height: 2px;
+
+
     background: #fff;
     border-radius: 1px;
     transform-origin: center;
+
+
 }
+
+
 
 .inventory-close::before {
     transform: translate(-50%, -50%) rotate(45deg);
@@ -127,6 +156,42 @@
 }
 
 .inventory-close:active {
+    transform: translateY(0);
+}
+
+/* Delete button (to the LEFT of close) */
+/* ✅ No border, no background, no outline box */
+.inventory-delete {
+    width: 29px;
+    height: 26px;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+    padding: 0;
+
+    overflow: hidden;
+}
+
+.inventory-delete img {
+    width: 22px;
+    height: 22px;
+    pointer-events: none;
+    display: block;
+}
+
+.inventory-delete:hover {
+    background: rgba(0, 0, 0, 0.12);
+    transform: translateY(-1px);
+    transition: transform 120ms ease, background 120ms ease;
+}
+
+.inventory-delete:active {
     transform: translateY(0);
 }
 
@@ -154,7 +219,7 @@
     color: #fff;
     text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
     line-height: 1;
-    Filter: drop-shadow(0 0 1px black);
+    filter: drop-shadow(0 0 1px black);
 }
 
 /* Core slot */
@@ -172,9 +237,9 @@
     position: relative;
     overflow: hidden;
     padding: 2px;
-    /* prevents icon clipping */
-    transition: background-color 120ms ease, box-shadow 150ms ease;
-    /* NOTE: Removed transform transitions to eliminate “bounce-left” feel */
+
+    transition: background-color 120ms ease, box-sh adow 150ms ease;
+
 }
 
 .inventory-slot:active {
@@ -214,6 +279,7 @@
     }
 }
 
+
 .slot-drop-pulse {
     animation: slotPulse .25s ease-out;
 }
@@ -231,6 +297,7 @@
     background-color: #6fa8dc;
 }
 
+
 .rarity-epic {
     background-color: #8e7cc3;
 }
@@ -238,6 +305,9 @@
 .rarity-legendary {
     background-color: #f4b942;
 }
+
+
+
 
 /* Number labels */
 .slot-number.filled-corner {
@@ -290,7 +360,6 @@
     image-rendering: auto;
     -ms-interpolation-mode: bicubic;
     pointer-events: none;
-    /* NOTE: Removed image transform on hover to avoid micro “jumps” */
     transition: none;
 }
 
@@ -359,6 +428,8 @@
 }
 
 .inventory-item-wrapper .item-tooltip::after {
+
+
     content: '';
     position: absolute;
     top: 100%;
@@ -372,6 +443,83 @@
 .inventory-item-wrapper:hover .item-tooltip {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+}
+
+/* ==== Delete Confirmation (Centered + Habbo style buttons) ========== */
+
+.inventory-delete-confirm {
+    width: 100%;
+    padding: 10px 12px 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.15);
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    text-align: center;
+}
+
+.inventory-delete-confirm .confirm-text {
+    font-size: 12px;
+    line-height: 1.2;
+    color: #111;
+}
+
+.inventory-delete-confirm .confirm-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Cancel button (white) */
+.inventory-delete-confirm .btn-cancel {
+    min-width: 92px;
+    height: 30px;
+    border-radius: 6px;
+
+    background: #ffffff;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    color: #111;
+    font-weight: 700;
+    cursor: pointer;
+
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
+}
+
+.inventory-delete-confirm .btn-cancel:hover {
+    filter: brightness(0.98);
+}
+
+.inventory-delete-confirm .btn-cancel:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.16);
+}
+
+/* Delete button (blue) */
+.inventory-delete-confirm .btn-delete {
+    min-width: 92px;
+    height: 30px;
+    border-radius: 6px;
+
+    background: linear-gradient(#4aa3d4, #2f7fb8);
+    border: 2px solid #1f5f92;
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
+}
+
+.inventory-delete-confirm .btn-delete:hover {
+    filter: brightness(1.03);
+}
+
+.inventory-delete-confirm .btn-delete:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.16);
 }
 
 /* Invalid shake is still available if you want to trigger it */

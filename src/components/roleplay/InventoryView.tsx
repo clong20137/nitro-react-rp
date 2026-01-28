@@ -1,9 +1,18 @@
-import React, { FC, useEffect, useRef, useState, useCallback } from "react";
+import React, {
+    FC,
+    useEffect,
+    useRef,
+    useState,
+    useCallback,
+    useMemo,
+} from "react";
 import { GetCommunication } from "../../api/nitro/GetCommunication";
 import { RequestInventoryItemsComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/RequestInventoryItemsComposer";
 import { InventoryStore } from "@nitrots/nitro-renderer/src/nitro/communication/messages/parser/roleplay/InventoryStore";
 import { InventoryContext } from "../../api/contexts/inventory/InventoryContext";
 import { UseInventoryItemComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/UseInventoryItemComposer";
+import { MoveInventoryItemComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/MoveInventoryItemComposer";
+import { DeleteInventoryItemComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/DeleteInventoryItemComposer";
 import { GetNitroInstance } from "../../api/nitro/GetNitroInstance";
 import "./InventoryView.scss";
 
@@ -141,6 +150,7 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
     const isWeaponOrShieldType = (item?: InventoryContext) =>
         !!item &&
         ["weapon", "shield"].includes((item.item_type || "").toLowerCase());
+
     const onHeaderTouchStart = (e: React.TouchEvent) => {
         const t = e.touches[0];
         if (!t) return;
@@ -169,13 +179,13 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
 
     // durability helpers
     const getDurabilityMax = (item: InventoryContext) => {
-        if (!isWeaponOrShieldType(item)) return 0; // <-- only weapons/shields
+        if (!isWeaponOrShieldType(item)) return 0;
         const md = (item as any)?.max_durability;
         if (typeof md === "number") return md;
         return 100;
     };
     const getDurabilityPercent = (item: InventoryContext) => {
-        if (!isWeaponOrShieldType(item)) return 0; // <-- only weapons/shields
+        if (!isWeaponOrShieldType(item)) return 0;
         if (typeof item.durability !== "number") return 0;
         const max = getDurabilityMax(item);
         const pct = (item.durability / Math.max(1, max)) * 100;
@@ -201,13 +211,61 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
     const [dragFromSlot, setDragFromSlot] = useState<number | null>(null);
     const [pulseSlot, setPulseSlot] = useState<number | null>(null);
 
+    // delete UX
+    const [deleteHover, setDeleteHover] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState<{
+        invRowId: number;
+        amount: number;
+        name?: string;
+    } | null>(null);
+
+    const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
+
+    const markDeleting = (invRowId: number) => {
+        setDeletingIds((prev) => {
+            const next = new Set(prev);
+            next.add(invRowId);
+            return next;
+        });
+
+        // remove locally after animation; server refresh will reconcile
+        window.setTimeout(() => {
+            setItems((prev) => prev.filter((i) => i.id !== invRowId));
+            setDeletingIds((prev) => {
+                const next = new Set(prev);
+                next.delete(invRowId);
+                return next;
+            });
+        }, 180);
+    };
+
+    const confirmDeleteYes = () => {
+        if (!confirmDelete) return;
+
+        const { invRowId, amount } = confirmDelete;
+
+        markDeleting(invRowId);
+
+        // send to server: decrement stack
+        GetCommunication().connection.send(
+            new DeleteInventoryItemComposer(invRowId, amount)
+        );
+
+        setConfirmDelete(null);
+        setDeleteHover(false);
+    };
+
+    const confirmDeleteNo = () => {
+        setConfirmDelete(null);
+        setDeleteHover(false);
+    };
+
     // Transparent drag image to avoid native “jump”
     const transparentImgRef = useRef<HTMLImageElement | null>(null);
     useEffect(() => {
         const img = new Image();
         img.width = 1;
         img.height = 1;
-        // 1x1 transparent PNG
         img.src =
             "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
         transparentImgRef.current = img;
@@ -220,14 +278,15 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         e.dataTransfer.setData("application/x-inv", JSON.stringify(payload));
         e.dataTransfer.effectAllowed = "move";
 
-        // Use transparent drag image so the browser ghost doesn’t shift left
         if (transparentImgRef.current) {
             e.dataTransfer.setDragImage(transparentImgRef.current, 0, 0);
         }
 
         setDragOverSlot(null);
         setDragInvalid(false);
+        setDeleteHover(false);
     };
+
     const onItemDragEnd = () =>
         setTimeout(() => (isDraggingRef.current = false), 0);
 
@@ -235,6 +294,7 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         setItems((prev) =>
             prev.map((it) => (it.id === id ? { ...it, slot: toSlot } : it))
         );
+
         setDragOverSlot(null);
         setDragInvalid(false);
         setPulseSlot(toSlot);
@@ -247,27 +307,9 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         );
     };
 
-    const syncEquipStateAfterDrop = (
-        movingId: number,
-        movingNewSlot: number,
-        occupying?: { id: number; newSlot: number }
-    ) => {
-        const toggleEquip = (id: number, newSlot: number) => {
-            GetCommunication().connection.send(
-                new UseInventoryItemComposer(id)
-            );
-        };
-
-        const movingEndsInEquip = movingNewSlot <= 2;
-        const movingWasInEquip = (dragFromSlot ?? -1) <= 2;
-        if (movingEndsInEquip !== movingWasInEquip)
-            toggleEquip(movingId, movingNewSlot);
-
-        if (occupying) toggleEquip(occupying.id, occupying.newSlot);
-    };
-
     const onSlotDrop = (e: React.DragEvent, toSlot: number) => {
         e.preventDefault();
+
         const raw = e.dataTransfer.getData("application/x-inv");
         setDragOverSlot(null);
         setDragInvalid(false);
@@ -296,23 +338,39 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                         : it
                 )
             );
+
             setPulseSlot(toSlot);
             window.setTimeout(() => setPulseSlot(null), 260);
 
-            window.dispatchEvent(
-                new CustomEvent("move-inventory-item", {
-                    detail: { id, fromSlot, toSlot, swapWith: occupying.id },
-                })
+            GetCommunication().connection.send(
+                new MoveInventoryItemComposer(id, fromSlot, toSlot)
             );
-
-            syncEquipStateAfterDrop(moving.id, toSlot, {
-                id: occupying.id,
-                newSlot: fromSlot,
-            });
         } else {
             applyLocalMove(id, fromSlot, toSlot);
-            syncEquipStateAfterDrop(moving.id, toSlot);
+
+            GetCommunication().connection.send(
+                new MoveInventoryItemComposer(id, fromSlot, toSlot)
+            );
         }
+    };
+
+    // delete drop target
+    const onDeleteDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setDeleteHover(false);
+
+        const raw = e.dataTransfer.getData("application/x-inv");
+        if (!raw) return;
+
+        const parsed = JSON.parse(raw) as DragPayload;
+        const invRowId = parsed?.id;
+        if (!invRowId) return;
+
+        const item = items.find((i) => i.id === invRowId);
+        if (!item) return;
+
+        // default decrement amount is 1
+        setConfirmDelete({ invRowId, amount: 1, name: item.name });
     };
 
     const labelForTop = (slot: number) =>
@@ -332,11 +390,19 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
         if (isExiting) return;
         setIsExiting(true);
     };
+
     const handleAnimEnd: React.AnimationEventHandler<HTMLDivElement> = (e) => {
         if (e.currentTarget !== winRef.current) return;
         if (isExiting) onClose();
         if (isEntering) setIsEntering(false);
     };
+
+    const confirmTitle = useMemo(() => {
+        if (!confirmDelete) return "";
+        return confirmDelete.name
+            ? `Delete ${confirmDelete.name}?`
+            : "Delete item?";
+    }, [confirmDelete]);
 
     return (
         <div
@@ -358,12 +424,37 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                 aria-grabbed={headerGrabbing}
             >
                 Inventory
-                <button
-                    type="button"
-                    className="inventory-close"
-                    aria-label="Close inventory"
-                    onClick={handleClose}
-                />
+                {/* right-side header buttons (delete left of close) */}
+                <div className="inventory-header-buttons">
+                    <button
+                        type="button"
+                        className={`inventory-delete ${
+                            deleteHover ? "is-hover" : ""
+                        }`}
+                        aria-label="Delete item"
+                        title="Delete item"
+                        onDragEnter={(e) => {
+                            e.preventDefault();
+                            setDeleteHover(true);
+                        }}
+                        onDragOver={(e) => {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = "move";
+                            setDeleteHover(true);
+                        }}
+                        onDragLeave={() => setDeleteHover(false)}
+                        onDrop={onDeleteDrop}
+                    >
+                        <img src="/icons/box.png" alt="" draggable={false} />
+                    </button>
+
+                    <button
+                        type="button"
+                        className="inventory-close"
+                        aria-label="Close inventory"
+                        onClick={handleClose}
+                    />
+                </div>
             </div>
 
             <div className="inventory-grid">
@@ -426,7 +517,11 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
 
                                 {item && (
                                     <div
-                                        className="inventory-item-wrapper"
+                                        className={`inventory-item-wrapper ${
+                                            deletingIds.has(item.id)
+                                                ? "is-deleting"
+                                                : ""
+                                        }`}
                                         draggable
                                         onDragStart={(e) =>
                                             onItemDragStart(e, item)
@@ -500,6 +595,7 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                                                 typeof item.durability ===
                                                     "number" && (
                                                     <>
+                                                        <br />
                                                         Durability:{" "}
                                                         {item.durability}/
                                                         {getDurabilityMax(item)}
@@ -513,6 +609,42 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
                     );
                 })}
             </div>
+
+            {/* ✅ Delete confirmation (centered + buttons match SCSS) */}
+            {confirmDelete && (
+                <div
+                    className="inventory-delete-confirm"
+                    role="dialog"
+                    aria-label="Delete confirmation"
+                >
+                    <div className="confirm-text">
+                        <strong>{confirmTitle}</strong>
+                        <br />
+                        Are you sure you want to delete{" "}
+                        <strong>{confirmDelete.name || "this item"}</strong>?
+                        <br />
+                        This will remove <strong>
+                            {confirmDelete.amount}
+                        </strong>{" "}
+                        from the stack.
+                    </div>
+
+                    <div className="confirm-actions">
+                        <button
+                            className="btn-cancel"
+                            onClick={confirmDeleteNo}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="btn-delete"
+                            onClick={confirmDeleteYes}
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
