@@ -244,9 +244,26 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
 
         const { invRowId, amount } = confirmDelete;
 
-        markDeleting(invRowId);
+        const item = items.find((i) => i.id === invRowId);
+        if (!item) {
+            setConfirmDelete(null);
+            setDeleteHover(false);
+            return;
+        }
 
-        // send to server: decrement stack
+        if (item.quantity > amount) {
+            setItems((prev) =>
+                prev.map((it) =>
+                    it.id === invRowId
+                        ? { ...it, quantity: it.quantity - amount }
+                        : it
+                )
+            );
+        } else {
+            markDeleting(invRowId);
+        }
+
+        // send to server
         GetCommunication().connection.send(
             new DeleteInventoryItemComposer(invRowId, amount)
         );
@@ -320,6 +337,16 @@ export const InventoryView: FC<InventoryViewProps> = ({ onClose }) => {
 
         const moving = items.find((i) => i.id === id);
         if (!moving) return;
+        if (
+            toSlot === 2 &&
+            (moving.item_type || "").toLowerCase() === "potion" &&
+            moving.quantity > 1
+        ) {
+            GetCommunication().connection.send(
+                new MoveInventoryItemComposer(id, fromSlot, toSlot)
+            );
+            return;
+        }
 
         if (!slotAccepts(toSlot, moving)) {
             setDragInvalid(true);
