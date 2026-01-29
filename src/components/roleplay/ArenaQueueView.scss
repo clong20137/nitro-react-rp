@@ -13,7 +13,10 @@
     user-select: none;
 }
 
-/* Header (matching MyProfileView) */
+/* =========================================================
+HEADER
+========================================================= */
+
 .arena-header {
     background: #1e7295;
     color: #fff;
@@ -36,7 +39,7 @@
     cursor: grabbing;
 }
 
-/* reuse same .close-button from profile */
+/* Close Button */
 .close-button {
     position: absolute;
     top: 6px;
@@ -44,7 +47,10 @@
     width: 24px;
     height: 24px;
     border: 2px solid #921911;
-    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
+    background: repeating-linear-gradient(#f55041,
+            #f55041 50%,
+            #c23027 0,
+            #c23027);
     border-radius: 4px;
     box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
     cursor: pointer;
@@ -72,7 +78,10 @@
     }
 }
 
-/* Body layout: left column fixed, right column flex, like profile */
+/* =========================================================
+BODY LAYOUT
+========================================================= */
+
 .arena-body {
     display: grid;
     grid-template-columns: 260px 1fr;
@@ -88,7 +97,10 @@
     min-width: 0;
 }
 
-/* Left column: avatar + summary card */
+/* =========================================================
+LEFT SIDEBAR (PLAYER SUMMARY)
+========================================================= */
+
 .arena-avatar-section {
     background: #cdcdcd;
     border-radius: 8px;
@@ -96,10 +108,7 @@
 }
 
 .arena-avatar-frame {
-    position: relative;
-    width: 100%;
     display: flex;
-    align-items: center;
     gap: 10px;
 }
 
@@ -109,17 +118,16 @@
     border-radius: 6px;
     background: #bdbdbd33;
     image-rendering: -webkit-optimize-contrast;
+    object-fit: contain;
 }
 
 .arena-avatar-meta {
     display: grid;
     gap: 4px;
-    align-content: start;
 }
 
 .arena-username-main {
     font-weight: 800;
-    color: #000;
 }
 
 .arena-meta-row {
@@ -140,37 +148,34 @@
 
 .arena-left-info {
     margin-top: 10px;
-    display: grid;
-    gap: 8px;
 }
 
 .arena-info-card {
     background: #dfdfdf;
     border-radius: 6px;
-    padding: 8px 10px;
-    border: 1px solid #ffffff;
-    box-sizing: border-box;
+    padding: 8px;
+    border: 1px solid #fff;
 
     h5 {
-        margin: 0 0 6px 0;
+        margin: 0 0 6px;
         font-size: 13px;
         font-weight: 800;
-        color: #000;
     }
 
     .arena-info-line {
-        margin: 0 0 6px;
         font-size: 12px;
     }
 
     .arena-info-note {
-        margin: 0;
         font-size: 11px;
         color: #555;
     }
 }
 
-/* Right column tabs (matching profile tabs) */
+/* =========================================================
+TABS
+========================================================= */
+
 .arena-tabs {
     display: flex;
     justify-content: center;
@@ -183,21 +188,20 @@
     padding: 10px 16px;
     border: 2px solid #fff;
     border-bottom: none;
-    background: linear-gradient(180deg, #1e7295, #1e7295 50%, #185d79 0, #185d79);
-    color: #ffffff;
-    text-shadow: -1px -1px 0 #000,
-        1px -1px 0 #000,
-        -1px 1px 0 #000,
-        1px 1px 0 #000;
-    box-shadow: 0 1px 0 rgba(0, 0, 0, .06);
-    transition: transform .12s ease, filter .12s ease;
-    filter: drop-shadow(0 0 1px black);
+    background: linear-gradient(180deg,
+            #1e7295,
+            #1e7295 50%,
+            #185d79 0,
+            #185d79);
+    color: #fff;
     font-weight: 700;
     border-radius: 8px 8px 0 0;
     cursor: pointer;
+    text-shadow: -1px -1px 0 #000, 1px 1px 0 #000;
 
     &.active {
         background: #cdcdcd;
+        color: #000;
     }
 }
 
@@ -207,7 +211,10 @@
     padding: 10px;
 }
 
-/* Matchmaking inner layout (blue left / red right) */
+/* =========================================================
+MATCHMAKING PANELS
+========================================================= */
+
 .arena-matchmaking {
     display: flex;
     flex-direction: column;
@@ -223,7 +230,6 @@
     flex: 1;
     border-radius: 6px;
     padding: 6px;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -231,29 +237,10 @@
 
 .arena-side--blue {
     background: linear-gradient(#4a89d6, #315e95);
-    border: 1px solid #244369;
 }
 
 .arena-side--red {
     background: linear-gradient(#d64a4a, #9b3333);
-    border: 1px solid #6f2323;
-}
-
-.arena-side-header {
-    width: 100%;
-    margin-bottom: 4px;
-    text-align: center;
-}
-
-.side-label {
-    display: inline-block;
-    padding: 2px 8px;
-    background: rgba(0, 0, 0, .35);
-    border-radius: 3px;
-    font-size: 10px;
-    font-weight: 700;
-    color: #fff;
-    text-shadow: 0 1px 0 rgba(0, 0, 0, .7);
 }
 
 .arena-avatar-wrapper {
@@ -261,158 +248,60 @@
     height: 90px;
     border-radius: 999px;
     background: rgba(0, 0, 0, .28);
-    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .15);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 4px;
-    position: relative;
-    overflow: hidden;
-}
-
-.arena-avatar-placeholder {
-    width: 64px;
-    height: 64px;
-    border-radius: 8px;
-    background: repeating-linear-gradient(45deg,
-            rgba(255, 255, 255, .12),
-            rgba(255, 255, 255, .12) 4px,
-            rgba(0, 0, 0, .08) 4px,
-            rgba(0, 0, 0, .08) 8px);
-    box-shadow: 0 2px 0 rgba(0, 0, 0, .25);
-}
-
-.arena-avatar-placeholder--empty {
-    opacity: .4;
 }
 
 .arena-avatar-image {
     width: 86px;
     height: 86px;
     image-rendering: -webkit-optimize-contrast;
-    user-select: none;
 }
 
-.arena-username {
-    font-size: 11px;
-    font-weight: 700;
-    color: #fff;
-    text-shadow: 0 1px 0 rgba(0, 0, 0, .8);
-    margin-bottom: 4px;
-}
+/* =========================================================
+HEALTH BAR
+========================================================= */
 
-/* Health bar */
 .arena-healthbar {
     width: 100%;
     height: 8px;
-    border-radius: 4px;
     background: rgba(0, 0, 0, .45);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15);
+    border-radius: 4px;
     overflow: hidden;
-    margin-bottom: 4px;
 }
 
 .arena-healthbar-fill {
     height: 100%;
     background: linear-gradient(#53d653, #2f9b2f);
-    box-shadow: 0 0 4px rgba(0, 0, 0, .4);
-    transition: width 0.15s ease-out;
 }
 
-.arena-healthbar-fill--empty {
-    width: 0;
-}
+/* =========================================================
+STATS (NO RATING)
+========================================================= */
 
-/* Stats inside side panels */
 .arena-stats {
     width: 100%;
     background: rgba(0, 0, 0, .35);
     border-radius: 4px;
-    padding: 4px 6px;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35);
+    padding: 4px;
 }
 
 .arena-stats-row {
     display: flex;
     justify-content: space-between;
     font-size: 10px;
-    color: #f8f8f8;
-
-    &+.arena-stats-row {
-        margin-top: 2px;
-    }
-
-    .label {
-        opacity: .8;
-    }
-
-    .value {
-        font-weight: 700;
-    }
-}
-
-.arena-stats-row--empty {
-    text-align: center;
-    justify-content: center;
-}
-
-/* Spinner */
-.arena-spinner-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-}
-
-.arena-spinner {
-    width: 24px;
-    height: 24px;
-    border-radius: 999px;
-    border: 3px solid rgba(255, 255, 255, .35);
-    border-top-color: #fff;
-    animation: arena-spin 0.8s linear infinite;
-}
-
-@keyframes arena-spin {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.arena-spinner-text {
-    font-size: 9px;
-    font-weight: 700;
     color: #fff;
-    text-shadow: 0 1px 0 rgba(0, 0, 0, .8);
 }
 
-/* Footer buttons/status */
+/* =========================================================
+FOOTER
+========================================================= */
+
 .arena-footer {
-    margin-top: 4px;
-    padding-top: 6px;
-    border-top: 2px solid rgba(0, 0, 0, .2);
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    gap: 8px;
-}
-
-.arena-footer-left {
-    flex: 1;
-}
-
-.arena-status-text {
-    font-size: 10px;
-    color: #333;
-}
-
-.arena-footer-right {
-    display: flex;
-    gap: 6px;
+    margin-top: 6px;
 }
 
 .arena-button {
@@ -424,63 +313,32 @@
     border: 2px solid #1b4c7a;
     background: linear-gradient(#5ea5e8, #2c5e9b);
     color: #fff;
-    text-shadow: 0 1px 0 rgba(0, 0, 0, .6);
-    box-shadow: 0 2px 0 rgba(0, 0, 0, .35);
     cursor: pointer;
-
-    &:active {
-        transform: translateY(1px);
-        box-shadow: 0 1px 0 rgba(0, 0, 0, .35);
-    }
-}
-
-.arena-button--primary {
-    border-color: #1b4c7a;
-    background: linear-gradient(#5ea5e8, #2c5e9b);
-}
-
-.arena-button--danger {
-    border-color: #7a1b1b;
-    background: linear-gradient(#f15656, #b13030);
 }
 
 /* =========================================================
-✅ LEADERBOARD (NEW: left poster + right list + trophies)
+LEADERBOARD
 ========================================================= */
 
-.arena-leaderboard-layout {
-    display: grid;
-    grid-template-columns: 200px 1fr;
+.arena-leaderboard-titlebar {
+    display: flex;
+    align-items: center;
     gap: 10px;
-    align-items: start;
-}
-
-.arena-leaderboard-art {
     background: #cdcdcd;
     border-radius: 8px;
-    border: 1px solid #ffffff;
+    border: 1px solid #fff;
     padding: 8px;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08);
+    margin-bottom: 8px;
 }
 
-.arena-leaderboard-art-img {
-    width: 100%;
-    height: auto;
-    display: block;
-    image-rendering: -webkit-optimize-contrast;
+.arena-leaderboard-title-img {
+    width: 44px;
+    height: 44px;
 }
 
-.arena-leaderboard-panel {
-    min-width: 0;
-}
-
-.arena-leaderboard-empty {
-    padding: 10px;
-    background: #cdcdcd;
-    border-radius: 8px;
-    text-align: center;
-    font-weight: 700;
-    color: #333;
+.arena-leaderboard-title {
+    font-weight: 900;
+    font-size: 16px;
 }
 
 .arena-leaderboard-table {
@@ -492,10 +350,9 @@
 .arena-leaderboard-header-row,
 .arena-leaderboard-row {
     display: grid;
-    grid-template-columns: 40px 1fr 90px 90px;
+    grid-template-columns: 40px 1fr 90px;
     gap: 8px;
-    align-items: center;
-    padding: 7px 8px;
+    padding: 7px;
     border-radius: 8px;
 }
 
@@ -509,71 +366,22 @@
     border: 1px solid #e5e7f0;
 }
 
-.col.fighter {
-    min-width: 0;
-}
-
-.arena-lb-fighter {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-}
-
 .arena-lb-avatar-wrap {
-    position: relative;
     width: 44px;
-    height: 44px;
-    flex: 0 0 44px;
+    height: 54px;
 }
 
 .arena-lb-avatar {
     width: 44px;
-    height: 44px;
+    height: 54px;
+    object-fit: contain;
     border-radius: 6px;
-    background: rgba(0, 0, 0, .08);
-    box-shadow: 0 2px 0 rgba(0, 0, 0, .2);
-    image-rendering: -webkit-optimize-contrast;
 }
 
-.arena-lb-avatar--empty {
-    display: inline-block;
-    background: repeating-linear-gradient(45deg,
-            rgba(0, 0, 0, .06),
-            rgba(0, 0, 0, .06) 4px,
-            rgba(255, 255, 255, .18) 4px,
-            rgba(255, 255, 255, .18) 8px);
-}
+/* =========================================================
+RESPONSIVE
+========================================================= */
 
-.arena-lb-trophy {
-    position: absolute;
-    left: -10px;
-    top: -10px;
-    width: 22px;
-    height: 22px;
-    image-rendering: pixelated;
-    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .35));
-}
-
-.arena-lb-name {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    font-weight: 900;
-    color: #111;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.arena-lb-level {
-    font-size: 11px;
-    font-weight: 800;
-    color: #444;
-}
-
-/* Responsive */
 @media (max-width: 860px) {
     .arena-container {
         width: 92vw;
@@ -585,13 +393,5 @@
 
     .arena-left {
         width: auto;
-    }
-
-    .arena-leaderboard-layout {
-        grid-template-columns: 1fr;
-    }
-
-    .arena-leaderboard-art {
-        display: none;
     }
 }

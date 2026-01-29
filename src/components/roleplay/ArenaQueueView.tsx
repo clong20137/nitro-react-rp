@@ -3,11 +3,13 @@ import React, {
     useCallback,
     useEffect,
     useMemo,
+    useRef,
     useState,
     MouseEvent as ReactMouseEvent,
 } from "react";
 import "./ArenaQueueView.scss";
 import { SendMessageComposer } from "../../api";
+
 import { ArenaJoinQueueComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ArenaJoinQueueComposer";
 import { ArenaLeaveQueueComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ArenaLeaveQueueComposer";
 import { ArenaRequestLeaderboardComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/ArenaRequestLeaderboardComposer";
@@ -38,7 +40,8 @@ export interface ArenaLeaderboardEntry {
     rank?: number; // computed client-side
     wins: number;
     losses: number;
-    rating: number;
+    // rating removed from UI; keep if server still sends it
+    rating?: number;
 }
 
 type ArenaQueueStatus = "idle" | "queued" | "matched";
@@ -79,44 +82,65 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
     );
     const [isDragging, setIsDragging] = useState(false);
 
+    // ✅ prevents “re-init” while dragging (drag changes position -> rerender)
+    const wasVisibleRef = useRef(false);
+
     // Request LB packet from server
     const requestLeaderboard = useCallback(() => {
         SendMessageComposer(new ArenaRequestLeaderboardComposer());
     }, []);
 
-    // Helper: build Habbo head-only avatar URL
+    // ✅ Helper: head-only avatar URL (for matchmaking circles)
     const getAvatarHeadUrl = (
         figure?: string,
         side: "left" | "right" = "left"
     ) => {
         if (!figure) return "";
         const direction = side === "left" ? 2 : 4; // face inward
-        return `https://imager.olympusrp.pw/?figure=${figure}&headonly=1&direction=${direction}`;
+        return `https://imager.olympusrp.pw/?figure=${encodeURIComponent(
+            figure
+        )}&headonly=1&direction=${direction}&action=std`;
+    };
+
+    // ✅ Helper: FULL avatar URL (for left sidebar + leaderboard)
+    const getAvatarFullUrl = (
+        figure?: string,
+        side: "left" | "right" = "left"
+    ) => {
+        if (!figure) return "";
+        const direction = side === "left" ? 2 : 4;
+        return `https://imager.olympusrp.pw/?figure=${encodeURIComponent(
+            figure
+        )}&direction=${direction}&action=std&gesture=sml&size=l`;
     };
 
     /**
      * ✅ Initialize layout ONLY when opening.
-     * (This no longer "auto opens" because visible is only controlled by the Dock.)
+     * IMPORTANT: This MUST NOT depend on `position` (dragging changes position).
      */
     useEffect(() => {
-        if (!visible) return;
+        // detect open transition
+        if (visible && !wasVisibleRef.current) {
+            setSelf((oldSelf) => oldSelf ?? currentUser);
 
-        setSelf((oldSelf) => oldSelf ?? currentUser);
-        setActiveTab("match");
+            // default tab on open
+            setActiveTab("match");
 
-        if (!position) {
-            const width = 750;
-            const x = (window.innerWidth - width) / 2;
-            const y = 60;
-            setPosition({ x, y });
+            // only set default position if it hasn't been set
+            setPosition((pos) => {
+                if (pos) return pos;
+                const width = 750;
+                return { x: (window.innerWidth - width) / 2, y: 60 };
+            });
         }
-    }, [visible, currentUser, position]);
+
+        wasVisibleRef.current = visible;
+    }, [visible, currentUser]);
 
     // ----- ARENA STATUS BRIDGE -----
     useEffect(() => {
         const handleArenaStatus = (ev: Event) => {
-            // ✅ If the UI is hidden, do NOT update local status/players.
-            // This prevents server pushes from causing weird “auto open” behavior.
+            // ✅ Only care while open
             if (!visible) return;
 
             const custom = ev as CustomEvent<any>;
@@ -171,7 +195,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
     // ✅ LEADERBOARD BRIDGE (server -> window event -> state)
     useEffect(() => {
         const handleLeaderboard = (ev: Event) => {
-            // ✅ Only care while open (prevents background updates)
             if (!visible) return;
 
             const custom = ev as CustomEvent<any>;
@@ -188,7 +211,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                     level: typeof e.level === "number" ? e.level : undefined,
                     wins: Number(e.wins ?? 0),
                     losses: Number(e.losses ?? 0),
-                    rating: Number(e.rating ?? 0),
+                    rating: Number(e.rating ?? 0), // kept (not displayed)
                 })
             );
 
@@ -234,22 +257,12 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         onClose?.();
     }, [onClose, sendLeaveQueue]);
 
-    /**
-     * ✅ FIX: Close button should ALWAYS close.
-     * It should NOT leave queue automatically unless you want that behavior.
-     * (Right now: X just closes UI. Queue state remains server-side.)
-     *
-     * If you DO want X to leave queue, uncomment the sendLeaveQueue line below.
-     */
     const handleCloseClick = useCallback(
         (e?: React.MouseEvent) => {
             e?.stopPropagation();
-            // If you want X to leave queue as well, uncomment:
-            // if (status !== "idle") sendLeaveQueue();
-
             onClose?.();
         },
-        [onClose /*, status, sendLeaveQueue*/]
+        [onClose]
     );
 
     // ----- DRAG HANDLERS -----
@@ -316,6 +329,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         );
     };
 
+    // ✅ removed “Rating” row (per request)
     const renderStatsRows = (fighter?: ArenaFighter) => {
         if (!fighter) {
             return (
@@ -337,11 +351,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                     <span className="value">
                         {fighter.wins ?? 0} / {fighter.losses ?? 0}
                     </span>
-                </div>
-
-                <div className="arena-stats-row">
-                    <span className="label">Rating</span>
-                    <span className="value">{fighter.rating ?? "-"}</span>
                 </div>
             </>
         );
@@ -470,7 +479,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         </div>
     );
 
-    // ✅ sorted top 10: wins desc, losses asc, rating desc, then username
+    // ✅ sorted top 10: wins desc, losses asc, then username
     const sortedLeaderboard = useMemo(() => {
         return [...(lbEntries ?? [])]
             .sort((a, b) => {
@@ -479,9 +488,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
 
                 const l = (a.losses ?? 0) - (b.losses ?? 0);
                 if (l !== 0) return l;
-
-                const r = (b.rating ?? 0) - (a.rating ?? 0);
-                if (r !== 0) return r;
 
                 return (a.username ?? "").localeCompare(b.username ?? "");
             })
@@ -496,97 +502,90 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         return null;
     };
 
+    // ✅ Best Fighters header above rankings + Rating removed + full avatars
     const renderLeaderboardTab = () => (
-        <div className="arena-leaderboard-layout">
-            <div className="arena-leaderboard-art">
+        <div className="arena-leaderboard-panel">
+            <div className="arena-leaderboard-titlebar">
                 <img
-                    className="arena-leaderboard-art-img"
+                    className="arena-leaderboard-title-img"
                     src={leaderboardPoster}
-                    alt="Leaderboard"
+                    alt="Best Fighters"
                     draggable={false}
                 />
+                <div className="arena-leaderboard-title">Best Fighters</div>
             </div>
 
-            <div className="arena-leaderboard-panel">
-                {sortedLeaderboard.length === 0 && (
-                    <div className="arena-leaderboard-empty">
-                        No arena matches yet. Be the first to enter the ring!
+            {sortedLeaderboard.length === 0 && (
+                <div className="arena-leaderboard-empty">
+                    No arena matches yet. Be the first to enter the ring!
+                </div>
+            )}
+
+            {sortedLeaderboard.length > 0 && (
+                <div className="arena-leaderboard-table">
+                    <div className="arena-leaderboard-header-row">
+                        <span className="col rank">#</span>
+                        <span className="col fighter">Fighter</span>
+                        <span className="col wl">W / L</span>
                     </div>
-                )}
 
-                {sortedLeaderboard.length > 0 && (
-                    <div className="arena-leaderboard-table">
-                        <div className="arena-leaderboard-header-row">
-                            <span className="col rank">#</span>
-                            <span className="col fighter">Fighter</span>
-                            <span className="col wl">W / L</span>
-                            <span className="col rating">Rating</span>
-                        </div>
+                    {sortedLeaderboard.map((entry) => {
+                        const trophy = getTrophyForRank(entry.rank!);
 
-                        {sortedLeaderboard.map((entry) => {
-                            const trophy = getTrophyForRank(entry.rank!);
+                        return (
+                            <div
+                                className="arena-leaderboard-row"
+                                key={entry.userId}
+                            >
+                                <span className="col rank">{entry.rank}</span>
 
-                            return (
-                                <div
-                                    className="arena-leaderboard-row"
-                                    key={entry.userId}
-                                >
-                                    <span className="col rank">
-                                        {entry.rank}
-                                    </span>
+                                <span className="col fighter">
+                                    <span className="arena-lb-fighter">
+                                        <span className="arena-lb-avatar-wrap">
+                                            {trophy && (
+                                                <img
+                                                    className="arena-lb-trophy"
+                                                    src={trophy}
+                                                    alt={`${entry.rank} place`}
+                                                    draggable={false}
+                                                />
+                                            )}
 
-                                    <span className="col fighter">
-                                        <span className="arena-lb-fighter">
-                                            <span className="arena-lb-avatar-wrap">
-                                                {trophy && (
-                                                    <img
-                                                        className="arena-lb-trophy"
-                                                        src={trophy}
-                                                        alt={`${entry.rank} place`}
-                                                        draggable={false}
-                                                    />
-                                                )}
+                                            {entry.figure ? (
+                                                <img
+                                                    className="arena-lb-avatar"
+                                                    src={getAvatarFullUrl(
+                                                        entry.figure,
+                                                        "left"
+                                                    )}
+                                                    alt={entry.username}
+                                                    draggable={false}
+                                                />
+                                            ) : (
+                                                <span className="arena-lb-avatar arena-lb-avatar--empty" />
+                                            )}
+                                        </span>
 
-                                                {entry.figure ? (
-                                                    <img
-                                                        className="arena-lb-avatar"
-                                                        src={getAvatarHeadUrl(
-                                                            entry.figure,
-                                                            "left"
-                                                        )}
-                                                        alt={entry.username}
-                                                        draggable={false}
-                                                    />
-                                                ) : (
-                                                    <span className="arena-lb-avatar arena-lb-avatar--empty" />
-                                                )}
-                                            </span>
-
-                                            <span className="arena-lb-name">
-                                                {entry.username}
-                                                {typeof entry.level ===
-                                                    "number" && (
-                                                    <span className="arena-lb-level">
-                                                        Lv {entry.level}
-                                                    </span>
-                                                )}
-                                            </span>
+                                        <span className="arena-lb-name">
+                                            {entry.username}
+                                            {typeof entry.level ===
+                                                "number" && (
+                                                <span className="arena-lb-level">
+                                                    Lv {entry.level}
+                                                </span>
+                                            )}
                                         </span>
                                     </span>
+                                </span>
 
-                                    <span className="col wl">
-                                        {entry.wins} / {entry.losses}
-                                    </span>
-
-                                    <span className="col rating">
-                                        {entry.rating}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
+                                <span className="col wl">
+                                    {entry.wins} / {entry.losses}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 
@@ -595,11 +594,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
             ? { left: position.x, top: position.y, transform: "none" as const }
             : undefined;
 
-    /**
-     * ✅ IMPORTANT:
-     * We are allowed to unmount now because BottomRightDockView controls mounting.
-     * But in case you want to keep your CSS hidden approach, this still works.
-     */
     return (
         <div
             className={`arena-container${!visible ? " hidden" : ""}`}
@@ -646,7 +640,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                             {self?.figure ? (
                                 <img
                                     className="arena-profile-avatar"
-                                    src={getAvatarHeadUrl(self.figure, "left")}
+                                    src={getAvatarFullUrl(self.figure, "left")}
                                     alt={self.username}
                                     draggable={false}
                                 />
@@ -673,12 +667,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                                     </span>
                                 </div>
 
-                                <div className="arena-meta-row">
-                                    <span className="label">Rating</span>
-                                    <span className="value">
-                                        {self?.rating ?? "-"}
-                                    </span>
-                                </div>
+                                {/* ✅ Rating removed */}
                             </div>
                         </div>
 
