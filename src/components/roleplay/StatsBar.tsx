@@ -52,33 +52,41 @@ interface ProfileStats {
     level: number;
     points: number;
 
+    // Vital bars
     health: number;
     maxHealth: number;
+
     energy: number;
     maxEnergy: number;
+
     hunger: number;
     maxHunger: number;
 
     healthlevel: number;
 
+    // Identity
     username: string;
     figure: string;
     motto?: string;
     isOnline?: boolean;
 
+    // Employment / corporation
     jobTitle?: string;
     corporationName?: string;
     corporationIconUrl?: string;
 
+    // Gang info
     gangName?: string;
     gangId?: number;
     gangIconKey?: string;
     gangPrimaryColor?: string;
     gangSecondaryColor?: string;
 
+    // Profile meta
     createdAt?: string;
     lastLogin?: string;
 
+    // allow opponent overrides
     [key: string]: any;
 }
 
@@ -102,6 +110,7 @@ export const StatsBar: FC = () => {
     const [inTurfRoom, setInTurfRoom] = useState(false);
     const [isAggressive, setAggressive] = useState(false);
 
+    // lightweight 60fps clock
     const [now, setNow] = useState(() => performance.now());
     useEffect(() => {
         let raf: number;
@@ -121,6 +130,7 @@ export const StatsBar: FC = () => {
     const figure = GetSessionDataManager().figure;
     const username = GetSessionDataManager().userName;
 
+    // —— gang + profile meta ——
     const [gangName, setGangName] = useState<string>();
     const [gangId, setGangId] = useState<number | undefined>(undefined);
     const [gangIconKey, setGangIconKey] = useState<string | undefined>(
@@ -143,6 +153,7 @@ export const StatsBar: FC = () => {
     const [motto, setMotto] = useState<string | undefined>(undefined);
     const [isOnline, setIsOnline] = useState<boolean>(true);
 
+    // created + last login for profile
     const [createdAt, setCreatedAt] = useState<string | undefined>(undefined);
     const [lastLogin, setLastLogin] = useState<string | undefined>(undefined);
 
@@ -168,6 +179,7 @@ export const StatsBar: FC = () => {
     const [healthlevel, setHealthLevel] = useState(0);
     const [cooldown, setCooldown] = useState(0);
 
+    // central profile state (me OR opponent)
     const [profileStats, setProfileStats] = useState<ProfileStats | null>(null);
     const [showProfile, setShowProfile] = useState(false);
 
@@ -182,6 +194,7 @@ export const StatsBar: FC = () => {
         });
     };
 
+    // —— XP toast tracking ——
     useEffect(() => {
         if (xp > lastXp) {
             setXpGained(xp - lastXp);
@@ -200,23 +213,6 @@ export const StatsBar: FC = () => {
         const handleStatsUpdate = (event: Event) => {
             const { detail: stats } = event as CustomEvent<any>;
             if (!stats) return;
-
-            // ✅ CRITICAL FIX:
-            // If the server includes a userId on this event and it is NOT me, ignore it.
-            // This prevents opponent/inspect/combat packets from overwriting my stats UI.
-            const myId = GetSessionDataManager().userId;
-            const incomingUserId =
-                typeof stats.userId === "number"
-                    ? stats.userId
-                    : typeof stats.habboId === "number"
-                    ? stats.habboId
-                    : typeof stats.id === "number"
-                    ? stats.id
-                    : undefined;
-
-            if (typeof incomingUserId === "number" && incomingUserId !== myId) {
-                return;
-            }
 
             setHealth(stats.health);
             setMaxHealth(stats.maxHealth);
@@ -267,7 +263,7 @@ export const StatsBar: FC = () => {
             setGangName(stats.gangName);
             setJobTitle(stats.jobTitle);
             setCorporationName(stats.corporationName);
-
+            // Convert icon key into URL (same as CorporationsView logic)
             if (stats.corporationIcon) {
                 setCorporationIconUrl(
                     /^https?:\/\//i.test(stats.corporationIcon)
@@ -301,7 +297,7 @@ export const StatsBar: FC = () => {
             window.removeEventListener("virtual_room_info_update", onVRoom);
     }, [aggressionWindowMs]);
 
-    // ===== Opponent inspect hook (kept, but not used for self UI) =====
+    // ===== Opponent inspect hook =====
     useEffect(() => {
         const onOpp = (event: CustomEvent) => setOpponentStats(event.detail);
         window.addEventListener("user_inspect_stats", onOpp as EventListener);
@@ -379,23 +375,29 @@ export const StatsBar: FC = () => {
         const myId = GetSessionDataManager().userId;
         if (parser.id !== myId) return;
 
+        // Created date is already a string (same as UserContainerView)
         const created: string = parser.registration ?? "Unknown";
+
+        // Format last login using FriendlyTime (returns string)
         const last: string =
             FriendlyTime.format(parser.secondsSinceLastVisit ?? 0, ".ago", 2) ??
             "Unknown";
 
+        // Update your local state (must be string | undefined)
         setCreatedAt(created);
         setLastLogin(last);
         setMotto(parser.motto);
         setIsOnline(parser.isOnline);
     });
 
+    // Listen for opponent avatar click → open profile
     useEffect(() => {
         const onOpenOppProfile = (e: Event) => {
             const { detail } = e as CustomEvent<any>;
             if (!detail) return;
 
             setProfileStats({
+                // sensible defaults (opponent payload may be sparse)
                 userId: detail.userId,
                 kills: 0,
                 deaths: 0,
@@ -426,7 +428,6 @@ export const StatsBar: FC = () => {
                 lastLogin: detail.lastLogin,
                 ...detail,
             } as ProfileStats);
-
             setShowProfile(true);
         };
 
@@ -443,7 +444,110 @@ export const StatsBar: FC = () => {
 
     return (
         <div ref={containerRef} className="stats-bar-container">
-            {/* ... your existing JSX unchanged ... */}
+            <div className="stats-left">
+                <div
+                    className="xp-bar-container"
+                    style={{ position: "relative" }}
+                >
+                    <div
+                        className="xp-bar-fill"
+                        style={{ width: `${(xp / maxXP) * 100}%` }}
+                    />
+                    {xpGained && <XPGainPopup amount={xpGained} />}
+                </div>
+
+                <div className="greek-circle">
+                    <div className="greek-xp-ring">
+                        <svg className="xp-ring-svg" viewBox="0 0 36 36">
+                            <path
+                                className="xp-ring-background"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            />
+                            <path
+                                className="xp-ring-progress"
+                                strokeDasharray={`${percent(xp, maxXP)}, 100`}
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            />
+                        </svg>
+
+                        <div
+                            className="avatar-tooltip-wrapper"
+                            onClick={() => {
+                                setProfileStats(buildSelfProfile());
+                                setShowProfile(true);
+                            }}
+                            onMouseEnter={() => setShowXPTooltip(true)}
+                            onMouseLeave={() => setShowXPTooltip(false)}
+                        >
+                            <img
+                                className="avatar-head"
+                                src={`https://imager.olympusrp.pw/?figure=${figure}&direction=2&head_direction=2&gesture=sml`}
+                                alt="Avatar"
+                            />
+                            {showXPTooltip && (
+                                <div className="xp-tooltip">
+                                    XP: {xp} / {maxXP}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="level-badge">{level}</div>
+                    </div>
+                </div>
+
+                <div className="avatar-name-wrapper">
+                    <div className="avatar-name">{username}</div>
+                </div>
+            </div>
+
+            <div className="stats-right">
+                <div className="stat">
+                    <div className="icons heart" />
+                    <div className="bar health-bar">
+                        <div
+                            className="fill health"
+                            style={{ width: `${percent(health, maxHealth)}%` }}
+                        />
+                        <div className="bar-value">
+                            {health} / {maxHealth}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="stat">
+                    <div className="icons bolt" />
+                    <div className="bar energy-bar">
+                        <div
+                            className="fill energy"
+                            style={{ width: `${percent(energy, maxEnergy)}%` }}
+                        />
+                        <div className="bar-value">
+                            {energy} / {maxEnergy}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="stat">
+                    <div className="icons apple" />
+                    <div className="bar hunger-bar">
+                        <div
+                            className="fill hunger"
+                            style={{ width: `${percent(hunger, maxHunger)}%` }}
+                        />
+                        <div className="bar-value">
+                            {hunger} / {maxHunger}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Aggression bar */}
+                <div className="aggression-bar-wrapper">
+                    <div
+                        className="aggression-fill"
+                        style={{ width: `${aggressionPercent}%` }}
+                    />
+                </div>
+            </div>
 
             {showProfile && profileStats && (
                 <MyProfileView

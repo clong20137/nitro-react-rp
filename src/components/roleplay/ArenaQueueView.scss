@@ -1,7 +1,3 @@
-/* ==============================
-ArenaView.scss
-============================== */
-
 .arena-container {
     position: fixed !important;
     top: 60px;
@@ -34,6 +30,10 @@ ArenaView.scss
     .title {
         text-shadow: 1px 1px 0 #000;
     }
+}
+
+.arena-header.is-grabbing {
+    cursor: grabbing;
 }
 
 /* reuse same .close-button from profile */
@@ -281,6 +281,13 @@ ArenaView.scss
     opacity: .4;
 }
 
+.arena-avatar-image {
+    width: 86px;
+    height: 86px;
+    image-rendering: -webkit-optimize-contrast;
+    user-select: none;
+}
+
 .arena-username {
     font-size: 11px;
     font-weight: 700;
@@ -432,37 +439,64 @@ ArenaView.scss
     background: linear-gradient(#f15656, #b13030);
 }
 
-/* Leaderboard tab */
-.arena-leaderboard {
-    font-size: 12px;
+/* =========================================================
+✅ LEADERBOARD (NEW: left poster + right list + trophies)
+========================================================= */
+
+.arena-leaderboard-layout {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 10px;
+    align-items: start;
+}
+
+.arena-leaderboard-art {
+    background: #cdcdcd;
+    border-radius: 8px;
+    border: 1px solid #ffffff;
+    padding: 8px;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08);
+}
+
+.arena-leaderboard-art-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+.arena-leaderboard-panel {
+    min-width: 0;
 }
 
 .arena-leaderboard-empty {
-    padding: 8px;
+    padding: 10px;
     background: #cdcdcd;
-    border-radius: 6px;
+    border-radius: 8px;
     text-align: center;
+    font-weight: 700;
+    color: #333;
 }
 
 .arena-leaderboard-table {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
 }
 
 .arena-leaderboard-header-row,
 .arena-leaderboard-row {
     display: grid;
-    grid-template-columns: 40px 1fr 80px 80px;
-    gap: 6px;
+    grid-template-columns: 40px 1fr 90px 90px;
+    gap: 8px;
     align-items: center;
-    padding: 6px 8px;
-    border-radius: 6px;
+    padding: 7px 8px;
+    border-radius: 8px;
 }
 
 .arena-leaderboard-header-row {
     background: #cdcdcd;
-    font-weight: 800;
+    font-weight: 900;
 }
 
 .arena-leaderboard-row {
@@ -470,8 +504,68 @@ ArenaView.scss
     border: 1px solid #e5e7f0;
 }
 
-.arena-leaderboard-row .col.name {
-    font-weight: 700;
+.col.fighter {
+    min-width: 0;
+}
+
+.arena-lb-fighter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.arena-lb-avatar-wrap {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+}
+
+.arena-lb-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, .08);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, .2);
+    image-rendering: -webkit-optimize-contrast;
+}
+
+.arena-lb-avatar--empty {
+    display: inline-block;
+    background: repeating-linear-gradient(45deg,
+            rgba(0, 0, 0, .06),
+            rgba(0, 0, 0, .06) 4px,
+            rgba(255, 255, 255, .18) 4px,
+            rgba(255, 255, 255, .18) 8px);
+}
+
+.arena-lb-trophy {
+    position: absolute;
+    left: -10px;
+    top: -10px;
+    width: 22px;
+    height: 22px;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .35));
+}
+
+.arena-lb-name {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-weight: 900;
+    color: #111;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.arena-lb-level {
+    font-size: 11px;
+    font-weight: 800;
+    color: #444;
 }
 
 /* Responsive */
@@ -486,5 +580,13 @@ ArenaView.scss
 
     .arena-left {
         width: auto;
+    }
+
+    .arena-leaderboard-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .arena-leaderboard-art {
+        display: none;
     }
 }

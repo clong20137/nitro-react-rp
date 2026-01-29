@@ -2,6 +2,7 @@ import React, {
     FC,
     useCallback,
     useEffect,
+    useMemo,
     useState,
     MouseEvent as ReactMouseEvent,
 } from "react";
@@ -9,6 +10,13 @@ import "./ArenaQueueView.scss";
 import { SendMessageComposer } from "../../api";
 import { ArenaJoinQueueComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ArenaJoinQueueComposer";
 import { ArenaLeaveQueueComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ArenaLeaveQueueComposer";
+import { ArenaRequestLeaderboardComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/ArenaRequestLeaderboardComposer";
+
+// ✅ Assets
+import trophy1 from "../../icons/1stplace.png";
+import trophy2 from "../../icons/2ndplace.png";
+import trophy3 from "../../icons/3rdplace.png";
+import leaderboardPoster from "../../icons/leaderboard.png";
 
 export interface ArenaFighter {
     userId: number;
@@ -25,7 +33,9 @@ export interface ArenaFighter {
 export interface ArenaLeaderboardEntry {
     userId: number;
     username: string;
-    rank: number;
+    figure?: string;
+    level?: number;
+    rank?: number; // computed client-side
     wins: number;
     losses: number;
     rating: number;
@@ -37,6 +47,8 @@ interface ArenaQueueViewProps {
     visible: boolean;
     onClose?: () => void;
     currentUser?: ArenaFighter;
+
+    // optional prop fallback (but we now use live state from server)
     leaderboard?: ArenaLeaderboardEntry[];
 }
 
@@ -58,11 +70,21 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
     // server-side match flag (separate from our personal queue state)
     const [serverIsMatched, setServerIsMatched] = useState<boolean>(false);
 
+    // ✅ LEADERBOARD STATE (this is what will actually render)
+    const [lbEntries, setLbEntries] = useState<ArenaLeaderboardEntry[]>(
+        leaderboard ?? []
+    );
+
     // ----- DRAG STATE -----
     const [position, setPosition] = useState<{ x: number; y: number } | null>(
         null
     );
     const [isDragging, setIsDragging] = useState(false);
+
+    // Request LB packet from server
+    const requestLeaderboard = useCallback(() => {
+        SendMessageComposer(new ArenaRequestLeaderboardComposer());
+    }, []);
 
     // Helper: build Habbo head-only avatar URL
     const getAvatarHeadUrl = (
@@ -71,25 +93,24 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
     ) => {
         if (!figure) return "";
         const direction = side === "left" ? 2 : 4; // face inward
-        return `https://www.habbo.com/habbo-imaging/avatarimage?figure=${figure}&headonly=1&direction=${direction}`;
+        return `https://imager.olympusrp.pw/?figure=${figure}&headonly=1&direction=${direction}`;
     };
 
     // Center once when it first shows; do NOT reset search/match when dragging
     useEffect(() => {
         if (!visible) return;
 
-        // Only set self if we don't already have one
         setSelf((oldSelf) => oldSelf ?? currentUser);
         setActiveTab("match");
 
         if (!position) {
             try {
-                const width = 750; // matches CSS width
+                const width = 750;
                 const x = (window.innerWidth - width) / 2;
                 const y = 60;
                 setPosition({ x, y });
             } catch {
-                // ignore (SSR safety)
+                // ignore
             }
         }
     }, [visible, currentUser, position]);
@@ -101,7 +122,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
             const detail = custom.detail;
             if (!detail) return;
 
-            // Personal queue state for THIS client
             const nextStatus: ArenaQueueStatus = detail.inQueue
                 ? detail.isMatched
                     ? "matched"
@@ -119,7 +139,9 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                     level: detail.self.level,
                     wins: detail.self.wins,
                     losses: detail.self.losses,
-                    rating: 0,
+                    rating: detail.self.rating ?? 0,
+                    health: detail.self.health,
+                    maxHealth: detail.self.maxHealth,
                 });
             }
 
@@ -131,7 +153,9 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                     level: detail.opponent.level,
                     wins: detail.opponent.wins,
                     losses: detail.opponent.losses,
-                    rating: 0,
+                    rating: detail.opponent.rating ?? 0,
+                    health: detail.opponent.health,
+                    maxHealth: detail.opponent.maxHealth,
                 });
             } else {
                 setOpponent(undefined);
@@ -139,10 +163,46 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         };
 
         window.addEventListener("arena_status", handleArenaStatus);
-        return () => {
+        return () =>
             window.removeEventListener("arena_status", handleArenaStatus);
-        };
     }, []);
+
+    // ✅ LEADERBOARD BRIDGE (server -> window event -> state)
+    useEffect(() => {
+        const handleLeaderboard = (ev: Event) => {
+            const custom = ev as CustomEvent<any>;
+            const detail = custom.detail;
+            const entries = detail?.entries;
+
+            if (!Array.isArray(entries)) return;
+
+            // normalize incoming fields in case server uses slightly different keys
+            const normalized: ArenaLeaderboardEntry[] = entries.map(
+                (e: any) => ({
+                    userId: Number(e.userId ?? e.id ?? 0),
+                    username: String(e.username ?? ""),
+                    figure: e.figure ?? "",
+                    level: typeof e.level === "number" ? e.level : undefined,
+                    wins: Number(e.wins ?? 0),
+                    losses: Number(e.losses ?? 0),
+                    rating: Number(e.rating ?? 0),
+                })
+            );
+
+            setLbEntries(normalized);
+        };
+
+        window.addEventListener("arena_leaderboard", handleLeaderboard);
+        return () =>
+            window.removeEventListener("arena_leaderboard", handleLeaderboard);
+    }, []);
+
+    // If you want: auto-request once when tab becomes active
+    useEffect(() => {
+        if (!visible) return;
+        if (activeTab !== "leaderboard") return;
+        requestLeaderboard();
+    }, [visible, activeTab, requestLeaderboard]);
 
     const sendJoinQueue = useCallback(() => {
         SendMessageComposer(new ArenaJoinQueueComposer());
@@ -154,12 +214,10 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
 
     const handleJoinClick = useCallback(() => {
         if (status === "idle") {
-            // Enter queue → clear opponent, optimistic queued
             setOpponent(undefined);
             setStatus("queued");
             sendJoinQueue();
         } else if (status === "queued" || status === "matched") {
-            // Leave queue / cancel match
             setStatus("idle");
             setOpponent(undefined);
             sendLeaveQueue();
@@ -173,19 +231,15 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         onClose && onClose();
     }, [onClose, sendLeaveQueue]);
 
-    // Proper close button: leave queue if needed then close
     const handleCloseClick = useCallback(() => {
-        if (status !== "idle") {
-            sendLeaveQueue();
-        }
+        if (status !== "idle") sendLeaveQueue();
         onClose && onClose();
     }, [status, sendLeaveQueue, onClose]);
 
     // ----- DRAG HANDLERS -----
     const handleHeaderMouseDown = (e: ReactMouseEvent<HTMLDivElement>) => {
-        if (e.button !== 0) return; // only left click
+        if (e.button !== 0) return;
 
-        // Don't initiate drag if they grabbed the close button
         const target = e.target as HTMLElement;
         if (target.closest(".close-button")) return;
 
@@ -217,7 +271,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
 
     if (!visible) return null;
 
-    // NOW: searching/matched come from the server, not our personal status
     const isSearching = !serverIsMatched && !!self && !opponent;
     const isMatched = serverIsMatched && !!self && !!opponent;
 
@@ -250,12 +303,13 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
     };
 
     const renderStatsRows = (fighter?: ArenaFighter) => {
-        if (!fighter)
+        if (!fighter) {
             return (
                 <div className="arena-stats-row arena-stats-row--empty">
                     Waiting for player...
                 </div>
             );
+        }
 
         return (
             <>
@@ -282,7 +336,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
     const renderMatchTab = () => (
         <div className="arena-matchmaking">
             <div className="arena-sides">
-                {/* LEFT — BLUE (YOU / or blue fighter for spectators) */}
+                {/* LEFT — YOU */}
                 <div className="arena-side arena-side--blue">
                     <div className="arena-side-header">
                         <span className="side-label">YOU</span>
@@ -309,11 +363,10 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                     </div>
 
                     {renderHealthBar(self)}
-
                     <div className="arena-stats">{renderStatsRows(self)}</div>
                 </div>
 
-                {/* RIGHT — RED (OPPONENT) */}
+                {/* RIGHT — OPPONENT */}
                 <div className="arena-side arena-side--red">
                     <div className="arena-side-header">
                         <span className="side-label">OPPONENT</span>
@@ -356,7 +409,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                     </div>
 
                     {renderHealthBar(opponent)}
-
                     <div className="arena-stats">
                         {renderStatsRows(opponent)}
                     </div>
@@ -368,11 +420,9 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                     <span className="arena-status-text">
                         {status === "idle" &&
                             "Click JOIN QUEUE to find a fight in the Bubble Juice arena."}
-
                         {status === "queued" &&
                             !serverIsMatched &&
                             "You are in queue. Waiting for another fighter..."}
-
                         {status === "matched" &&
                             serverIsMatched &&
                             "Match found! Get ready to fight."}
@@ -406,48 +456,129 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         </div>
     );
 
+    // ✅ sorted top 10: wins desc, losses asc (tiebreaker), then rating desc
+    const sortedLeaderboard = useMemo(() => {
+        return [...(lbEntries ?? [])]
+            .sort((a, b) => {
+                const w = (b.wins ?? 0) - (a.wins ?? 0);
+                if (w !== 0) return w;
+
+                const l = (a.losses ?? 0) - (b.losses ?? 0);
+                if (l !== 0) return l;
+
+                const r = (b.rating ?? 0) - (a.rating ?? 0);
+                if (r !== 0) return r;
+
+                return (a.username ?? "").localeCompare(b.username ?? "");
+            })
+            .slice(0, 10)
+            .map((e, i) => ({ ...e, rank: i + 1 }));
+    }, [lbEntries]);
+
+    const getTrophyForRank = (rank: number) => {
+        if (rank === 1) return trophy1;
+        if (rank === 2) return trophy2;
+        if (rank === 3) return trophy3;
+        return null;
+    };
+
     const renderLeaderboardTab = () => (
-        <div className="arena-leaderboard">
-            {leaderboard.length === 0 && (
-                <div className="arena-leaderboard-empty">
-                    No arena matches yet. Be the first to enter the ring!
-                </div>
-            )}
+        <div className="arena-leaderboard-layout">
+            <div className="arena-leaderboard-art">
+                <img
+                    className="arena-leaderboard-art-img"
+                    src={leaderboardPoster}
+                    alt="Leaderboard"
+                    draggable={false}
+                />
+            </div>
 
-            {leaderboard.length > 0 && (
-                <div className="arena-leaderboard-table">
-                    <div className="arena-leaderboard-header-row">
-                        <span className="col rank">#</span>
-                        <span className="col name">Fighter</span>
-                        <span className="col wl">W / L</span>
-                        <span className="col rating">Rating</span>
+            <div className="arena-leaderboard-panel">
+                {sortedLeaderboard.length === 0 && (
+                    <div className="arena-leaderboard-empty">
+                        No arena matches yet. Be the first to enter the ring!
                     </div>
+                )}
 
-                    {leaderboard.map((entry) => (
-                        <div
-                            className="arena-leaderboard-row"
-                            key={entry.userId}
-                        >
-                            <span className="col rank">{entry.rank}</span>
-                            <span className="col name">{entry.username}</span>
-                            <span className="col wl">
-                                {entry.wins} / {entry.losses}
-                            </span>
-                            <span className="col rating">{entry.rating}</span>
+                {sortedLeaderboard.length > 0 && (
+                    <div className="arena-leaderboard-table">
+                        <div className="arena-leaderboard-header-row">
+                            <span className="col rank">#</span>
+                            <span className="col fighter">Fighter</span>
+                            <span className="col wl">W / L</span>
+                            <span className="col rating">Rating</span>
                         </div>
-                    ))}
-                </div>
-            )}
+
+                        {sortedLeaderboard.map((entry) => {
+                            const trophy = getTrophyForRank(entry.rank!);
+
+                            return (
+                                <div
+                                    className="arena-leaderboard-row"
+                                    key={entry.userId}
+                                >
+                                    <span className="col rank">
+                                        {entry.rank}
+                                    </span>
+
+                                    <span className="col fighter">
+                                        <span className="arena-lb-fighter">
+                                            <span className="arena-lb-avatar-wrap">
+                                                {trophy && (
+                                                    <img
+                                                        className="arena-lb-trophy"
+                                                        src={trophy}
+                                                        alt={`${entry.rank} place`}
+                                                        draggable={false}
+                                                    />
+                                                )}
+
+                                                {entry.figure ? (
+                                                    <img
+                                                        className="arena-lb-avatar"
+                                                        src={getAvatarHeadUrl(
+                                                            entry.figure,
+                                                            "left"
+                                                        )}
+                                                        alt={entry.username}
+                                                        draggable={false}
+                                                    />
+                                                ) : (
+                                                    <span className="arena-lb-avatar arena-lb-avatar--empty" />
+                                                )}
+                                            </span>
+
+                                            <span className="arena-lb-name">
+                                                {entry.username}
+                                                {typeof entry.level ===
+                                                    "number" && (
+                                                    <span className="arena-lb-level">
+                                                        Lv {entry.level}
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </span>
+                                    </span>
+
+                                    <span className="col wl">
+                                        {entry.wins} / {entry.losses}
+                                    </span>
+
+                                    <span className="col rating">
+                                        {entry.rating}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
         </div>
     );
 
     const containerStyle =
         position != null
-            ? {
-                  left: position.x,
-                  top: position.y,
-                  transform: "none",
-              }
+            ? { left: position.x, top: position.y, transform: "none" as const }
             : undefined;
 
     return (
@@ -464,7 +595,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                 />
             </div>
 
-            {/* Tabs row */}
             <div className="arena-tabs">
                 <button
                     className={`tab-btn ${
@@ -479,14 +609,17 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                     className={`tab-btn ${
                         activeTab === "leaderboard" ? "active" : ""
                     }`}
-                    onClick={() => setActiveTab("leaderboard")}
+                    onClick={() => {
+                        setActiveTab("leaderboard");
+                        requestLeaderboard(); // ✅ request from server
+                    }}
                 >
                     Leaderboards
                 </button>
             </div>
 
             <div className="arena-body">
-                {/* LEFT COLUMN - lobby info */}
+                {/* LEFT COLUMN */}
                 <div className="arena-left">
                     <div className="arena-avatar-section">
                         <div className="arena-avatar-frame">
@@ -500,6 +633,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                             ) : (
                                 <div className="arena-profile-avatar" />
                             )}
+
                             <div className="arena-avatar-meta">
                                 <div className="arena-username-main">
                                     {self?.username ?? "You"}
