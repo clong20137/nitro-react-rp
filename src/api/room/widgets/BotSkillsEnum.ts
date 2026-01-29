@@ -1,5 +1,4 @@
-export class BotSkillsEnum
-{
+export class BotSkillsEnum {
     public static GENERIC_SKILL: number = 0;
     public static DRESS_UP: number = 1;
     public static SETUP_CHAT: number = 2;
@@ -15,4 +14,7 @@ export class BotSkillsEnum
     public static NAVIGATOR_SEARCH: number = 14;
     public static DONATE_TO_USER: number = 24;
     public static DONATE_TO_ALL: number = 25;
+    public static INFORMATION: number = 26;
+    public static SELL_FISH: number = 27;
+    public static CHANGE_NAME: number = 28;
 }

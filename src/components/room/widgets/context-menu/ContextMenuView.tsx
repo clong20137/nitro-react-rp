@@ -25,8 +25,16 @@ import { Base, BaseProps } from "../../../../common";
 import { ContextMenuCaretView } from "./ContextMenuCaretView";
 import { InspectUserStatsComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/InspectUserStatsComposer";
 
-/* If you’re no longer using this anywhere else, you can delete this import */
-// import { GetSessionDataManager } from "../../../../api";
+/**
+ * TODO: Replace these with your real composers (or create them server-side):
+ *
+ * - InspectBotStatsComposer(botId)
+ * - BotActionComposer(botId, action)
+ *
+ * The pattern is correct; only the message class names may differ.
+ */
+// import { InspectBotStatsComposer } from "...";
+// import { BotActionComposer } from "...";
 
 interface ContextMenuViewProps extends BaseProps<HTMLDivElement> {
     objectId: number;
@@ -84,7 +92,6 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         () => readBool("contextMenuDisabled", false)
     );
 
-    // Click-through flag (seed from global, update via bridge)
     const [ctEnabled, setCtEnabled] = useState<boolean>(
         () => !!(window as any).__ctEnabled
     );
@@ -101,7 +108,7 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         const onCT = (e: Event) => {
             const enabled = !!(e as CustomEvent)?.detail?.enabled;
             setCtEnabled(enabled);
-            if (enabled && onClose) onClose(); // hide immediately when CT turns on
+            if (enabled && onClose) onClose();
         };
 
         const onStorage = (ev: StorageEvent) => {
@@ -116,7 +123,6 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         window.addEventListener("click_through_state", onCT as EventListener);
         window.addEventListener("storage", onStorage);
 
-        // sync once from global in case CT was toggled before mount
         const syncFromGlobal = () => {
             const now = !!(window as any).__ctEnabled;
             setCtEnabled(now);
@@ -137,7 +143,6 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         };
     }, [onClose]);
 
-    // If disabled or click-through is enabled, do not render at all
     if (contextMenuDisabled || ctEnabled) return null;
 
     /* ---------------- state ---------------- */
@@ -150,22 +155,84 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
     const userData =
         GetRoomSession().userDataManager.getUserDataByIndex(objectId);
 
-    // Only trigger stats explicitly (on click) — no more auto on hover
+    const isBot =
+        userType === RoomObjectType.BOT ||
+        userType === RoomObjectType.RENTABLE_BOT;
+
+    const isUser = userType === RoomObjectType.USER;
+
+    /**
+     * ⚠️ VERY IMPORTANT:
+     * For USERS you correctly use userData.webID as the real userId.
+     * For BOTS you need the bot's id. Depending on your Nitro fork,
+     * the bot id may be in one of these:
+     *
+     * - userData.webID
+     * - userData.id
+     * - userData.roomIndex / index
+     *
+     * We’ll pick the most likely: webID first, fall back to objectId.
+     */
+    const botId = useMemo(() => {
+        if (!userData) return objectId;
+        return userData.webID && userData.webID > 0 ? userData.webID : objectId;
+    }, [userData, objectId]);
+
+    // Only trigger stats explicitly (on click)
     const toggleStats = useCallback(() => {
         if (objectId <= 0 || !userData) return;
 
-        // Ask server for latest stats
         SendMessageComposer(new InspectUserStatsComposer(userData.webID));
 
-        // Fire client-side event so the overlay opens
         window.dispatchEvent(
             new CustomEvent("user_inspect_stats", {
-                detail: {
-                    userId: userData.webID, // use webID (actual userId), not room index
-                },
+                detail: { userId: userData.webID },
             })
         );
-    }, [objectId, userData]);
+
+        onClose?.();
+    }, [objectId, userData, onClose]);
+
+    /**
+     * BOT: Inspect
+     * Replace with your real composer + event name.
+     */
+    const inspectBot = useCallback(() => {
+        if (!userData) return;
+
+        // Example pattern:
+        // SendMessageComposer(new InspectBotStatsComposer(botId));
+
+        window.dispatchEvent(
+            new CustomEvent("bot_inspect_stats", {
+                detail: { botId },
+            })
+        );
+
+        onClose?.();
+    }, [userData, botId, onClose]);
+
+    /**
+     * BOT: Action sender (attack, heal, cuff, etc.)
+     * Replace with your real composer.
+     */
+    const botAction = useCallback(
+        (action: string) => {
+            if (!userData) return;
+
+            // Example pattern:
+            // SendMessageComposer(new BotActionComposer(botId, action));
+
+            window.dispatchEvent(
+                new CustomEvent("bot_action", {
+                    detail: { botId, action },
+                })
+            );
+
+            onClose?.();
+        },
+        [userData, botId, onClose]
+    );
 
     const [opacity, setOpacity] = useState(1);
     const [isFading, setIsFading] = useState(false);
@@ -194,6 +261,7 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
                 return;
 
             let offset = -elementRef.current.offsetHeight;
+
             if (
                 userType > -1 &&
                 (userType === RoomObjectType.USER ||
@@ -219,6 +287,7 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
                 GetNitroInstance().width -
                 elementRef.current.offsetWidth -
                 SPACE_AROUND_EDGES;
+
             const maxTop =
                 GetNitroInstance().height -
                 elementRef.current.offsetHeight -
@@ -268,19 +337,24 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
                     objectId,
                     category
                 );
+
                 const location = GetRoomObjectScreenLocation(
                     session.roomId,
                     objectId,
                     category
                 );
 
-                if (bounds && location) updatePosition(bounds, location);
+                if (bounds && location) {
+                    updatePosition(bounds, location);
+                }
             } catch {
-                // swallow any frame errors to avoid black screen
+                // swallow frame errors
             }
         };
 
         ticker.add(update);
+
+        // ✅ CLEANUP — THIS IS THE IMPORTANT PART
         return () => {
             ticker.remove(update);
         };
@@ -302,30 +376,10 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         FADE_TIME = 1;
     }, []);
 
-    /**
-     * ✅ FIX:
-     * When you close the overlay, COLLAPSED may remain true (module-level).
-     * Then the next time you click a user, the context menu remounts already collapsed,
-     * hiding the stats button so you can’t open it again.
-     *
-     * Reset collapsed state whenever this menu opens for a user/object again.
-     */
     useEffect(() => {
         setIsCollapsed(false);
         COLLAPSED = false;
     }, [objectId, category]);
-
-    // 🔥 REMOVED: the auto-fire inspect effect so it DOES NOT trigger on hover
-    //
-    // useEffect(() => {
-    // if (ctEnabled) return; // do not auto-open when click-through is enabled
-    // if (userType !== RoomObjectType.USER) return;
-    //
-    // const currentUserId = GetSessionDataManager().userId;
-    // if (!userData || userData.webID === currentUserId) return;
-    //
-    // toggleStats();
-    // }, [objectId, userType, userData, ctEnabled, toggleStats]);
 
     /* ---------------- render ---------------- */
 
@@ -341,14 +395,18 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
                 <>
                     {children}
 
-                    <div
-                        className="context-menu-option"
-                        onClick={() => {
-                            // Explicitly open stats ONLY when this is clicked
-                            toggleStats();
-                            setIsCollapsed(true);
-                        }}
-                    />
+                    {/* ✅ USER MENU */}
+                    {isUser && <div className="context-menu-options"></div>}
+
+                    {/* ✅ BOT MENU */}
+                    {isBot && (
+                        <div className="context-menu-options">
+                            <div className="context-menu-divider" />
+                        </div>
+                    )}
+
+                    {/* collapse after click if desired */}
+                    {/* If you want collapse-on-any-action, just setIsCollapsed(true) inside actions */}
                 </>
             )}
 
