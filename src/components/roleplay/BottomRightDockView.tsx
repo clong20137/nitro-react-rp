@@ -38,9 +38,7 @@ export const BottomRightDockView: FC = () => {
                         ) {
                             (navigator as any).vibrate([120, 80, 120]);
                         }
-                    } catch {
-                        // ignore
-                    }
+                    } catch {}
 
                     setTimeout(() => setShake(false), 500);
                 }
@@ -53,7 +51,7 @@ export const BottomRightDockView: FC = () => {
         return () => window.removeEventListener("doordash_orders", handler);
     }, []);
 
-    /* ---------------- Virtual room id (same as GangClaim) ---------------- */
+    /* ---------------- Virtual room id ---------------- */
     useEffect(() => {
         const handler = (event: Event) => {
             const custom = event as CustomEvent<{ virtualRoomId?: number }>;
@@ -62,7 +60,6 @@ export const BottomRightDockView: FC = () => {
             if (typeof vId === "number") setVirtualRoomId(vId);
         };
 
-        // Some bridges may use one or the other – listen to both
         window.addEventListener(
             "virtual_room_status",
             handler as EventListener
@@ -84,7 +81,7 @@ export const BottomRightDockView: FC = () => {
         };
     }, []);
 
-    /* auto-close arena UI if we leave vRoom 33 */
+    // auto-close arena UI if we leave vRoom 33
     useEffect(() => {
         if (virtualRoomId !== 33 && arenaOpen) setArenaOpen(false);
     }, [virtualRoomId, arenaOpen]);
@@ -97,10 +94,13 @@ export const BottomRightDockView: FC = () => {
             {/* PHONE VIEW */}
             {phoneOpen && <PhoneView onClose={() => setPhoneOpen(false)} />}
 
-            {/* ARENA QUEUE VIEW */}
-            {isArenaRoom && (
+            {/* ✅ ARENA QUEUE VIEW
+Only mount when OPEN and in arena room.
+This prevents it from “popping up automatically” or reacting in background.
+*/}
+            {isArenaRoom && arenaOpen && (
                 <ArenaQueueView
-                    visible={arenaOpen}
+                    visible={true}
                     onClose={() => setArenaOpen(false)}
                 />
             )}

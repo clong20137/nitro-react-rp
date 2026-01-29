@@ -183,16 +183,21 @@
     padding: 10px 16px;
     border: 2px solid #fff;
     border-bottom: none;
-    background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
-    color: #fff;
+    background: linear-gradient(180deg, #1e7295, #1e7295 50%, #185d79 0, #185d79);
+    color: #ffffff;
+    text-shadow: -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .06);
+    transition: transform .12s ease, filter .12s ease;
+    filter: drop-shadow(0 0 1px black);
     font-weight: 700;
     border-radius: 8px 8px 0 0;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6);
     cursor: pointer;
 
     &.active {
         background: #cdcdcd;
-        color: #000;
     }
 }
 

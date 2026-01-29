@@ -47,8 +47,6 @@ interface ArenaQueueViewProps {
     visible: boolean;
     onClose?: () => void;
     currentUser?: ArenaFighter;
-
-    // optional prop fallback (we still support it, but live state wins)
     leaderboard?: ArenaLeaderboardEntry[];
 }
 
@@ -96,8 +94,10 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         return `https://imager.olympusrp.pw/?figure=${figure}&headonly=1&direction=${direction}`;
     };
 
-    // ✅ IMPORTANT: DO NOT unmount when hidden (prevents React hook crash / black screen)
-    // We hide via CSS instead.
+    /**
+     * ✅ Initialize layout ONLY when opening.
+     * (This no longer "auto opens" because visible is only controlled by the Dock.)
+     */
     useEffect(() => {
         if (!visible) return;
 
@@ -105,20 +105,20 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         setActiveTab("match");
 
         if (!position) {
-            try {
-                const width = 750;
-                const x = (window.innerWidth - width) / 2;
-                const y = 60;
-                setPosition({ x, y });
-            } catch {
-                // ignore
-            }
+            const width = 750;
+            const x = (window.innerWidth - width) / 2;
+            const y = 60;
+            setPosition({ x, y });
         }
     }, [visible, currentUser, position]);
 
     // ----- ARENA STATUS BRIDGE -----
     useEffect(() => {
         const handleArenaStatus = (ev: Event) => {
+            // ✅ If the UI is hidden, do NOT update local status/players.
+            // This prevents server pushes from causing weird “auto open” behavior.
+            if (!visible) return;
+
             const custom = ev as CustomEvent<any>;
             const detail = custom.detail;
             if (!detail) return;
@@ -166,11 +166,14 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         window.addEventListener("arena_status", handleArenaStatus);
         return () =>
             window.removeEventListener("arena_status", handleArenaStatus);
-    }, []);
+    }, [visible]);
 
     // ✅ LEADERBOARD BRIDGE (server -> window event -> state)
     useEffect(() => {
         const handleLeaderboard = (ev: Event) => {
+            // ✅ Only care while open (prevents background updates)
+            if (!visible) return;
+
             const custom = ev as CustomEvent<any>;
             const detail = custom.detail;
             const entries = detail?.entries;
@@ -195,9 +198,9 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         window.addEventListener("arena_leaderboard", handleLeaderboard);
         return () =>
             window.removeEventListener("arena_leaderboard", handleLeaderboard);
-    }, []);
+    }, [visible]);
 
-    // ✅ Auto-request LB when leaderboard tab becomes active (ONLY ONCE per tab change)
+    // ✅ Auto-request LB when leaderboard tab becomes active (ONLY when open)
     useEffect(() => {
         if (!visible) return;
         if (activeTab !== "leaderboard") return;
@@ -228,13 +231,26 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         setStatus("idle");
         setOpponent(undefined);
         sendLeaveQueue();
-        onClose && onClose();
+        onClose?.();
     }, [onClose, sendLeaveQueue]);
 
-    const handleCloseClick = useCallback(() => {
-        if (status !== "idle") sendLeaveQueue();
-        onClose && onClose();
-    }, [status, sendLeaveQueue, onClose]);
+    /**
+     * ✅ FIX: Close button should ALWAYS close.
+     * It should NOT leave queue automatically unless you want that behavior.
+     * (Right now: X just closes UI. Queue state remains server-side.)
+     *
+     * If you DO want X to leave queue, uncomment the sendLeaveQueue line below.
+     */
+    const handleCloseClick = useCallback(
+        (e?: React.MouseEvent) => {
+            e?.stopPropagation();
+            // If you want X to leave queue as well, uncomment:
+            // if (status !== "idle") sendLeaveQueue();
+
+            onClose?.();
+        },
+        [onClose /*, status, sendLeaveQueue*/]
+    );
 
     // ----- DRAG HANDLERS -----
     const handleHeaderMouseDown = (e: ReactMouseEvent<HTMLDivElement>) => {
@@ -579,6 +595,11 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
             ? { left: position.x, top: position.y, transform: "none" as const }
             : undefined;
 
+    /**
+     * ✅ IMPORTANT:
+     * We are allowed to unmount now because BottomRightDockView controls mounting.
+     * But in case you want to keep your CSS hidden approach, this still works.
+     */
     return (
         <div
             className={`arena-container${!visible ? " hidden" : ""}`}
@@ -589,9 +610,11 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                 onMouseDown={handleHeaderMouseDown}
             >
                 <span className="title">BUBBLE JUICE ARENA</span>
+
                 <button
                     className="close-button"
                     type="button"
+                    onMouseDown={(e) => e.stopPropagation()}
                     onClick={handleCloseClick}
                 />
             </div>
@@ -606,7 +629,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                     Matchmaking
                 </button>
 
-                {/* ✅ Only switch tabs here. The useEffect will request leaderboard once. */}
                 <button
                     className={`tab-btn ${
                         activeTab === "leaderboard" ? "active" : ""
@@ -618,7 +640,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
             </div>
 
             <div className="arena-body">
-                {/* LEFT COLUMN */}
                 <div className="arena-left">
                     <div className="arena-avatar-section">
                         <div className="arena-avatar-frame">
@@ -680,7 +701,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                     </div>
                 </div>
 
-                {/* RIGHT COLUMN */}
                 <div className="arena-right">
                     <div className="arena-tab-content">
                         {activeTab === "match"
