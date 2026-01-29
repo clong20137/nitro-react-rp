@@ -48,7 +48,7 @@ interface ArenaQueueViewProps {
     onClose?: () => void;
     currentUser?: ArenaFighter;
 
-    // optional prop fallback (but we now use live state from server)
+    // optional prop fallback (we still support it, but live state wins)
     leaderboard?: ArenaLeaderboardEntry[];
 }
 
@@ -70,7 +70,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
     // server-side match flag (separate from our personal queue state)
     const [serverIsMatched, setServerIsMatched] = useState<boolean>(false);
 
-    // ✅ LEADERBOARD STATE (this is what will actually render)
+    // ✅ LEADERBOARD STATE (this is what renders)
     const [lbEntries, setLbEntries] = useState<ArenaLeaderboardEntry[]>(
         leaderboard ?? []
     );
@@ -96,7 +96,8 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         return `https://imager.olympusrp.pw/?figure=${figure}&headonly=1&direction=${direction}`;
     };
 
-    // Center once when it first shows; do NOT reset search/match when dragging
+    // ✅ IMPORTANT: DO NOT unmount when hidden (prevents React hook crash / black screen)
+    // We hide via CSS instead.
     useEffect(() => {
         if (!visible) return;
 
@@ -176,7 +177,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
 
             if (!Array.isArray(entries)) return;
 
-            // normalize incoming fields in case server uses slightly different keys
             const normalized: ArenaLeaderboardEntry[] = entries.map(
                 (e: any) => ({
                     userId: Number(e.userId ?? e.id ?? 0),
@@ -197,7 +197,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
             window.removeEventListener("arena_leaderboard", handleLeaderboard);
     }, []);
 
-    // If you want: auto-request once when tab becomes active
+    // ✅ Auto-request LB when leaderboard tab becomes active (ONLY ONCE per tab change)
     useEffect(() => {
         if (!visible) return;
         if (activeTab !== "leaderboard") return;
@@ -268,8 +268,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         document.addEventListener("mousemove", onMouseMove);
         document.addEventListener("mouseup", onMouseUp);
     };
-
-    if (!visible) return null;
 
     const isSearching = !serverIsMatched && !!self && !opponent;
     const isMatched = serverIsMatched && !!self && !!opponent;
@@ -456,7 +454,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         </div>
     );
 
-    // ✅ sorted top 10: wins desc, losses asc (tiebreaker), then rating desc
+    // ✅ sorted top 10: wins desc, losses asc, rating desc, then username
     const sortedLeaderboard = useMemo(() => {
         return [...(lbEntries ?? [])]
             .sort((a, b) => {
@@ -582,7 +580,10 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
             : undefined;
 
     return (
-        <div className="arena-container" style={containerStyle}>
+        <div
+            className={`arena-container${!visible ? " hidden" : ""}`}
+            style={containerStyle}
+        >
             <div
                 className={`arena-header${isDragging ? " is-grabbing" : ""}`}
                 onMouseDown={handleHeaderMouseDown}
@@ -605,14 +606,12 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                     Matchmaking
                 </button>
 
+                {/* ✅ Only switch tabs here. The useEffect will request leaderboard once. */}
                 <button
                     className={`tab-btn ${
                         activeTab === "leaderboard" ? "active" : ""
                     }`}
-                    onClick={() => {
-                        setActiveTab("leaderboard");
-                        requestLeaderboard(); // ✅ request from server
-                    }}
+                    onClick={() => setActiveTab("leaderboard")}
                 >
                     Leaderboards
                 </button>
