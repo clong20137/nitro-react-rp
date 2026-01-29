@@ -128,6 +128,8 @@ LEFT SIDEBAR (PLAYER SUMMARY)
 
 .arena-username-main {
     font-weight: 800;
+    color: #FFF;
+    font-size: 24px;
 }
 
 .arena-meta-row {
@@ -201,7 +203,6 @@ TABS
 
     &.active {
         background: #cdcdcd;
-        color: #000;
     }
 }
 
@@ -237,10 +238,14 @@ MATCHMAKING PANELS
 
 .arena-side--blue {
     background: linear-gradient(#4a89d6, #315e95);
+    color: #FFF;
+    font-weight: bold;
 }
 
 .arena-side--red {
     background: linear-gradient(#d64a4a, #9b3333);
+    color: #FFF;
+    font-weight: bold;
 }
 
 .arena-avatar-wrapper {
@@ -257,6 +262,7 @@ MATCHMAKING PANELS
     width: 86px;
     height: 86px;
     image-rendering: -webkit-optimize-contrast;
+    margin-top: 30px;
 }
 
 /* =========================================================
@@ -290,7 +296,8 @@ STATS (NO RATING)
 .arena-stats-row {
     display: flex;
     justify-content: space-between;
-    font-size: 10px;
+    font-size: 14px;
+    font-weight: bold;
     color: #fff;
 }
 
@@ -347,6 +354,9 @@ LEADERBOARD
     gap: 6px;
 }
 
+/* header + row grid stays the same, but we remove the medal numbers
+and make username + W/L larger/bolder, and add more space between
+username and level. */
 .arena-leaderboard-header-row,
 .arena-leaderboard-row {
     display: grid;
@@ -364,8 +374,72 @@ LEADERBOARD
 .arena-leaderboard-row {
     background: #f6f7fb;
     border: 1px solid #e5e7f0;
+    align-items: center;
 }
 
+/* --- Medal column --- */
+/* Remove any rank numbers displayed next to/over medals */
+.arena-leaderboard-row .arena-lb-rank,
+.arena-leaderboard-row .arena-lb-rank-number,
+.arena-leaderboard-row .arena-lb-number,
+.arena-leaderboard-row .rank-number,
+.arena-leaderboard-row .lb-number,
+.arena-leaderboard-row .number,
+.arena-leaderboard-row .count {
+    display: none !important;
+}
+
+/* If your medal is wrapped and the number is a <span> in that cell, hide it */
+.arena-leaderboard-row> :first-child span {
+    display: none !important;
+}
+
+/* --- Fighter / name column --- */
+.arena-leaderboard-row .arena-lb-fighter,
+.arena-leaderboard-row .fighter,
+.arena-leaderboard-row .arena-fighter,
+.arena-leaderboard-row .fighter-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    /* more space between username and level */
+    min-width: 0;
+}
+
+/* Bigger + bold username */
+.arena-leaderboard-row .arena-lb-username,
+.arena-leaderboard-row .username,
+.arena-leaderboard-row .fighter-name,
+.arena-leaderboard-row .name {
+    font-size: 18px;
+    font-weight: 900;
+    color: #111;
+    line-height: 1.1;
+}
+
+/* Level line (smaller) + spacing handled via gap above */
+.arena-leaderboard-row .arena-lb-level,
+.arena-leaderboard-row .level,
+.arena-leaderboard-row .fighter-level {
+    font-size: 13px;
+    font-weight: 700;
+    color: #666;
+    line-height: 1.1;
+}
+
+/* --- W/L column --- */
+.arena-leaderboard-row .arena-lb-wl,
+.arena-leaderboard-row .wl,
+.arena-leaderboard-row .record,
+.arena-leaderboard-row .w-l {
+    font-size: 18px;
+    font-weight: 900;
+    color: #111;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* Avatar (if used in leaderboard rows) */
 .arena-lb-avatar-wrap {
     width: 44px;
     height: 54px;

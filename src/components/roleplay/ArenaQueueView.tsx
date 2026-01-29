@@ -392,7 +392,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                 {/* RIGHT — OPPONENT */}
                 <div className="arena-side arena-side--red">
                     <div className="arena-side-header">
-                        <span className="side-label">OPPONENT</span>
+                        <span className="side-label">RED TEAM</span>
                     </div>
 
                     <div className="arena-avatar-wrapper">
@@ -650,7 +650,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
 
                             <div className="arena-avatar-meta">
                                 <div className="arena-username-main">
-                                    {self?.username ?? "You"}
+                                    {self?.username ?? "Blue Team"}
                                 </div>
 
                                 <div className="arena-meta-row">
