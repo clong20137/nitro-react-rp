@@ -40,7 +40,6 @@ export interface ArenaLeaderboardEntry {
     rank?: number; // computed client-side
     wins: number;
     losses: number;
-    // rating removed from UI; keep if server still sends it
     rating?: number;
 }
 
@@ -114,19 +113,24 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         )}&direction=${direction}&action=std&gesture=sml&size=l`;
     };
 
+    const pctText = useCallback((wins?: number, losses?: number) => {
+        const w = Math.max(0, Number(wins ?? 0));
+        const l = Math.max(0, Number(losses ?? 0));
+        const total = w + l;
+        if (total <= 0) return "0%";
+        const pct = Math.round((w / total) * 100);
+        return `${pct}%`;
+    }, []);
+
     /**
      * ✅ Initialize layout ONLY when opening.
      * IMPORTANT: This MUST NOT depend on `position` (dragging changes position).
      */
     useEffect(() => {
-        // detect open transition
         if (visible && !wasVisibleRef.current) {
             setSelf((oldSelf) => oldSelf ?? currentUser);
-
-            // default tab on open
             setActiveTab("match");
 
-            // only set default position if it hasn't been set
             setPosition((pos) => {
                 if (pos) return pos;
                 const width = 750;
@@ -140,7 +144,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
     // ----- ARENA STATUS BRIDGE -----
     useEffect(() => {
         const handleArenaStatus = (ev: Event) => {
-            // ✅ Only care while open
             if (!visible) return;
 
             const custom = ev as CustomEvent<any>;
@@ -211,7 +214,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                     level: typeof e.level === "number" ? e.level : undefined,
                     wins: Number(e.wins ?? 0),
                     losses: Number(e.losses ?? 0),
-                    rating: Number(e.rating ?? 0), // kept (not displayed)
+                    rating: Number(e.rating ?? 0),
                 })
             );
 
@@ -301,58 +304,40 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
     const isSearching = !serverIsMatched && !!self && !opponent;
     const isMatched = serverIsMatched && !!self && !!opponent;
 
-    const renderHealthBar = (fighter?: ArenaFighter) => {
-        if (!fighter || !fighter.maxHealth) {
-            return (
-                <div className="arena-healthbar">
-                    <div className="arena-healthbar-fill arena-healthbar-fill--empty" />
-                </div>
-            );
-        }
-
-        const pct = Math.max(
-            0,
-            Math.min(
-                100,
-                ((fighter.health ?? fighter.maxHealth) / fighter.maxHealth) *
-                    100
-            )
-        );
-
-        return (
-            <div className="arena-healthbar">
-                <div
-                    className="arena-healthbar-fill"
-                    style={{ width: `${pct}%` }}
-                />
-            </div>
-        );
-    };
-
-    // ✅ removed “Rating” row (per request)
-    const renderStatsRows = (fighter?: ArenaFighter) => {
+    // ✅ Match stats: name + level + W/L + %
+    const renderMatchStats = (fighter?: ArenaFighter) => {
         if (!fighter) {
             return (
-                <div className="arena-stats-row arena-stats-row--empty">
+                <div className="arena-match-meta arena-match-meta--empty">
                     Waiting for player...
                 </div>
             );
         }
 
+        const w = fighter.wins ?? 0;
+        const l = fighter.losses ?? 0;
+
         return (
-            <>
-                <div className="arena-stats-row">
-                    <span className="label">Level</span>
-                    <span className="value">{fighter.level ?? "-"}</span>
+            <div className="arena-match-meta">
+                <div className="arena-match-name-row">
+                    <span className="arena-match-name">{fighter.username}</span>
+                    {typeof fighter.level === "number" && (
+                        <span className="arena-match-level">
+                            Lv {fighter.level}
+                        </span>
+                    )}
                 </div>
 
-                <div className="arena-stats-row">
-                    <span className="label">W / L</span>
-                    <span className="value">
-                        {fighter.wins ?? 0} / {fighter.losses ?? 0}
+                <div className="arena-match-wl">
+                    <span className="arena-match-wl-label">W / L</span>
+                    <span className="arena-match-wl-value">
+                        {w} / {l}{" "}
+                        <span className="arena-match-winpct">
+                            ({pctText(w, l)})
+                        </span>
                     </span>
                 </div>
-            </>
+            </div>
         );
     };
 
@@ -362,7 +347,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                 {/* LEFT — YOU */}
                 <div className="arena-side arena-side--blue">
                     <div className="arena-side-header">
-                        <span className="side-label">YOU</span>
+                        <span className="side-label">BLUE TEAM</span>
                     </div>
 
                     <div className="arena-avatar-wrapper">
@@ -378,15 +363,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                         )}
                     </div>
 
-                    <div className="arena-username">
-                        {self?.username ??
-                            (status === "idle"
-                                ? "Waiting to join..."
-                                : "Unknown")}
-                    </div>
-
-                    {renderHealthBar(self)}
-                    <div className="arena-stats">{renderStatsRows(self)}</div>
+                    {renderMatchStats(self)}
                 </div>
 
                 {/* RIGHT — OPPONENT */}
@@ -426,15 +403,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                             ))}
                     </div>
 
-                    <div className="arena-username">
-                        {opponent?.username ??
-                            (isSearching ? "Searching..." : "Waiting")}
-                    </div>
-
-                    {renderHealthBar(opponent)}
-                    <div className="arena-stats">
-                        {renderStatsRows(opponent)}
-                    </div>
+                    {renderMatchStats(opponent)}
                 </div>
             </div>
 
@@ -502,7 +471,6 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
         return null;
     };
 
-    // ✅ Best Fighters header above rankings + Rating removed + full avatars
     const renderLeaderboardTab = () => (
         <div className="arena-leaderboard-panel">
             <div className="arena-leaderboard-titlebar">
@@ -530,27 +498,38 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                     </div>
 
                     {sortedLeaderboard.map((entry) => {
-                        const trophy = getTrophyForRank(entry.rank!);
+                        const rank = entry.rank ?? 0;
+                        const trophy = getTrophyForRank(rank);
+
+                        const w = entry.wins ?? 0;
+                        const l = entry.losses ?? 0;
+
+                        // ✅ For #1-3: show image only (no number)
+                        // ✅ For #4-10: show number
+                        const rankCell =
+                            rank >= 1 && rank <= 3 ? (
+                                <img
+                                    className="arena-lb-rank-icon"
+                                    src={trophy ?? ""}
+                                    alt={`${rank} place`}
+                                    draggable={false}
+                                />
+                            ) : (
+                                <span className="arena-lb-rank-number">
+                                    {rank}
+                                </span>
+                            );
 
                         return (
                             <div
                                 className="arena-leaderboard-row"
                                 key={entry.userId}
                             >
-                                <span className="col rank">{entry.rank}</span>
+                                <span className="col rank">{rankCell}</span>
 
                                 <span className="col fighter">
                                     <span className="arena-lb-fighter">
                                         <span className="arena-lb-avatar-wrap">
-                                            {trophy && (
-                                                <img
-                                                    className="arena-lb-trophy"
-                                                    src={trophy}
-                                                    alt={`${entry.rank} place`}
-                                                    draggable={false}
-                                                />
-                                            )}
-
                                             {entry.figure ? (
                                                 <img
                                                     className="arena-lb-avatar"
@@ -567,7 +546,9 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                                         </span>
 
                                         <span className="arena-lb-name">
-                                            {entry.username}
+                                            <span className="arena-lb-username">
+                                                {entry.username}
+                                            </span>
                                             {typeof entry.level ===
                                                 "number" && (
                                                 <span className="arena-lb-level">
@@ -579,7 +560,12 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                                 </span>
 
                                 <span className="col wl">
-                                    {entry.wins} / {entry.losses}
+                                    <span className="arena-lb-wl">
+                                        {w} / {l}{" "}
+                                        <span className="arena-lb-winpct">
+                                            ({pctText(w, l)})
+                                        </span>
+                                    </span>
                                 </span>
                             </div>
                         );
@@ -650,7 +636,7 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
 
                             <div className="arena-avatar-meta">
                                 <div className="arena-username-main">
-                                    {self?.username ?? "Blue Team"}
+                                    {self?.username ?? "YOU"}
                                 </div>
 
                                 <div className="arena-meta-row">
@@ -663,11 +649,13 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                                 <div className="arena-meta-row">
                                     <span className="label">W / L</span>
                                     <span className="value">
-                                        {self?.wins ?? 0} / {self?.losses ?? 0}
+                                        {self?.wins ?? 0} / {self?.losses ?? 0}{" "}
+                                        <span className="arena-meta-winpct">
+                                            ({pctText(self?.wins, self?.losses)}
+                                            )
+                                        </span>
                                     </span>
                                 </div>
-
-                                {/* ✅ Rating removed */}
                             </div>
                         </div>
 
@@ -682,8 +670,8 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                                     </strong>
                                 </p>
                                 <p className="arena-info-note">
-                                    Arena deaths do NOT send you to the
-                                    hospital.
+                                    Match against friends or foes in Bubble
+                                    Juice Arena. Only the best will win.
                                 </p>
                             </div>
                         </div>
