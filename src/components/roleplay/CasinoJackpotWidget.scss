@@ -1,0 +1,87 @@
+.casino-jackpot-widget {
+    position: fixed;
+
+    /* RightSideView sits at right edge.
+Put this just LEFT of it (tweak as needed). */
+    top: 12px;
+    right: 250px; // <-- adjust to your RightSideView width
+
+    z-index: 1002;
+
+    pointer-events: auto;
+}
+
+.casino-jackpot-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 8px 12px;
+    border-radius: 14px;
+
+    background: #0d6091;
+    border: 3px solid #2077ab;
+    box-shadow: 0 2px #000000b3, 0 0 0 1px #000000b3;
+
+    color: #fff;
+    font-weight: 900;
+    font-size: 12px;
+}
+
+.casino-jackpot-star {
+    font-size: 14px;
+    transform: translateY(-1px);
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .35);
+}
+
+.casino-jackpot-title {
+    letter-spacing: .8px;
+    font-size: 11px;
+    opacity: .95;
+}
+
+.casino-odometer {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    margin-left: 4px;
+}
+
+.casino-odometer-sep {
+    display: inline-block;
+    width: 6px;
+    text-align: center;
+    opacity: .95;
+}
+
+.casino-digit {
+    --h: 14px;
+    --target: 0;
+    --delay: 0ms;
+
+    display: inline-block;
+    width: 10px;
+    height: var(--h);
+    overflow: hidden;
+
+    border-radius: 4px;
+    background: rgba(0, 0, 0, .18);
+    box-shadow: inset 0 -1px rgba(255, 255, 255, .08);
+
+    .casino-digit-reel {
+        display: flex;
+        flex-direction: column;
+        transform: translateY(calc(var(--target) * var(--h) * -1));
+        transition: transform 520ms cubic-bezier(.12, .9, .2, 1);
+        transition-delay: var(--delay);
+
+        span {
+            height: var(--h);
+            line-height: var(--h);
+            text-align: center;
+            font-size: 12px;
+            font-weight: 900;
+            text-shadow: 0 1px 0 rgba(0, 0, 0, .35);
+        }
+    }
+}

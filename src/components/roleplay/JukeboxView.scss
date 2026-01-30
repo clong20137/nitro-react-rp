@@ -1,12 +1,13 @@
 /* ===========================================================
 OlympusRP – Jukebox View
 Styled to match MyProfileView header / shell
++ Added: Always-on Now Playing overlay (separate from queue UI)
 =========================================================== */
 
 $jukebox-bg: #dfdfdf;
 $jukebox-header-bg: #1e7295;
 
-/* Optional overlay */
+/* Optional overlay layer for the draggable window */
 .jukebox-layer {
     position: fixed;
     inset: 0;
@@ -14,7 +15,122 @@ $jukebox-header-bg: #1e7295;
     z-index: 1400;
 }
 
-/* ---- Root window ---- */
+/* ===========================================================
+ALWAYS-ON "NOW PLAYING" OVERLAY (separate from queue UI)
+=========================================================== */
+.jukebox-overlay {
+    position: fixed;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    z-index: 1390;
+    /* below the open window (1450), above most UI */
+    pointer-events: none;
+    /* only inner controls clickable */
+}
+
+.jukebox-overlay__inner {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    min-width: 320px;
+    max-width: min(720px, 92vw);
+
+    padding: 8px 10px;
+    border-radius: 10px;
+
+    background: rgba(30, 114, 149, 0.22);
+    /* opacity shell */
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    box-shadow:
+        0 10px 24px rgba(0, 0, 0, 0.18),
+        0 2px 0 rgba(0, 0, 0, 0.20);
+
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.jukebox-overlay__meta {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.jukebox-overlay__title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #ffffff;
+    text-shadow:
+        -1px -1px 0 rgba(0, 0, 0, 0.75),
+        1px -1px 0 rgba(0, 0, 0, 0.75),
+        -1px 1px 0 rgba(0, 0, 0, 0.75),
+        1px 1px 0 rgba(0, 0, 0, 0.75);
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 44vw;
+}
+
+.jukebox-overlay__sub {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.88);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.55);
+}
+
+.jukebox-overlay__time {
+    white-space: nowrap;
+}
+
+.jukebox-overlay__controls {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.jukebox-overlay__btn {
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    cursor: pointer;
+
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(223, 214, 195, 0.92));
+    color: #3a2d18;
+
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.75),
+        0 1px 0 rgba(0, 0, 0, 0.18);
+
+    &:hover {
+        filter: brightness(1.05);
+    }
+
+    &:active {
+        transform: translateY(1px);
+    }
+
+    &.is-muted {
+        opacity: 0.92;
+    }
+}
+
+.jukebox-overlay__btn--queue {
+    background: linear-gradient(180deg, rgba(244, 238, 224, 0.95), rgba(227, 215, 193, 0.95));
+    border-color: rgba(255, 255, 255, 0.75);
+}
+
+/* ===========================================================
+ROOT WINDOW
+=========================================================== */
 .jukebox-view {
     position: absolute;
     z-index: 1450;
@@ -70,7 +186,9 @@ $jukebox-header-bg: #1e7295;
     }
 }
 
-/* ---- Header / drag handle ---- */
+/* ===========================================================
+HEADER / DRAG HANDLE
+=========================================================== */
 .juke-header {
     display: flex;
     align-items: center;
@@ -163,7 +281,9 @@ $jukebox-header-bg: #1e7295;
     }
 }
 
-/* ---- Icon sprites (use your 6 images here) ---- */
+/* ===========================================================
+ICON SPRITES
+=========================================================== */
 .juke-icon {
     display: inline-block;
     background-repeat: no-repeat;
@@ -232,7 +352,9 @@ $jukebox-header-bg: #1e7295;
     margin-right: 4px;
 }
 
-/* ---- Buttons (hb-btn) ---- */
+/* ===========================================================
+BUTTONS (hb-btn)
+=========================================================== */
 .hb-btn {
     border-radius: 4px;
     border: 1px solid #75664f;
@@ -286,7 +408,9 @@ $jukebox-header-bg: #1e7295;
     opacity: 0.9;
 }
 
-/* ---- Body ---- */
+/* ===========================================================
+BODY
+=========================================================== */
 .juke-body {
     height: calc(100% - 42px);
     padding: 8px 10px 10px;
@@ -297,7 +421,9 @@ $jukebox-header-bg: #1e7295;
     gap: 8px;
 }
 
-/* ---- "Now Playing" card ---- */
+/* ===========================================================
+"NOW PLAYING" CARD
+=========================================================== */
 .now-card {
     background: #cdcdcd;
     border-radius: 6px;
@@ -361,7 +487,9 @@ $jukebox-header-bg: #1e7295;
     }
 }
 
-/* ---- Entry ---- */
+/* ===========================================================
+ENTRY
+=========================================================== */
 .entry {
     background: #cdcdcd;
     border-radius: 6px;
@@ -417,7 +545,9 @@ $jukebox-header-bg: #1e7295;
     }
 }
 
-/* ---- Queue ---- */
+/* ===========================================================
+QUEUE
+=========================================================== */
 .queue {
     background: #cdcdcd;
     border-radius: 6px;
@@ -502,11 +632,22 @@ $jukebox-header-bg: #1e7295;
     }
 }
 
-/* ---- Mobile ---- */
+/* ===========================================================
+MOBILE
+=========================================================== */
 @media (max-width: 480px) {
     .jukebox-view {
         width: 92%;
         left: 4% !important;
         top: 60px !important;
+    }
+
+    .jukebox-overlay__inner {
+        min-width: 0;
+        width: 92vw;
+    }
+
+    .jukebox-overlay__title {
+        max-width: 52vw;
     }
 }

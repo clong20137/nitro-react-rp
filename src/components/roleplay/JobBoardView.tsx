@@ -32,11 +32,22 @@ export const JobBoardView: FC = () => {
     useEffect(() => {
         const onOpen = (e: CustomEvent<JobBoardData>) => {
             if (!e.detail) return;
-            setData(e.detail);
+
+            // Filter out Supervisor / Manager ranks (do not show them anywhere)
+            const filteredRanks = (e.detail.ranks || []).filter(
+                (r: any) => !r?.isSupervisor && !r?.isManager
+            );
+
+            const next: JobBoardData = {
+                ...e.detail,
+                ranks: filteredRanks,
+            };
+
+            setData(next);
 
             // default to first rank if manager & ranks exist
-            if (e.detail.isManager && e.detail.ranks.length > 0) {
-                setSelectedRankId(e.detail.ranks[0].id);
+            if (next.isManager && next.ranks.length > 0) {
+                setSelectedRankId(next.ranks[0].id);
             } else {
                 setSelectedRankId(null);
             }
@@ -106,9 +117,13 @@ export const JobBoardView: FC = () => {
         SendMessageComposer(new JobBoardApplyComposer(id));
     };
 
-    const onToggle = (id: number, isOpen: boolean) => {
-        // we only support "close" from UI; composer just needs openingId
+    const onClose = (id: number, isOpen: boolean) => {
         if (!isOpen) return;
+        SendMessageComposer(new JobBoardCloseOpeningComposer(id));
+    };
+
+    // Managers only: delete = close (server only has "close", UI labels as Delete)
+    const onDelete = (id: number) => {
         SendMessageComposer(new JobBoardCloseOpeningComposer(id));
     };
 
@@ -251,15 +266,27 @@ export const JobBoardView: FC = () => {
 
                                     <td>
                                         {data.isManager ? (
-                                            <button
-                                                className="jobboard-btn btn-close"
-                                                disabled={!o.isOpen}
-                                                onClick={() =>
-                                                    onToggle(o.id, o.isOpen)
-                                                }
-                                            >
-                                                Close
-                                            </button>
+                                            <div className="jobboard-actions">
+                                                <button
+                                                    className="jobboard-btn btn-close"
+                                                    disabled={!o.isOpen}
+                                                    onClick={() =>
+                                                        onClose(o.id, o.isOpen)
+                                                    }
+                                                >
+                                                    Close
+                                                </button>
+
+                                                {/* Managers only: Delete button */}
+                                                <button
+                                                    className="jobboard-btn btn-delete"
+                                                    onClick={() =>
+                                                        onDelete(o.id)
+                                                    }
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
                                         ) : (
                                             <button
                                                 className="jobboard-btn btn-apply"

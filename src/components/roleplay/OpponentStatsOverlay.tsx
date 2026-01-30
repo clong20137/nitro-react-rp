@@ -81,11 +81,29 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
     // polling timer
     const pollTimerRef = useRef<number | null>(null);
 
+    // ✅ helper: set global highlight target
+    const setHighlightTarget = (userId: number) => {
+        (window as any).__rpTargetUserId = userId > 0 ? userId : 0;
+        // optional: if you want an event as well (useful for debugging)
+        try {
+            window.dispatchEvent(
+                new CustomEvent("rp_target_changed", {
+                    detail: { userId: userId > 0 ? userId : 0 },
+                })
+            );
+        } catch {}
+    };
+
     useEffect(() => {
         lockedRef.current = locked;
         lockedUserIdRef.current = locked
             ? stats?.userId ?? lockedUserIdRef.current
             : 0;
+
+        // ✅ keep highlight synced with lock state
+        if (locked) setHighlightTarget(stats?.userId ?? 0);
+        else setHighlightTarget(0);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [locked, stats?.userId]);
 
     useEffect(() => {
@@ -137,8 +155,10 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
         setHiding(true);
 
         lastWatchedIdRef.current = 0;
-
         stopPolling();
+
+        // ✅ always clear highlight if overlay is clearing
+        setHighlightTarget(0);
 
         if (alsoClearTarget) {
             try {
@@ -161,15 +181,10 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
                 | undefined;
             if (!payload || !payload.userId) return;
 
-            // ✅ CRITICAL FIX:
             // Never allow your own stats to populate the opponent overlay.
-            // (This is the bug you’re seeing when combat packets reuse the same event name.)
-            if (payload.userId === myUserId) {
-                // If you're locked on someone else, ignore self updates too.
-                return;
-            }
+            if (payload.userId === myUserId) return;
 
-            // ✅ If locked, do NOT allow a different user to override the overlay
+            // If locked, do NOT allow a different user to override the overlay
             if (lockedRef.current) {
                 const lockedId =
                     lockedUserIdRef.current || currentStatsUserIdRef.current;
@@ -190,9 +205,7 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
 
             // ensure we're watching the current opponent (idempotent)
             sendWatch(payload.userId);
-
             startPolling(payload.userId);
-
             setHiding(false);
         };
 
@@ -232,8 +245,10 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
 
             stopPolling();
             sendWatch(0);
+
+            // ✅ cleanup highlight on unmount
+            setHighlightTarget(0);
         };
-        // myUserId is stable per session; if you hot-swap sessions, add it here.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -329,6 +344,9 @@ export const OpponentStatsOverlay: FC<Props> = ({ onClose }) => {
         setLocked(next);
 
         lockedUserIdRef.current = next ? stats.userId : 0;
+
+        // ✅ set highlight ONLY when locked
+        setHighlightTarget(next ? stats.userId : 0);
 
         try {
             SendMessageComposer(

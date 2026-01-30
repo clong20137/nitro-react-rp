@@ -53,6 +53,7 @@ import HighLowView from "./components/roleplay/HighLowView";
 import SlotMachineView from "./components/roleplay/SlotMachineView";
 import { HotelAlertView } from "./components/roleplay/HotelAlertView";
 import { initClickThroughUsers } from "./components/roleplay/ClickThroughUsers";
+import { CasinoJackpotWidget } from "./components/roleplay/CasinoJackpotWidget";
 
 // optional: if you later restore big wheel
 // import BigWheelView from "./components/roleplay/BigWheelView";
@@ -265,6 +266,7 @@ Render
                 <SlotMachineView />
                 <MarketplaceView />
                 <HotelAlertView />
+                <CasinoJackpotWidget></CasinoJackpotWidget>
                 {/* <BigWheelView /> */}
                 <PoliceCallView />
 

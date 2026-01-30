@@ -11,6 +11,9 @@ import "./JukeboxView.scss";
 // Soft-import composers so missing paths don’t explode dev builds
 let JukeboxRequestComposerRef: any;
 let JukeboxOpenCloseComposerRef: any;
+// OPTIONAL: if you have a "TrackEnded" outgoing composer, wire it here
+let JukeboxTrackEndedComposerRef: any;
+
 try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     JukeboxRequestComposerRef =
@@ -20,6 +23,11 @@ try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     JukeboxOpenCloseComposerRef =
         require("@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/JukeboxOpenCloseComposer").JukeboxOpenCloseComposer;
+} catch {}
+try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    JukeboxTrackEndedComposerRef =
+        require("@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/JukeboxTrackEndedComposer").JukeboxTrackEndedComposer;
 } catch {}
 
 /* ---------- types ---------- */
@@ -44,9 +52,7 @@ type JState = {
     queue: QueueItem[];
 };
 
-type Props = {
-    onClose?: () => void;
-};
+type Props = { onClose?: () => void };
 
 /* ---------- helpers ---------- */
 const YT_ID = /(?:^|v=|\/|embed\/|youtu\.be\/)([A-Za-z0-9_-]{11})(?:\b|$)/i;
@@ -60,7 +66,15 @@ function extractVideoId(s: string): string | null {
     return null;
 }
 
-/** Small, no-deps draggable hook (no transform-jump now) */
+function fmtTime(totalSec: number): string {
+    if (!Number.isFinite(totalSec) || totalSec <= 0) return "0:00";
+    const sec = Math.floor(totalSec);
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
+}
+
+/** Small, no-deps draggable hook (no transform-jump) */
 function useDraggable<T extends HTMLElement>() {
     const ref = useRef<T | null>(null);
     const dragData = useRef<{
@@ -108,8 +122,6 @@ function useDraggable<T extends HTMLElement>() {
 
             el.style.left = `${newLeft}px`;
             el.style.top = `${newTop}px`;
-            // IMPORTANT: we do NOT touch el.style.transform here,
-            // so no fighting with animations / centering.
         };
 
         const onUp = () => {
@@ -125,9 +137,63 @@ function useDraggable<T extends HTMLElement>() {
     return { ref, onMouseDown };
 }
 
+/* ---------- YT IFrame API loader ---------- */
+declare global {
+    interface Window {
+        YT: any;
+        onYouTubeIframeAPIReady: any;
+    }
+}
+
+function useYouTubeApiReady() {
+    const [ready, setReady] = useState(false);
+
+    useEffect(() => {
+        // already loaded?
+        if (window.YT && window.YT.Player) {
+            setReady(true);
+            return;
+        }
+
+        // avoid injecting twice
+        const existing = document.querySelector(
+            'script[data-yt-api="1"]'
+        ) as HTMLScriptElement | null;
+        if (existing) {
+            // wait for it
+            const t = window.setInterval(() => {
+                if (window.YT && window.YT.Player) {
+                    window.clearInterval(t);
+                    setReady(true);
+                }
+            }, 50);
+            return () => window.clearInterval(t);
+        }
+
+        window.onYouTubeIframeAPIReady = () => setReady(true);
+
+        const script = document.createElement("script");
+        script.src = "https://www.youtube.com/iframe_api";
+        script.async = true;
+        script.setAttribute("data-yt-api", "1");
+        document.head.appendChild(script);
+
+        const t = window.setInterval(() => {
+            if (window.YT && window.YT.Player) {
+                window.clearInterval(t);
+                setReady(true);
+            }
+        }, 50);
+
+        return () => window.clearInterval(t);
+    }, []);
+
+    return ready;
+}
+
 /* ---------- component ---------- */
 export const JukeboxView: React.FC<Props> = ({ onClose }) => {
-    // ONLY control the *window* with this; audio continues regardless
+    // Controls ONLY the queue window visibility
     const [open, setOpen] = useState(false);
 
     // Live state pushed by server
@@ -146,24 +212,39 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
     const [input, setInput] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
-    // 🔇 local mute toggle (per-user only)
+    // Local-only mute + play/pause (overlay controls, does NOT affect server state)
     const [muted, setMuted] = useState(false);
+    const [localPaused, setLocalPaused] = useState(false);
 
-    // Hidden player URL (includes start offset + mute flag)
-    const [playerUrl, setPlayerUrl] = useState<string | null>(null);
+    // Duration + current time from player (for overlay)
+    const [durationSec, setDurationSec] = useState(0);
+    const [currentSec, setCurrentSec] = useState(0);
 
-    // drag like TaxiView (but with fixed base position)
+    // This overlay should be present as long as you’re in the same vRoom as jukebox.
+    // If you already have a "current virtual room id" event, wire it here.
+    // For now: show overlay when jukebox is playing or has a current title/video.
+    const shouldShowOverlay =
+        !!state.currentVideoId && (state.isPlaying || !!state.currentTitle);
+
+    // YouTube player
+    const ytReady = useYouTubeApiReady();
+    const playerRef = useRef<any>(null);
+    const playerHostRef = useRef<HTMLDivElement | null>(null);
+
+    // Track last server video id so we only load when it changes
+    const lastVidRef = useRef<string | null>(null);
+
+    // Small guard so ENDED doesn’t spam
+    const endedDebounceRef = useRef<number>(0);
+
+    // drag window
     const { ref: dragRef, onMouseDown: startDrag } =
         useDraggable<HTMLDivElement>();
 
     /* ---------- bridges ---------- */
     useEffect(() => {
-        // OPEN: fired by furniture click
-        const onOpenEvt = () => {
-            setOpen(true);
-        };
+        const onOpenEvt = () => setOpen(true);
 
-        // STATE updates (from parser → window.dispatchEvent)
         const onState = (e: any) => {
             const d = (e?.detail || {}) as Partial<JState>;
             setState((prev) => ({
@@ -173,7 +254,6 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
             }));
         };
 
-        // TOAST passthrough
         const onToast = (e: any) => {
             const d = e?.detail as { kind: string; text: string };
             if (!d) return;
@@ -218,38 +298,190 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
     const doClose = () => {
         setOpen(false);
         onClose?.();
-        // NOTE: we do NOT stop audio here; audio is controlled by server state
+        // audio continues
     };
 
-    /* ---------- AUDIO SYNC EFFECT ---------- */
+    /* ---------- create persistent YT player once ---------- */
     useEffect(() => {
-        // Only play when server says playing + we have a video id
-        if (!state.isPlaying || !state.currentVideoId) {
-            setPlayerUrl(null);
+        if (!ytReady) return;
+        if (!playerHostRef.current) return;
+        if (playerRef.current) return;
+
+        // Create once; we never destroy unless full unmount
+        playerRef.current = new window.YT.Player(playerHostRef.current, {
+            height: "0",
+            width: "0",
+            videoId: "",
+            playerVars: {
+                autoplay: 1,
+                controls: 0,
+                modestbranding: 1,
+                rel: 0,
+                playsinline: 1,
+                disablekb: 1,
+            },
+            events: {
+                onReady: () => {
+                    try {
+                        playerRef.current.mute();
+                        if (!muted) playerRef.current.unMute();
+                    } catch {}
+                },
+                onStateChange: (ev: any) => {
+                    // 0 = ended, 1 = playing, 2 = paused
+                    if (!ev || typeof ev.data !== "number") return;
+
+                    if (ev.data === 1) {
+                        // playing
+                        setLocalPaused(false);
+                        // update duration ASAP
+                        try {
+                            const d = Number(
+                                playerRef.current.getDuration?.() ?? 0
+                            );
+                            if (d > 0) setDurationSec(d);
+                        } catch {}
+                    }
+
+                    if (ev.data === 2) {
+                        // paused
+                        setLocalPaused(true);
+                    }
+
+                    if (ev.data === 0) {
+                        // ended
+                        const now = Date.now();
+                        if (now - endedDebounceRef.current < 900) return;
+                        endedDebounceRef.current = now;
+
+                        // ✅ Tell server to advance immediately (this is what eliminates dead air)
+                        // Wire this to YOUR outgoing packet/composer.
+                        try {
+                            if (JukeboxTrackEndedComposerRef) {
+                                SendMessageComposer(
+                                    new JukeboxTrackEndedComposerRef()
+                                );
+                            } else {
+                                // fallback: window event hook if your client->server bridge listens for it
+                                window.dispatchEvent(
+                                    new CustomEvent("jukebox_track_ended")
+                                );
+                            }
+                        } catch {}
+                    }
+                },
+            },
+        });
+
+        return () => {
+            // If you *want* to destroy on hot reload/unmount:
+            try {
+                playerRef.current?.destroy?.();
+            } catch {}
+            playerRef.current = null;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ytReady]);
+
+    /* ---------- keep player mute in sync ---------- */
+    useEffect(() => {
+        const p = playerRef.current;
+        if (!p) return;
+        try {
+            if (muted) p.mute();
+            else p.unMute();
+        } catch {}
+    }, [muted]);
+
+    /* ---------- server sync -> load video without iframe remount ---------- */
+    useEffect(() => {
+        const p = playerRef.current;
+        const vid = state.currentVideoId ?? null;
+
+        // stop audio if not playing / no vid
+        if (!p || !vid || !state.isPlaying) {
+            try {
+                // avoid "pause between songs" when server flips states briefly:
+                // only stop if server truly indicates not playing
+                if (!state.isPlaying) p.stopVideo?.();
+            } catch {}
             return;
         }
 
+        // compute offset from startedAt (sync with everyone)
         const nowSec = Math.floor(Date.now() / 1000);
         const started = state.startedAt ?? nowSec;
         let offset = nowSec - started;
-
-        // Clamp offset: never negative, never beyond 5 minutes
         if (offset < 0) offset = 0;
-        if (offset > 5 * 60) offset = 5 * 60;
+        if (offset > 60 * 10) offset = 60 * 10;
 
-        const vid = state.currentVideoId;
-        const url =
-            `https://www.youtube.com/embed/${vid}` +
-            `?autoplay=1&controls=0&modestbranding=1&rel=0&playsinline=1` +
-            `&start=${offset}` +
-            `&mute=${muted ? 1 : 0}`;
+        // If the server video changed, load it immediately (no remount = minimal gap)
+        if (lastVidRef.current !== vid) {
+            lastVidRef.current = vid;
+            setDurationSec(0);
+            setCurrentSec(0);
 
-        setPlayerUrl(url);
-    }, [state.isPlaying, state.currentVideoId, state.startedAt, muted]);
+            try {
+                p.loadVideoById({
+                    videoId: vid,
+                    startSeconds: offset,
+                    suggestedQuality: "small",
+                });
+            } catch {
+                // ignore
+            }
+
+            // OPTIONAL: pre-cue the next song in queue to reduce next transition gap further
+            try {
+                const next = state.queue?.[0]?.videoId;
+                if (next && next !== vid) {
+                    // cueing doesn't play, but primes the buffer a bit
+                    p.cueVideoById({
+                        videoId: next,
+                        startSeconds: 0,
+                        suggestedQuality: "small",
+                    });
+                }
+            } catch {}
+
+            return;
+        }
+
+        // Same vid: keep in sync (avoid drift)
+        // Only correct if we’re off by more than ~2 seconds (so we don’t fight normal playback)
+        try {
+            const cur = Number(p.getCurrentTime?.() ?? 0);
+            if (Number.isFinite(cur)) {
+                const drift = Math.abs(cur - offset);
+                if (drift > 2.25) {
+                    p.seekTo?.(offset, true);
+                }
+            }
+        } catch {}
+    }, [state.isPlaying, state.currentVideoId, state.startedAt, state.queue]);
+
+    /* ---------- poll player time for overlay ---------- */
+    useEffect(() => {
+        const p = playerRef.current;
+        if (!p) return;
+
+        const t = window.setInterval(() => {
+            try {
+                const d = Number(p.getDuration?.() ?? 0);
+                if (d > 0) setDurationSec((prev) => (prev > 0 ? prev : d));
+
+                const c = Number(p.getCurrentTime?.() ?? 0);
+                if (c >= 0) setCurrentSec(c);
+            } catch {}
+        }, 500);
+
+        return () => window.clearInterval(t);
+    }, [ytReady]);
 
     /* ---------- actions ---------- */
     const sendRequest = (expedite: boolean) => {
         if (!JukeboxRequestComposerRef) return;
+
         const vid = extractVideoId(input);
         if (!vid) {
             window.dispatchEvent(
@@ -259,6 +491,7 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
             );
             return;
         }
+
         setSubmitting(true);
         try {
             SendMessageComposer(new JukeboxRequestComposerRef(vid, expedite));
@@ -274,8 +507,18 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
         setState((s) => ({ ...s, isOpen: !s.isOpen }));
     };
 
-    const toggleMute = () => {
-        setMuted((m) => !m);
+    const toggleMute = () => setMuted((m) => !m);
+
+    const overlayPlayPause = () => {
+        const p = playerRef.current;
+        if (!p) return;
+
+        try {
+            const ps = p.getPlayerState?.();
+            // 1 playing, 2 paused
+            if (ps === 1) p.pauseVideo?.();
+            else p.playVideo?.();
+        } catch {}
     };
 
     const canSubmit = useMemo(
@@ -283,10 +526,14 @@ export const JukeboxView: React.FC<Props> = ({ onClose }) => {
         [input, submitting]
     );
 
+    const overlayTitle = state.currentTitle || "Now Playing";
+    const overlayDur = durationSec > 0 ? fmtTime(durationSec) : "--:--";
+    const overlayCur =
+        durationSec > 0 ? fmtTime(currentSec) : fmtTime(currentSec);
+
     return (
         <>
-            {/* 🔊 Hidden YouTube iframe for audio playback.
-This stays mounted even when the jukebox window is closed. */}
+            {/* Persistent YT player host (0x0). DO NOT swap iframe URLs. */}
             <div
                 style={{
                     position: "absolute",
@@ -296,21 +543,65 @@ This stays mounted even when the jukebox window is closed. */}
                     pointerEvents: "none",
                 }}
             >
-                {state.isPlaying && state.currentVideoId && playerUrl && (
-                    <iframe
-                        title="Room Jukebox Audio"
-                        src={playerUrl}
-                        allow="autoplay"
-                        style={{
-                            width: 0,
-                            height: 0,
-                            border: 0,
-                        }}
-                    />
-                )}
+                <div ref={playerHostRef as any} />
             </div>
 
-            {/* UI window (can be closed/minimized independently) */}
+            {/* Always-present overlay while in jukebox vRoom (or while playing). */}
+            {shouldShowOverlay && (
+                <div
+                    className="jukebox-overlay"
+                    aria-label="Jukebox Now Playing Overlay"
+                >
+                    <div className="jukebox-overlay__inner">
+                        <div className="jukebox-overlay__meta">
+                            <div
+                                className="jukebox-overlay__title"
+                                title={overlayTitle}
+                            >
+                                {overlayTitle}
+                            </div>
+                            <div className="jukebox-overlay__sub">
+                                <span className="jukebox-overlay__time">
+                                    {overlayCur} / {overlayDur}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="jukebox-overlay__controls">
+                            <button
+                                type="button"
+                                className="jukebox-overlay__btn"
+                                onClick={overlayPlayPause}
+                                title={localPaused ? "Play" : "Pause"}
+                            >
+                                {localPaused ? "Play" : "Pause"}
+                            </button>
+
+                            <button
+                                type="button"
+                                className={`jukebox-overlay__btn ${
+                                    muted ? "is-muted" : ""
+                                }`}
+                                onClick={toggleMute}
+                                title={muted ? "Unmute" : "Mute"}
+                            >
+                                {muted ? "Unmute" : "Mute"}
+                            </button>
+
+                            <button
+                                type="button"
+                                className="jukebox-overlay__btn jukebox-overlay__btn--queue"
+                                onClick={() => setOpen(true)}
+                                title="Open Queue"
+                            >
+                                Queue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Queue UI window (can be closed/minimized independently) */}
             {open && (
                 <div className="jukebox-layer">
                     <div
@@ -392,6 +683,7 @@ This stays mounted even when the jukebox window is closed. */}
                                             : "Open Jukebox"}
                                     </button>
                                 </div>
+
                                 <div
                                     className="now-title"
                                     title={state.currentTitle || ""}
@@ -437,6 +729,7 @@ This stays mounted even when the jukebox window is closed. */}
                                             {state.requestCost}
                                         </span>
                                     </button>
+
                                     <button
                                         className="hb-btn hb-accent"
                                         disabled={!canSubmit}
@@ -490,6 +783,7 @@ This stays mounted even when the jukebox window is closed. */}
                                             </div>
                                         </div>
                                     ))}
+
                                     {!state.queue?.length && (
                                         <div className="q-empty">
                                             No pending requests.

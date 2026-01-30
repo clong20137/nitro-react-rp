@@ -72,8 +72,15 @@ const RANK: Record<string, string> = {
 };
 
 function parseCard(code: string) {
-    if (!code || code === "?" || code === "HID" || code === "??")
+    if (
+        !code ||
+        code === "?" ||
+        code === "HID" ||
+        code === "??" ||
+        code === "??"
+    )
         return { rank: "?", suit: "•", red: false, ten: false, hidden: true };
+
     const up = code.toUpperCase().trim();
     const rank = RANK[up[0]] || "?";
     const suit = SUIT[up[1]] || "•";
@@ -126,18 +133,70 @@ const PlayingCard: FC<{
 /* ---------- main view ---------- */
 type VCard = { id: number; code: string };
 
+const DEAL_STEP_MS = 260; // base deal pacing
+const DEAL_DEALER_DRAW_MS = 320; // dealer draw pacing (slower)
+const DEAL_INITIAL_BREATHE_MS = 140; // tiny pause before first card
+const WIN_COUNTUP_MS = 900;
+
+function clampInt(n: string | number | undefined | null): number {
+    const v = typeof n === "number" ? n : parseInt(String(n ?? "0"), 10);
+    const out = Math.floor(Number.isFinite(v) ? v : 0);
+    return Number.isFinite(out) ? out : 0;
+}
+
+function extractWinAmount(messages: BJMsg[]): number {
+    // Try to find "won 500", "+500", "payout 500", "you win 500", etc.
+    const joined = messages.map((m) => m.text).join(" • ");
+
+    // Pattern A: "won 500" / "payout 500" / "+500"
+    const m1 =
+        /(won|win|payout|paid|profit|winnings|\+)\s*\$?\s*([0-9]{1,9})/i.exec(
+            joined
+        );
+
+    // Pattern B: "500 coins won" / "500 winnings"
+    const m2 =
+        /\$?\s*([0-9]{1,9})\s*(coins)?\s*(won|winnings|payout|paid)/i.exec(
+            joined
+        );
+
+    const match = m1 || m2;
+    if (!match) return 0;
+
+    // If message was "lost 500" don't treat as win
+    if (/(lose|lost|bust)/i.test(joined)) return 0;
+
+    // m1 has amount in [2], m2 has amount in [1]
+    const amount = clampInt(m1 ? m1[2] : m2?.[1]);
+    return Math.max(0, amount);
+}
+
 export const BlackjackView: FC = () => {
     const [open, setOpen] = useState(false);
     const [st, setSt] = useState<BJState | null>(null);
+
     const [toasts, setToasts] = useState<
         Array<{ id: number; text: string; level: string }>
     >([]);
+
     const [visDealer, setVisDealer] = useState<VCard[]>([]);
     const [visPlayer, setVisPlayer] = useState<VCard[]>([]);
+
+    // keep live refs for dealing logic (avoid stale closures / no-op setState reads)
+    const visDealerRef = useRef<VCard[]>([]);
+    const visPlayerRef = useRef<VCard[]>([]);
+
     const [confetti, setConfetti] = useState<
         Array<{ id: number; left: number; delay: number }>
     >([]);
+
     const [tableFlash, setTableFlash] = useState(false);
+
+    // WIN COUNT-UP
+    const [winShow, setWinShow] = useState(false);
+    const [winValue, setWinValue] = useState(0);
+    const winRafRef = useRef<number | null>(null);
+    const lastWinKeyRef = useRef<string>("");
 
     // draggable position (High/Low style)
     const [dragPos, setDragPos] = useState(() => {
@@ -158,6 +217,182 @@ export const BlackjackView: FC = () => {
     const lastRevealRef = useRef<boolean>(false);
 
     const rootRef = useRef<HTMLDivElement>(null);
+
+    // DEAL QUEUE (prevents dealer cards appearing at same time)
+    const desiredDealerRef = useRef<string[]>([]);
+    const desiredPlayerRef = useRef<string[]>([]);
+    const dealTimersRef = useRef<number[]>([]);
+    const dealingRef = useRef<boolean>(false);
+
+    const schedule = (fn: () => void, ms: number) => {
+        const id = window.setTimeout(fn, ms);
+        dealTimersRef.current.push(id);
+        return id;
+    };
+
+    const clearDealTimers = () => {
+        for (const t of dealTimersRef.current) window.clearTimeout(t);
+        dealTimersRef.current = [];
+        dealingRef.current = false;
+    };
+
+    // Wrap setters so refs stay in sync
+    const setVisDealerSafe = (updater: (cur: VCard[]) => VCard[]) => {
+        setVisDealer((cur) => {
+            const next = updater(cur);
+            visDealerRef.current = next;
+            return next;
+        });
+    };
+
+    const setVisPlayerSafe = (updater: (cur: VCard[]) => VCard[]) => {
+        setVisPlayer((cur) => {
+            const next = updater(cur);
+            visPlayerRef.current = next;
+            return next;
+        });
+    };
+
+    const resetVisualHands = (dealer: string[] = [], player: string[] = []) => {
+        clearDealTimers();
+
+        const d = dealer.map((c) => ({ id: idSeq.current++, code: c }));
+        const p = player.map((c) => ({ id: idSeq.current++, code: c }));
+
+        visDealerRef.current = d;
+        visPlayerRef.current = p;
+
+        setVisDealer(d);
+        setVisPlayer(p);
+    };
+
+    const runDealSequence = (opts: {
+        initialAlternate: boolean;
+        dealerRevealJustHappened: boolean;
+        dealerDrawMode: boolean;
+    }) => {
+        // If we're already scheduling, don't start another one.
+        if (dealingRef.current) return;
+        dealingRef.current = true;
+
+        const targetDealer = desiredDealerRef.current;
+        const targetPlayer = desiredPlayerRef.current;
+
+        // Start from current visible lengths (from refs, NOT from state closures)
+        let dCount = visDealerRef.current.length;
+        let pCount = visPlayerRef.current.length;
+
+        schedule(() => {
+            const startDelay = DEAL_INITIAL_BREATHE_MS;
+
+            const step = () => {
+                const needD = targetDealer.length - dCount;
+                const needP = targetPlayer.length - pCount;
+
+                if (needD <= 0 && needP <= 0) {
+                    dealingRef.current = false;
+                    return;
+                }
+
+                // INITIAL DEAL: alternate player then dealer like real life
+                if (opts.initialAlternate) {
+                    if (pCount < targetPlayer.length) {
+                        const code = targetPlayer[pCount];
+                        pCount++;
+                        setVisPlayerSafe((cur) => [
+                            ...cur,
+                            { id: idSeq.current++, code },
+                        ]);
+                        schedule(step, DEAL_STEP_MS);
+                        return;
+                    }
+
+                    if (dCount < targetDealer.length) {
+                        const code = targetDealer[dCount];
+                        dCount++;
+                        setVisDealerSafe((cur) => [
+                            ...cur,
+                            { id: idSeq.current++, code },
+                        ]);
+                        schedule(step, DEAL_STEP_MS);
+                        return;
+                    }
+                }
+
+                // Dealer draw mode: one-by-one slower
+                if (opts.dealerDrawMode && dCount < targetDealer.length) {
+                    const code = targetDealer[dCount];
+                    dCount++;
+                    setVisDealerSafe((cur) => [
+                        ...cur,
+                        { id: idSeq.current++, code },
+                    ]);
+                    schedule(step, DEAL_DEALER_DRAW_MS);
+                    return;
+                }
+
+                // Normal: add missing player first, otherwise dealer
+                if (pCount < targetPlayer.length) {
+                    const code = targetPlayer[pCount];
+                    pCount++;
+                    setVisPlayerSafe((cur) => [
+                        ...cur,
+                        { id: idSeq.current++, code },
+                    ]);
+                    schedule(step, DEAL_STEP_MS);
+                    return;
+                }
+
+                if (dCount < targetDealer.length) {
+                    const code = targetDealer[dCount];
+                    dCount++;
+                    setVisDealerSafe((cur) => [
+                        ...cur,
+                        { id: idSeq.current++, code },
+                    ]);
+                    schedule(step, DEAL_STEP_MS);
+                    return;
+                }
+
+                dealingRef.current = false;
+            };
+
+            step();
+        }, DEAL_INITIAL_BREATHE_MS);
+    };
+
+    const animateWinCountUp = (to: number) => {
+        if (winRafRef.current) cancelAnimationFrame(winRafRef.current);
+
+        setWinShow(true);
+        setWinValue(0);
+
+        const start = performance.now();
+        const from = 0;
+
+        const tick = (now: number) => {
+            const t = Math.min(1, (now - start) / WIN_COUNTUP_MS);
+            // ease-out
+            const eased = 1 - Math.pow(1 - t, 3);
+            const val = Math.floor(from + (to - from) * eased);
+            setWinValue(val);
+
+            if (t < 1) winRafRef.current = requestAnimationFrame(tick);
+            else schedule(() => setWinShow(false), 1100); // hold then fade
+        };
+
+        winRafRef.current = requestAnimationFrame(tick);
+    };
+
+    const popConfetti = (count: number) => {
+        const pieces = Array.from({ length: count }).map((_, i) => ({
+            id: Date.now() + i,
+            left: Math.random() * 100,
+            delay: Math.random() * 0.55,
+        }));
+        setConfetti(pieces);
+        schedule(() => setConfetti([]), 2200);
+    };
 
     // Global listeners while dragging (mouse + touch)
     useEffect(() => {
@@ -250,15 +485,20 @@ export const BlackjackView: FC = () => {
                         insuranceOffered: false,
                         bet: detail.bet ?? 0,
                         messages: [],
-                        isDealer: !!detail.isDealer, // if server/bridge sends it
+                        isDealer: !!detail.isDealer,
                     }
             );
+
             // clear stage for fresh invite
-            setVisDealer([]);
-            setVisPlayer([]);
+            clearDealTimers();
+            resetVisualHands([], []);
             idSeq.current = 1;
             lastPhaseRef.current = "INVITE";
             lastRevealRef.current = false;
+
+            setWinShow(false);
+            setWinValue(0);
+            lastWinKeyRef.current = "";
         };
 
         const onState = (e: Event) => {
@@ -293,7 +533,7 @@ export const BlackjackView: FC = () => {
                 messages: Array.isArray(incoming?.messages)
                     ? incoming.messages
                     : [],
-                isDealer: !!incoming.isDealer, // respected if provided
+                isDealer: !!incoming.isDealer,
             };
 
             setSt(safe);
@@ -312,7 +552,73 @@ export const BlackjackView: FC = () => {
                 );
             }
 
-            // celebration for blackjack
+            const prevPhase = lastPhaseRef.current;
+            const prevReveal = lastRevealRef.current;
+            lastPhaseRef.current = phase;
+            lastRevealRef.current = !!safe.dealerReveal;
+
+            const justRevealed = !prevReveal && !!safe.dealerReveal;
+
+            // RESET rules (use refs to compare, not closure state)
+            const resetNeeded =
+                phase === "INVITE" ||
+                prevPhase === "ENDED" ||
+                safe.playerHand.length < visPlayerRef.current.length ||
+                safe.dealerCards.length < visDealerRef.current.length;
+
+            if (resetNeeded) {
+                idSeq.current = 1;
+                desiredDealerRef.current = safe.dealerCards.slice();
+                desiredPlayerRef.current = safe.playerHand.slice();
+                resetVisualHands([], []);
+            } else {
+                // Reveal: replace 2nd dealer card instantly
+                if (justRevealed && safe.dealerCards.length >= 2) {
+                    setVisDealerSafe((cur) => {
+                        if (cur.length < 2) return cur;
+                        const next = [...cur];
+                        next[1] = { ...next[1], code: safe.dealerCards[1] };
+                        return next;
+                    });
+                }
+            }
+
+            // Targets for sequencing
+            desiredDealerRef.current = safe.dealerCards.slice();
+            desiredPlayerRef.current = safe.playerHand.slice();
+
+            // Initial deal moment: we want alternating
+            const isInitialDealMoment =
+                safe.playerHand.length <= 2 &&
+                safe.dealerCards.length <= 2 &&
+                (visPlayerRef.current.length === 0 ||
+                    visDealerRef.current.length === 0);
+
+            // Dealer draw mode: once reveal is true and it's dealer's turn
+            const dealerDrawMode =
+                phase === "PLAYING" && !safe.playerTurn && safe.dealerReveal;
+
+            runDealSequence({
+                initialAlternate: isInitialDealMoment,
+                dealerRevealJustHappened: justRevealed,
+                dealerDrawMode,
+            });
+
+            // ---- WIN EFFECTS ----
+            const winAmount = extractWinAmount(safe.messages);
+            const winKey = `${phase}|${safe.bet}|${winAmount}|${safe.dealerTotal}|${safe.playerTotal}`;
+
+            if (winAmount > 0 && lastWinKeyRef.current !== winKey) {
+                lastWinKeyRef.current = winKey;
+
+                setTableFlash(true);
+                popConfetti(120);
+                animateWinCountUp(winAmount);
+
+                schedule(() => setTableFlash(false), 700);
+            }
+
+            // blackjack flash too
             const naturalBJ =
                 safe.playerHand.length === 2 && safe.playerTotal === 21;
             const toastBJ = safe.messages.some((m) =>
@@ -320,67 +626,9 @@ export const BlackjackView: FC = () => {
             );
             if (naturalBJ || toastBJ) {
                 setTableFlash(true);
-                const pieces = Array.from({ length: 60 }).map((_, i) => ({
-                    id: Date.now() + i,
-                    left: Math.random() * 100,
-                    delay: Math.random() * 0.6,
-                }));
-                setConfetti(pieces);
-                setTimeout(() => setConfetti([]), 1800);
-                setTimeout(() => setTableFlash(false), 600);
+                popConfetti(90);
+                schedule(() => setTableFlash(false), 600);
             }
-
-            const prevPhase = lastPhaseRef.current;
-            const prevReveal = lastRevealRef.current;
-            lastPhaseRef.current = phase;
-            lastRevealRef.current = !!safe.dealerReveal;
-
-            // reset if new invite / cards removed / previous ended
-            const resetNeeded =
-                phase === "INVITE" ||
-                safe.playerHand.length < visPlayer.length ||
-                safe.dealerCards.length < visDealer.length ||
-                prevPhase === "ENDED";
-
-            if (resetNeeded) {
-                setVisDealer([]);
-                setVisPlayer([]);
-                idSeq.current = 1;
-            }
-
-            // dealer hand staging: rebuild on first reveal so "??" gets replaced immediately
-            const justRevealed = !prevReveal && !!safe.dealerReveal;
-            if (justRevealed) {
-                setVisDealer(
-                    safe.dealerCards.map((code) => ({
-                        id: idSeq.current++,
-                        code,
-                    }))
-                );
-            } else {
-                setVisDealer((cur) => {
-                    const next = [...cur];
-                    for (let i = cur.length; i < safe.dealerCards.length; i++) {
-                        next.push({
-                            id: idSeq.current++,
-                            code: safe.dealerCards[i],
-                        });
-                    }
-                    return next;
-                });
-            }
-
-            // player hand: append only new
-            setVisPlayer((cur) => {
-                const next = [...cur];
-                for (let i = cur.length; i < safe.playerHand.length; i++) {
-                    next.push({
-                        id: idSeq.current++,
-                        code: safe.playerHand[i],
-                    });
-                }
-                return next;
-            });
 
             setOpen(true);
         };
@@ -402,8 +650,12 @@ export const BlackjackView: FC = () => {
                 onState as EventListener
             );
             W.__BJ_LISTENERS__ = null;
+
+            clearDealTimers();
+            if (winRafRef.current) cancelAnimationFrame(winRafRef.current);
         };
-    }, [visDealer.length, visPlayer.length]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     if (!open) return null;
 
@@ -411,10 +663,11 @@ export const BlackjackView: FC = () => {
     const inviting = phase === "INVITE";
     const playing = phase === "PLAYING";
     const myTurn = !!st?.playerTurn;
-    const isDealer = !!st?.isDealer; // UI respects server flag
+    const isDealer = !!st?.isDealer;
 
     const close = () => {
         setOpen(false);
+        clearDealTimers();
         try {
             leave();
         } catch {}
@@ -477,7 +730,7 @@ export const BlackjackView: FC = () => {
                                     key={d.id}
                                     code={d.code}
                                     faceDown={!st?.dealerReveal && idx === 1}
-                                    className="deal-in"
+                                    className="deal-in to-dealer"
                                 />
                             ))}
                         </div>
@@ -495,7 +748,7 @@ export const BlackjackView: FC = () => {
                                 <PlayingCard
                                     key={p.id}
                                     code={p.code}
-                                    className="deal-in"
+                                    className="deal-in to-player"
                                 />
                             ))}
                         </div>
@@ -504,6 +757,14 @@ export const BlackjackView: FC = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* WIN COUNT UP */}
+                {winShow && (
+                    <div className="bj-win-pop" aria-hidden="true">
+                        <div className="win-title">WINNINGS</div>
+                        <div className="win-amount">+{winValue}</div>
+                    </div>
+                )}
 
                 {/* INSURANCE — player only */}
                 {playing && st?.insuranceOffered && !isDealer && myTurn && (
