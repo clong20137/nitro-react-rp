@@ -69,7 +69,9 @@ export const CasinoJackpotWidget: FC = () => {
         <div className="casino-jackpot-widget">
             <div className="casino-jackpot-inner">
                 <span className="casino-jackpot-star">★</span>
-                <span className="casino-jackpot-title">JACKPOT</span>
+                <span className="casino-jackpot-title">
+                    PROGRESSIVE JACKPOT
+                </span>
                 <Odometer value={amount} />
             </div>
         </div>
