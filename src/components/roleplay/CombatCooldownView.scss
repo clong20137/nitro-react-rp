@@ -1,0 +1,85 @@
+.combat-cd-radial {
+    position: absolute;
+    left: 18px;
+    bottom: 10px;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 8px 10px;
+    border-radius: 10px;
+    // box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
+    //     0 2px 0 rgba(0, 0, 0, 0.25),
+    //     inset 0 -4px rgba(0, 0, 0, 0.12);
+
+    z-index: 9999;
+    user-select: none;
+
+    transition: opacity 0.18s ease, filter 0.18s ease;
+}
+
+/* Cooldown = slightly dim */
+.combat-cd-radial.cooling {
+    opacity: 0.75;
+    filter: saturate(0.95);
+}
+
+/* Ready = fully lit */
+.combat-cd-radial.ready {
+    opacity: 1;
+    filter: none;
+}
+
+.combat-cd-wheel {
+    position: relative;
+    width: 60px;
+    height: 60px;
+}
+
+.combat-cd-svg {
+    transform: rotate(-90deg);
+}
+
+.combat-cd-track {
+    stroke: rgba(255, 255, 255, 0.35);
+}
+
+.combat-cd-progress {
+    stroke: #ffffff;
+}
+
+.combat-cd-icon {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+}
+
+.combat-cd-icon img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+
+.combat-cd-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+    min-width: 64px;
+}
+
+.combat-cd-title {
+    font-weight: 800;
+    font-size: 13px;
+    color: #eaf3ff;
+}
+
+.combat-cd-sub {
+    margin-top: 4px;
+    font-weight: 900;
+    font-size: 16px;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+}
