@@ -9,9 +9,12 @@
 
     padding: 8px 10px;
     border-radius: 10px;
-    // box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
-    //     0 2px 0 rgba(0, 0, 0, 0.25),
-    //     inset 0 -4px rgba(0, 0, 0, 0.12);
+
+    background: #0d6091;
+    border: 3px solid #2077ab;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
+        0 2px 0 rgba(0, 0, 0, 0.25),
+        inset 0 -4px rgba(0, 0, 0, 0.12);
 
     z-index: 9999;
     user-select: none;

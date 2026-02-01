@@ -137,13 +137,6 @@ export const CombatCooldownView = () => {
                     />
                 </div>
             </div>
-
-            <div className="combat-cd-text">
-                <div className="combat-cd-title">Attack</div>
-                <div className="combat-cd-sub">
-                    {isReady ? "READY" : `${seconds}s`}
-                </div>
-            </div>
         </div>
     );
 };
