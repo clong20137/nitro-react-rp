@@ -3,15 +3,32 @@ import "./MacroView.scss";
 
 /** ========= Types & storage keys ========= */
 type KeyString = string; // e.g. "F1", "KeyG", "Digit1", "ArrowUp"
-type Macro = { id: string; key: KeyString; command: string };
+type TriggerString = string; // e.g. "Key:F1", "Mouse:MouseLeft", "Shift+Mouse:MouseRight", "Wheel:WheelUp"
+
+type Macro = { id: string; trigger: TriggerString; script: string };
 type Preset = { id: string; name: string; macros: Macro[] };
 
-const LS_PRESETS = "olrp.macros.presets.v1";
+const LS_PRESETS_V2 = "olrp.macros.presets.v2";
+const LS_PRESETS_V1 = "olrp.macros.presets.v1";
 const LS_ENABLED = "olrp.macros.enabled.v1";
 const LS_ACTIVE = "olrp.macros.activePreset.v1";
 const MAX_PRESETS = 5;
 
 const uid = () => Math.random().toString(36).slice(2, 10);
+
+function normalizeMods(e: {
+    shiftKey?: boolean;
+    altKey?: boolean;
+    ctrlKey?: boolean;
+    metaKey?: boolean;
+}) {
+    const parts: string[] = [];
+    if (e.ctrlKey) parts.push("Ctrl");
+    if (e.shiftKey) parts.push("Shift");
+    if (e.altKey) parts.push("Alt");
+    if (e.metaKey) parts.push("Meta");
+    return parts.length ? parts.join("+") + "+" : "";
+}
 
 function eventToKeyString(e: KeyboardEvent): KeyString | null {
     if (
@@ -21,8 +38,39 @@ function eventToKeyString(e: KeyboardEvent): KeyString | null {
         e.key === "Meta"
     )
         return null;
+
     const code = e.code || e.key;
     return code === " " ? "Space" : code;
+}
+
+function keyEventToTrigger(e: KeyboardEvent): TriggerString | null {
+    const k = eventToKeyString(e);
+    if (!k) return null;
+    const mods = normalizeMods(e);
+    return `${mods}Key:${k}`;
+}
+
+function mouseEventToTrigger(e: MouseEvent): TriggerString {
+    const mods = normalizeMods(e);
+    const btn =
+        e.button === 0
+            ? "MouseLeft"
+            : e.button === 1
+            ? "MouseMiddle"
+            : e.button === 2
+            ? "MouseRight"
+            : e.button === 3
+            ? "Mouse4"
+            : e.button === 4
+            ? "Mouse5"
+            : `Mouse${e.button}`;
+    return `${mods}Mouse:${btn}`;
+}
+
+function wheelEventToTrigger(e: WheelEvent): TriggerString {
+    const mods = normalizeMods(e);
+    const dir = e.deltaY < 0 ? "WheelUp" : "WheelDown";
+    return `${mods}Wheel:${dir}`;
 }
 
 function broadcastMacrosChanged() {
@@ -31,12 +79,69 @@ function broadcastMacrosChanged() {
     } catch {}
 }
 
+type MacroAction =
+    | { type: "command"; value: string }
+    | { type: "module"; value: string }
+    | { type: "wait"; ms: number };
+
+const MODULES = new Set([
+    "inventory",
+    "wanted",
+    "corporations",
+    "gangs",
+    "settings",
+    "macros",
+    "stats",
+    "phone",
+]);
+
+function parseScript(script: string): MacroAction[] {
+    const raw = script
+        .split(/\n|;/g)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+    const actions: MacroAction[] = [];
+
+    for (const line of raw) {
+        const lower = line.toLowerCase();
+
+        if (lower.startsWith("ui:") || lower.startsWith("module:")) {
+            const mod = line.split(":").slice(1).join(":").trim().toLowerCase();
+            if (mod) actions.push({ type: "module", value: mod });
+            continue;
+        }
+
+        if (lower.startsWith("wait")) {
+            const m = lower.match(/wait\s*:?\s*(\d+)/);
+            if (m) {
+                const ms = Math.max(0, Math.min(5000, parseInt(m[1], 10)));
+                actions.push({ type: "wait", ms });
+            }
+            continue;
+        }
+
+        actions.push({ type: "command", value: line });
+    }
+
+    return actions.slice(0, 12);
+}
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 export interface MacroViewProps {
     onClose: () => void;
     onSendCommand?: (command: string) => void;
+
+    /** If provided, MacroView will call this for `ui:inventory` etc. */
+    onOpenModule?: (moduleId: string) => void;
 }
 
-export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
+export const MacroView: FC<MacroViewProps> = ({
+    onClose,
+    onSendCommand,
+    onOpenModule,
+}) => {
     /** ======== State / persistence ======== */
     const [enabled, setEnabled] = useState<boolean>(() => {
         try {
@@ -47,10 +152,33 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
     });
 
     const [presets, setPresets] = useState<Preset[]>(() => {
+        // v2 first
         try {
-            const raw = localStorage.getItem(LS_PRESETS);
+            const raw = localStorage.getItem(LS_PRESETS_V2);
             if (raw) return JSON.parse(raw);
         } catch {}
+
+        // fallback migrate v1 -> v2 shape
+        try {
+            const rawOld = localStorage.getItem(LS_PRESETS_V1);
+            if (rawOld) {
+                const old = JSON.parse(rawOld) as Array<{
+                    id: string;
+                    name: string;
+                    macros: Array<{ id: string; key: string; command: string }>;
+                }>;
+                return old.map((p) => ({
+                    id: p.id || uid(),
+                    name: p.name || "Default",
+                    macros: (p.macros || []).map((m) => ({
+                        id: m.id || uid(),
+                        trigger: `Key:${m.key}`,
+                        script: m.command ?? "",
+                    })),
+                }));
+            }
+        } catch {}
+
         return [{ id: uid(), name: "Default", macros: [] }];
     });
 
@@ -76,7 +204,7 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
     }, [enabled]);
 
     useEffect(() => {
-        localStorage.setItem(LS_PRESETS, JSON.stringify(presets));
+        localStorage.setItem(LS_PRESETS_V2, JSON.stringify(presets));
         broadcastMacrosChanged();
     }, [presets]);
 
@@ -91,51 +219,118 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
         () => presets.find((p) => p.id === activePresetId) || presets[0],
         [presets, activePresetId]
     );
+
     const macros = activePreset?.macros ?? [];
 
-    /** ======== Global Hotkeys (when enabled) ======== */
+    /** ======== Global triggers (key + mouse + wheel) ======== */
     const enabledRef = useRef(enabled);
     const macrosRef = useRef<Macro[]>(macros);
+
     useEffect(() => {
         enabledRef.current = enabled;
     }, [enabled]);
+
     useEffect(() => {
         macrosRef.current = macros;
     }, [macros]);
 
-    useEffect(() => {
-        const onKeydown = (e: KeyboardEvent) => {
-            if (!enabledRef.current) return;
+    const runMacroScript = async (script: string) => {
+        const actions = parseScript(script);
 
-            const t = e.target as HTMLElement | null;
-            if (
-                t &&
-                (t.tagName === "INPUT" ||
-                    t.tagName === "TEXTAREA" ||
-                    t.isContentEditable)
-            )
-                return;
+        for (const a of actions) {
+            if (a.type === "wait") {
+                await sleep(a.ms);
+                continue;
+            }
 
-            const k = eventToKeyString(e);
-            if (!k) return;
+            if (a.type === "module") {
+                const id = a.value.toLowerCase();
+                if (!MODULES.has(id)) continue;
 
-            const found = macrosRef.current.find((m) => m.key === k);
-            if (!found) return;
+                if (onOpenModule) onOpenModule(id);
+                else
+                    window.dispatchEvent(
+                        new CustomEvent("olrp_open_module", {
+                            detail: { module: id },
+                        })
+                    );
 
-            e.preventDefault();
-            const cmd = found.command.trim();
-            if (!cmd) return;
+                continue;
+            }
+
+            const cmd = a.value.trim();
+            if (!cmd) continue;
 
             if (onSendCommand) onSendCommand(cmd);
             else
                 window.dispatchEvent(
                     new CustomEvent("macro_run", { detail: { command: cmd } })
                 );
+
+            await sleep(60);
+        }
+    };
+
+    useEffect(() => {
+        const isTypingTarget = (t: EventTarget | null) => {
+            const el = t as HTMLElement | null;
+            if (!el) return false;
+            return (
+                el.tagName === "INPUT" ||
+                el.tagName === "TEXTAREA" ||
+                el.isContentEditable
+            );
         };
 
-        window.addEventListener("keydown", onKeydown);
-        return () => window.removeEventListener("keydown", onKeydown);
-    }, [onSendCommand]);
+        const isInsideMacroUI = (t: EventTarget | null) => {
+            const el = t as HTMLElement | null;
+            if (!el) return false;
+            return !!el.closest(".macros-view, .macro-modal");
+        };
+
+        const tryRun = (trigger: TriggerString, e: Event) => {
+            if (!enabledRef.current) return;
+            if (isTypingTarget(e.target)) return;
+            if (isInsideMacroUI(e.target)) return;
+
+            const found = macrosRef.current.find((m) => m.trigger === trigger);
+            if (!found) return;
+
+            // prevent default only when matched
+            (e as any).preventDefault?.();
+            (e as any).stopPropagation?.();
+
+            const script = found.script?.trim();
+            if (!script) return;
+            void runMacroScript(script);
+        };
+
+        const onKeydown = (e: KeyboardEvent) => {
+            const t = keyEventToTrigger(e);
+            if (!t) return;
+            tryRun(t, e);
+        };
+
+        const onMouseDown = (e: MouseEvent) => {
+            const t = mouseEventToTrigger(e);
+            tryRun(t, e);
+        };
+
+        const onWheel = (e: WheelEvent) => {
+            const t = wheelEventToTrigger(e);
+            tryRun(t, e);
+        };
+
+        window.addEventListener("keydown", onKeydown, { passive: false });
+        window.addEventListener("mousedown", onMouseDown, { passive: false });
+        window.addEventListener("wheel", onWheel, { passive: false });
+
+        return () => {
+            window.removeEventListener("keydown", onKeydown as any);
+            window.removeEventListener("mousedown", onMouseDown as any);
+            window.removeEventListener("wheel", onWheel as any);
+        };
+    }, [onSendCommand, onOpenModule]);
 
     /** ======== Preset CRUD ======== */
     const addPreset = () => {
@@ -203,7 +398,9 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                     ? {
                           ...p,
                           macros: [
-                              ...p.macros.filter((x) => x.key !== m.key),
+                              ...p.macros.filter(
+                                  (x) => x.trigger !== m.trigger
+                              ),
                               m,
                           ],
                       }
@@ -215,38 +412,60 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
     /** ======== Add Macro Modal ======== */
     const [modalOpen, setModalOpen] = useState(false);
     const [captureArmed, setCaptureArmed] = useState(false);
-    const [capturedKey, setCapturedKey] = useState<KeyString>("");
-    const [newCmd, setNewCmd] = useState("");
+    const [capturedTrigger, setCapturedTrigger] = useState<TriggerString>("");
+    const [newScript, setNewScript] = useState("");
 
-    // open modal
     const openAddModal = () => {
-        setCapturedKey("");
-        setNewCmd("");
+        setCapturedTrigger("");
+        setNewScript("");
         setCaptureArmed(false);
         setModalOpen(true);
     };
 
     useEffect(() => {
         if (!modalOpen || !captureArmed) return;
+
         const onKey = (e: KeyboardEvent) => {
-            const k = eventToKeyString(e);
-            if (!k) return;
+            const t = keyEventToTrigger(e);
+            if (!t) return;
             e.preventDefault();
-            setCapturedKey(k);
+            setCapturedTrigger(t);
             setCaptureArmed(false);
         };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
+
+        const onMouse = (e: MouseEvent) => {
+            e.preventDefault();
+            const t = mouseEventToTrigger(e);
+            setCapturedTrigger(t);
+            setCaptureArmed(false);
+        };
+
+        const onWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            const t = wheelEventToTrigger(e);
+            setCapturedTrigger(t);
+            setCaptureArmed(false);
+        };
+
+        window.addEventListener("keydown", onKey, { passive: false });
+        window.addEventListener("mousedown", onMouse, { passive: false });
+        window.addEventListener("wheel", onWheel, { passive: false });
+
+        return () => {
+            window.removeEventListener("keydown", onKey as any);
+            window.removeEventListener("mousedown", onMouse as any);
+            window.removeEventListener("wheel", onWheel as any);
+        };
     }, [modalOpen, captureArmed]);
 
     const confirmAdd = () => {
-        const key = capturedKey.trim();
-        const cmd = newCmd.trim();
-        if (!key || !cmd) return;
-        addMacro({ id: uid(), key, command: cmd });
+        const trigger = capturedTrigger.trim();
+        const script = newScript.trim();
+        if (!trigger || !script) return;
+        addMacro({ id: uid(), trigger, script });
         setModalOpen(false);
-        setCapturedKey("");
-        setNewCmd("");
+        setCapturedTrigger("");
+        setNewScript("");
         setCaptureArmed(false);
     };
 
@@ -283,6 +502,21 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
         };
     };
 
+    const onDrag = (e: MouseEvent) =>
+        setPos(
+            clamp(
+                e.clientX - dragOff.current.dx,
+                e.clientY - dragOff.current.dy
+            )
+        );
+
+    const endDrag = () => {
+        setDragging(false);
+        document.body.classList.remove("no-select");
+        window.removeEventListener("mousemove", onDrag as any);
+        window.removeEventListener("mouseup", endDrag as any);
+    };
+
     const startDrag = (e: React.MouseEvent) => {
         if (!rootRef.current) return;
         const rect = rootRef.current.getBoundingClientRect();
@@ -294,19 +528,6 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
         document.body.classList.add("no-select");
         window.addEventListener("mousemove", onDrag as any);
         window.addEventListener("mouseup", endDrag as any);
-    };
-    const onDrag = (e: MouseEvent) =>
-        setPos(
-            clamp(
-                e.clientX - dragOff.current.dx,
-                e.clientY - dragOff.current.dy
-            )
-        );
-    const endDrag = () => {
-        setDragging(false);
-        document.body.classList.remove("no-select");
-        window.removeEventListener("mousemove", onDrag as any);
-        window.removeEventListener("mouseup", endDrag as any);
     };
 
     /** ======== UI ======== */
@@ -350,7 +571,6 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                     </button>
                 </div>
 
-                {/* Tabs (static) */}
                 <div className="tabs">
                     <button className="tab active" type="button">
                         My Macros
@@ -417,7 +637,6 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                                 placeholder="Preset name"
                             />
 
-                            {/* ✅ Wrap buttons so they never push out of view */}
                             <div className="preset-actions">
                                 <button
                                     className="habbo-green-btn"
@@ -471,16 +690,16 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                         <div className="macro-list">
                             {macros.map((m) => (
                                 <div className="macro-row" key={m.id}>
-                                    <div className="key-chip">{m.key}</div>
+                                    <div className="key-chip">{m.trigger}</div>
                                     <input
                                         className="cmd-input"
-                                        value={m.command}
+                                        value={m.script}
                                         onChange={(e) =>
                                             updateMacro(m.id, {
-                                                command: e.target.value,
+                                                script: e.target.value,
                                             })
                                         }
-                                        placeholder="/wave"
+                                        placeholder=":stun x; wait 150; :cuff x | ui:inventory"
                                     />
                                     <button
                                         className="habbo-red-btn"
@@ -496,7 +715,6 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                 </div>
             </div>
 
-            {/* Add Macro Modal */}
             {modalOpen && (
                 <div
                     className="macro-modal enter-br"
@@ -509,8 +727,8 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                             className="close-button"
                             onClick={() => {
                                 setModalOpen(false);
-                                setCapturedKey("");
-                                setNewCmd("");
+                                setCapturedTrigger("");
+                                setNewScript("");
                                 setCaptureArmed(false);
                             }}
                             aria-label="Close"
@@ -524,24 +742,26 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                         <button
                             className={`capture ${captureArmed ? "armed" : ""}`}
                             onClick={() => setCaptureArmed(true)}
-                            title="Click then press a key"
+                            title="Click then press a key or click mouse / wheel"
                             type="button"
                         >
-                            {capturedKey ? capturedKey : "Press a key"}
+                            {capturedTrigger
+                                ? capturedTrigger
+                                : "Press key or click mouse"}
                         </button>
 
                         <input
                             className="macro-command"
-                            placeholder="Enter macro command"
-                            value={newCmd}
-                            onChange={(e) => setNewCmd(e.target.value)}
+                            placeholder="Enter macro script (newline or ;). Use ui:inventory, wait 150"
+                            value={newScript}
+                            onChange={(e) => setNewScript(e.target.value)}
                         />
 
                         <div className="modal-actions">
                             <button
                                 className="habbo-green-btn"
                                 onClick={confirmAdd}
-                                disabled={!capturedKey || !newCmd.trim()}
+                                disabled={!capturedTrigger || !newScript.trim()}
                                 type="button"
                             >
                                 Add Macro
@@ -550,8 +770,8 @@ export const MacroView: FC<MacroViewProps> = ({ onClose, onSendCommand }) => {
                             <button
                                 className="habbo-red-btn"
                                 onClick={() => {
-                                    setCapturedKey("");
-                                    setNewCmd("");
+                                    setCapturedTrigger("");
+                                    setNewScript("");
                                     setCaptureArmed(false);
                                 }}
                                 type="button"
