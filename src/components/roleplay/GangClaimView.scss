@@ -1,43 +1,76 @@
 .gang-claim {
-    position: absolute;
-    top: 15px;
+    position: fixed;
+    top: 12px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 50;
+    z-index: 1002;
+
     pointer-events: none;
 
     &__card {
-        width: 240px;
-        background: #0e1f2b;
-        border: 2px solid #1b374a;
-        border-radius: 10px;
-        padding: 12px 12px 14px;
-        box-shadow: 0 10px 18px rgba(0, 0, 0, .35);
+        width: 260px;
         pointer-events: auto;
-        color: #fff;
+
+        background: #e7d7b6;
+        /* beige body */
+        border: 3px solid #2a6f9e;
+        /* casino-like blue border */
+        border-radius: 10px;
+
+        box-shadow:
+            0 2px #000000b3,
+            0 0 0 1px #000000b3;
+
+        overflow: hidden;
+        color: #2b2b2b;
         text-align: center;
     }
 
-    &__title {
-        font-weight: 800;
-        font-size: 15px;
+    /* header bar (casino widget vibe) */
+    &__header {
+        background: #0d6091;
+        border-bottom: 2px solid #2077ab;
+        padding: 8px 10px;
+        box-shadow: inset 0 -2px rgba(0, 0, 0, .18);
+    }
+
+    &__header-title {
+        color: #fff;
+        font-weight: 900;
+        font-size: 12px;
+        letter-spacing: .8px;
         text-transform: uppercase;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, .35);
+    }
+
+    /* body spacing */
+    &__status,
+    &__owner,
+    &__gangline,
+    &__btn {
+        margin-left: 12px;
+        margin-right: 12px;
     }
 
     &__status {
-        margin-top: 4px;
-        margin-bottom: 6px;
-        font-size: 12px;
-        opacity: .95;
+        margin-top: 10px;
+        margin-bottom: 8px;
+
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 6px;
+
+        font-size: 12px;
+        font-weight: 800;
+        color: #2b2b2b;
 
         &-dot {
             width: 7px;
             height: 7px;
             border-radius: 50%;
-            background: #1fd06b;
+            background: #27c46b;
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, .12);
         }
 
         &--contested .gang-claim__status-dot {
@@ -49,12 +82,11 @@
         }
 
         &--captured .gang-claim__status-dot {
-            background: #ffd04d;
+            background: #ffcf4d;
         }
 
-        .gang-claim__status-dot.is-yellow {
-            background: #ffc400;
-            box-shadow: 0 0 6px rgba(255, 196, 0, .9);
+        &--capturing .gang-claim__status-dot {
+            background: #4aa3ff;
         }
     }
 
@@ -67,8 +99,8 @@ SHIELD = progress bar (bottom fill)
     &__shield {
         position: relative;
         margin: 10px auto 10px;
-        width: 56px;
-        height: 68px;
+        width: 58px;
+        height: 70px;
 
         /* Defaults (React overrides) */
         --shield-a: #E06C35;
@@ -77,25 +109,22 @@ SHIELD = progress bar (bottom fill)
         --att-b: #4a74a3;
         --pct: 0%;
 
-        /* 1) TOP layer: attacker split that grows from bottom (your heart trick)
-2) BOTTOM layer: owner split (always visible behind the fill) */
         background:
             linear-gradient(90deg, var(--att-a) 50%, var(--att-b) 0) bottom / 100% var(--pct) no-repeat,
             linear-gradient(90deg, var(--shield-a) 50%, var(--shield-b) 0);
 
-        /* Shield silhouette */
         -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 88"><path d="M36 2l31 12v24c0 22-14 38-31 48C19 76 5 60 5 38V14L36 2z"/></svg>') no-repeat center/contain;
         mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 88"><path d="M36 2l31 12v24c0 22-14 38-31 48C19 76 5 60 5 38V14L36 2z"/></svg>') no-repeat center/contain;
 
-        /* outline */
-        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
-        transition: box-shadow .15s ease;
+        /* Olympus/casino outline */
+        filter: drop-shadow(0 2px rgba(0, 0, 0, .35));
+        transition: transform .12s ease, filter .12s ease;
 
         &.is-contested {
-            filter: hue-rotate(25deg) saturate(1.15);
+            filter: drop-shadow(0 2px rgba(0, 0, 0, .35)) saturate(1.15);
+            transform: scale(1.02);
         }
 
-        /* SHINE on completion (keeps split colors intact) */
         &.is-complete {
             animation: shieldPulse .45s ease-out 1;
 
@@ -103,9 +132,11 @@ SHIELD = progress bar (bottom fill)
                 content: "";
                 position: absolute;
                 inset: -3px;
-                /* slight overscan so the shine rides the edge */
                 background:
-                    linear-gradient(120deg, rgba(255, 255, 255, 0) 20%, rgba(255, 255, 255, .55) 40%, rgba(255, 255, 255, 0) 60%) 0 0 / 200% 100% no-repeat;
+                    linear-gradient(120deg,
+                        rgba(255, 255, 255, 0) 20%,
+                        rgba(255, 255, 255, .55) 40%,
+                        rgba(255, 255, 255, 0) 60%) 0 0 / 200% 100% no-repeat;
                 -webkit-mask: inherit;
                 mask: inherit;
                 animation: shieldShine .55s ease-out 1;
@@ -116,17 +147,14 @@ SHIELD = progress bar (bottom fill)
 
     @keyframes shieldPulse {
         0% {
-            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.00);
             transform: scale(1);
         }
 
         35% {
-            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.45);
-            transform: scale(1.03);
+            transform: scale(1.04);
         }
 
         100% {
-            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.00);
             transform: scale(1);
         }
     }
@@ -134,7 +162,7 @@ SHIELD = progress bar (bottom fill)
     @keyframes shieldShine {
         0% {
             background-position: -120% 0;
-            opacity: .0;
+            opacity: 0;
         }
 
         15% {
@@ -147,45 +175,77 @@ SHIELD = progress bar (bottom fill)
         }
     }
 
-    /* Centered % */
     &__shield-center {
         position: absolute;
         inset: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 800;
-        font-size: 18px;
+
+        font-weight: 900;
+        font-size: 16px;
         color: #fff;
+
         text-shadow:
-            0 1px 2px rgba(0, 0, 0, .65),
-            0 0 3px rgba(0, 0, 0, .45),
-            0 0 6px rgba(0, 0, 0, .35);
-        pointer-events: none;
+            0 1px 0 rgba(0, 0, 0, .55),
+            0 0 4px rgba(0, 0, 0, .35);
+
         user-select: none;
+        pointer-events: none;
     }
 
     &__owner {
+        margin-top: 2px;
+        margin-bottom: 8px;
         font-size: 12px;
-        font-weight: 600;
-        color: #e7e7e7;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, .5);
+        font-weight: 800;
+        color: #2b2b2b;
     }
 
-    &__btn {
-        width: 100%;
-        height: 36px;
-        border-radius: 8px;
-        border: 2px solid #adf26c;
+    &__gangline {
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-size: 11px;
         font-weight: 700;
-        background: #4caf50;
-        box-shadow:
-            0 10px 24px rgba(0, 0, 0, .22),
-            0 2px 0 rgba(0, 0, 0, .25),
-            inset 0 -4px rgba(0, 0, 0, .12);
+        color: rgba(0, 0, 0, .75);
+
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    &__gang--att {
+        color: #0d6091;
+    }
+
+    &__gang--def {
+        color: #b06c00;
+    }
+
+    /* Habbo/Olympus style button */
+    &__btn {
+        width: calc(100% - 24px);
+        height: 34px;
+        margin: 0 12px 12px;
+
+        border-radius: 8px;
+        border: 2px solid #1d7f2f;
+
+        background: #39b54a;
         color: #fff;
+
+        font-weight: 900;
+        font-size: 12px;
+        letter-spacing: .4px;
+        text-transform: uppercase;
+
+        box-shadow:
+            0 2px rgba(0, 0, 0, .35),
+            inset 0 -3px rgba(0, 0, 0, .12);
+
         cursor: pointer;
-        transition: all .15s ease-in-out;
+        transition: transform .12s ease, filter .12s ease, opacity .12s ease;
 
         &:hover {
             filter: brightness(1.05);
@@ -194,24 +254,16 @@ SHIELD = progress bar (bottom fill)
 
         &:active {
             transform: translateY(1px);
+            filter: brightness(.98);
         }
-    }
 
-    &__gangline {
-        margin-top: 8px;
-        font-size: 11px;
-        opacity: .85;
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    &__gang--def {
-        color: #ffcc66;
-    }
-
-    &__gang--att {
-        color: #9ad1ff;
+        &:disabled,
+        &[aria-disabled="true"] {
+            opacity: .55;
+            cursor: default;
+            transform: none;
+            filter: none;
+            border-color: rgba(0, 0, 0, .25);
+        }
     }
 }
