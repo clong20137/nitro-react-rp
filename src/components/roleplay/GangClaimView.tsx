@@ -312,7 +312,6 @@ export const GangClaimView: FC = () => {
                 onStatus as EventListener
             );
         };
-        // include current colors so snapshot persists latest hues too
     }, [
         vId,
         progress,
@@ -344,11 +343,13 @@ export const GangClaimView: FC = () => {
     const onClaim = useCallback(() => {
         if (!visible || vId <= 0) return;
         if (isBusy || isDone) return;
+
         try {
             const Composer =
                 StartTurfCaptureComposerRef ||
                 require("@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/StartTurfCaptureComposer")
                     .StartTurfCaptureComposer;
+
             SendMessageComposer(new Composer(vId));
         } catch (e) {
             console.warn("Failed to send StartTurfCaptureComposer", e);
@@ -371,7 +372,12 @@ export const GangClaimView: FC = () => {
     return (
         <div className="gang-claim">
             <div className="gang-claim__card">
-                <div className="gang-claim__title">{name || "Turf"}</div>
+                {/* OlympusRP/casino-style header */}
+                <div className="gang-claim__header">
+                    <div className="gang-claim__header-title">
+                        {name || "Turf"}
+                    </div>
+                </div>
 
                 <div
                     className={`gang-claim__status gang-claim__status--${turfState}`}

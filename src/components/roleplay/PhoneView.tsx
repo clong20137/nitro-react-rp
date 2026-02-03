@@ -45,6 +45,12 @@ export interface ConversationEntry {
 export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
     const [activeApp, setActiveApp] = useState<PhoneApp>("home");
 
+    const [appAnimKey, setAppAnimKey] = useState(0);
+
+    useEffect(() => {
+        setAppAnimKey((k) => k + 1);
+    }, [activeApp]);
+
     // REAL FRIEND DATA FROM STORE
     const { friends = [] } = useFriends(); // MessengerFriend[]
 
@@ -161,35 +167,34 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
                         <div className="phone-app-grid">
                             <PhoneAppIcon
                                 label="Settings"
-                                icon="⚙️"
+                                iconSrc={require("../../icons/settings_icon.png")}
                                 onClick={() => setActiveApp("settings")}
                             />
                             <PhoneAppIcon
                                 label="Contacts"
-                                icon="👥"
+                                iconSrc={require("../../icons/contacts.png")}
                                 onClick={() => setActiveApp("friends")}
                                 badge={friends.length}
                             />
                             <PhoneAppIcon
                                 label="Messages"
-                                icon="💬"
+                                iconSrc={require("../../icons/messages.png")}
                                 onClick={() => setActiveApp("messages")}
                             />
                             <PhoneAppIcon
                                 label="Achievements"
-                                icon="🏆"
+                                iconSrc={require("../../icons/trophy.png")}
                                 onClick={() => {}}
                             />
                             <PhoneAppIcon
                                 label="YouTube"
-                                icon="▶️"
+                                iconSrc={require("../../icons/messages.png")}
                                 onClick={() => {}}
                             />
-
                             <PhoneAppIcon
                                 label="DoorDash"
-                                icon="🍕"
-                                badge={doorDashBadge} // 🔔 show active orders
+                                iconSrc={require("../../icons/doordash.png")}
+                                badge={doorDashBadge}
                                 onClick={() => setActiveApp("doordash")}
                             />
                         </div>
@@ -197,26 +202,44 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
                 )}
 
                 {activeApp === "friends" && (
-                    <FriendsApp
-                        friends={friends}
-                        onBack={() => setActiveApp("home")}
-                        onMessageFriend={handleMessageFriendFromFriendsApp}
-                    />
+                    <div
+                        key={`app-${appAnimKey}`}
+                        className="phone-app-animate"
+                    >
+                        <FriendsApp
+                            friends={friends}
+                            onBack={() => setActiveApp("home")}
+                            onMessageFriend={handleMessageFriendFromFriendsApp}
+                        />
+                    </div>
                 )}
                 {activeApp === "messages" && (
-                    <MessagesApp onBack={() => setActiveApp("home")} />
+                    <div
+                        key={`app-${appAnimKey}`}
+                        className="phone-app-animate"
+                    >
+                        <MessagesApp onBack={() => setActiveApp("home")} />
+                    </div>
                 )}
-
                 {activeApp === "settings" && (
-                    <SettingsApp onBack={() => setActiveApp("home")} />
+                    <div
+                        key={`app-${appAnimKey}`}
+                        className="phone-app-animate"
+                    >
+                        <SettingsApp onBack={() => setActiveApp("home")} />
+                    </div>
                 )}
-
                 {activeApp === "doordash" && (
-                    <DoorDashApp
-                        onBack={() => setActiveApp("home")}
-                        onOrdersUpdated={handleDoorDashOrdersUpdated}
-                        onOrderAccepted={handleDoorDashOrderAccepted}
-                    />
+                    <div
+                        key={`app-${appAnimKey}`}
+                        className="phone-app-animate"
+                    >
+                        <DoorDashApp
+                            onBack={() => setActiveApp("home")}
+                            onOrdersUpdated={handleDoorDashOrdersUpdated}
+                            onOrderAccepted={handleDoorDashOrderAccepted}
+                        />
+                    </div>
                 )}
             </div>
         </div>
@@ -225,20 +248,26 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
 
 interface PhoneAppIconProps {
     label: string;
-    icon: string;
+    iconSrc: string; // ✅ image path
     badge?: number;
     onClick: () => void;
 }
 
 const PhoneAppIcon: React.FC<PhoneAppIconProps> = ({
     label,
-    icon,
+    iconSrc,
     badge,
     onClick,
 }) => (
     <button className="phone-app-icon" onClick={onClick}>
         <div className="phone-app-icon-inner">
-            <span className="phone-app-icon-emoji">{icon}</span>
+            <span className="phone-app-icon-shine" />
+            <img
+                className="phone-app-icon-img"
+                src={iconSrc}
+                alt={label}
+                draggable={false}
+            />
             {badge !== undefined && badge > 0 && (
                 <span className="phone-app-icon-badge">{badge}</span>
             )}
@@ -556,30 +585,38 @@ const MessagesApp: React.FC<MessagesAppProps> = ({ onBack }) => {
                         {filteredThreads.map((thread: any) => (
                             <div
                                 key={thread.threadId}
-                                className="phone-convo-row"
+                                className="phone-thread-row"
                                 onClick={() => openThread(thread.threadId)}
                             >
-                                <div className="phone-convo-avatar" />
-                                <div className="phone-convo-main">
-                                    <div className="phone-convo-name">
-                                        {thread.participant?.name}
+                                <div className="phone-thread-avatar" />
+
+                                <div className="phone-thread-main">
+                                    <div className="phone-thread-top">
+                                        <div className="phone-thread-name">
+                                            {thread.participant?.name}
+                                        </div>
+                                        <div className="phone-thread-time">
+                                            now
+                                        </div>
                                     </div>
-                                    <div className="phone-convo-last">
-                                        {getLastMessagePreview(thread)}
+
+                                    <div className="phone-thread-bottom">
+                                        <div className="phone-thread-preview">
+                                            {getLastMessagePreview(thread)}
+                                        </div>
+                                        <span className="phone-thread-unread" />
                                     </div>
                                 </div>
 
                                 {closeThread && (
                                     <button
-                                        className="phone-convo-delete"
+                                        className="phone-thread-delete"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             closeThread(thread.threadId);
                                         }}
                                         title="Delete conversation"
-                                    >
-                                        🗑
-                                    </button>
+                                    />
                                 )}
                             </div>
                         ))}

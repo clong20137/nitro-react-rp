@@ -1,5 +1,10 @@
 /* =========================================
-PhoneView.scss
+PhoneView.scss (FULL)
+- hover shine on apps
+- image icons (no emojis)
+- message threads list style
+- fixed trash icon button (no weird background)
+- app open transitions
 ========================================= */
 
 .phone-root {
@@ -22,25 +27,25 @@ PhoneView.scss
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    position: fixed; // anchor to screen
+    position: fixed;
     font-family: "Ubuntu", sans-serif;
+    transition: box-shadow 180ms ease, transform 180ms ease;
 
-    /* NEW: stick it to bottom-right */
-    bottom: 24px;
-    right: 24px;
+    /* IMPORTANT:
+If you are dragging with inline left/top, DO NOT force bottom/right.
+Comment these out if you're using draggable position. */
+    /* bottom: 24px;
+right: 24px; */
 }
 
-/* Slide in from right when opened */
 /* Slide in from bottom-right when opened */
 .phone-enter {
     animation: phone-slide-in 260ms ease-out;
     transform-origin: bottom right;
-    /* optional, feels nicer */
 }
 
 @keyframes phone-slide-in {
     from {
-        /* start further down and to the right (off-screen) */
         transform: translate(40px, 40px);
         opacity: 0;
     }
@@ -112,7 +117,25 @@ PhoneView.scss
     flex-direction: column;
 }
 
-/* Small fade/slide when switching apps */
+/* App open feel (zoom + fade) */
+.phone-app {
+    animation: appOpen 160ms ease-out;
+    transform-origin: 60% 30%;
+}
+
+@keyframes appOpen {
+    from {
+        opacity: 0;
+        transform: scale(0.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Small fade/slide when switching apps (optional class hook) */
 .phone-app-animate {
     animation: phone-app-fade-in 180ms ease-out;
 }
@@ -154,8 +177,10 @@ PhoneView.scss
     align-items: center;
     gap: 4px;
     cursor: pointer;
+    transform: translateZ(0);
 }
 
+/* App icon tile */
 .phone-app-icon-inner {
     width: 60px;
     height: 60px;
@@ -165,17 +190,64 @@ PhoneView.scss
             #0067b3 50%,
             #005da3 0,
             #005da3);
-    box-shadow: inset 0 0 0 2px hsla(0, 0%, 100%, .3), 0 3px 0 #1c74f0;
+    box-shadow: inset 0 0 0 2px hsla(0, 0%, 100%, 0.3), 0 3px 0 #1c74f0;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
+    transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
 }
 
-.phone-app-icon-emoji {
-    font-size: 26px;
+/* ✅ Image icon (use <img class="phone-app-icon-img" ... />) */
+.phone-app-icon-img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    image-rendering: auto;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45));
 }
 
+/* Shine overlay element (use <span class="phone-app-icon-shine" />) */
+.phone-app-icon-shine {
+    position: absolute;
+    inset: -40%;
+    background: linear-gradient(120deg,
+            rgba(255, 255, 255, 0) 35%,
+            rgba(255, 255, 255, 0.45) 50%,
+            rgba(255, 255, 255, 0) 65%);
+    transform: translateX(-60%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.phone-app-icon:hover .phone-app-icon-inner {
+    filter: brightness(1.06);
+    transform: translateY(-2px);
+    box-shadow: inset 0 0 0 2px hsla(0, 0%, 100%, 0.35), 0 4px 0 #1c74f0;
+}
+
+.phone-app-icon:hover .phone-app-icon-shine {
+    opacity: 1;
+    animation: phoneShine 700ms ease-out;
+}
+
+.phone-app-icon:active .phone-app-icon-inner {
+    transform: translateY(1px) scale(0.96);
+    filter: brightness(0.98);
+}
+
+@keyframes phoneShine {
+    0% {
+        transform: translateX(-70%);
+    }
+
+    100% {
+        transform: translateX(70%);
+    }
+}
+
+/* Badge bubble */
 .phone-app-icon-badge {
     position: absolute;
     top: -4px;
@@ -297,18 +369,6 @@ PhoneView.scss
     justify-content: center;
 }
 
-/* Full-screen empty state (Messages app with no threads) */
-.phone-empty-full {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    color: #fff;
-    font-size: 11px;
-}
-
 /* ---------- Contacts / Friends app ---------- */
 
 .contacts-header {
@@ -404,7 +464,7 @@ PhoneView.scss
 }
 
 /* =========================================================================
-Messages
+Messages (Thread list style)
 ========================================================================= */
 
 .phone-app.phone-messages {
@@ -412,8 +472,7 @@ Messages
     flex-direction: column;
 }
 
-/* list mode */
-
+/* Thread list container */
 .phone-messages-list-view {
     flex: 1;
     display: flex;
@@ -430,61 +489,113 @@ Messages
     overflow-y: auto;
 }
 
-.phone-convo-row {
+/* Thread row (looks like iMessage list) */
+.phone-thread-row {
     display: flex;
     align-items: center;
-    padding: 6px 10px;
-    gap: 8px;
+    gap: 10px;
+    padding: 8px 10px;
     cursor: pointer;
-    transition: background 120ms ease-out;
+    transition: background 140ms ease-out;
 }
 
-.phone-convo-row:hover {
+.phone-thread-row:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
-.phone-convo-avatar {
-    width: 28px;
-    height: 28px;
+.phone-thread-avatar {
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     background: radial-gradient(circle at 30% 20%, #ffe69a, #f3c858);
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.55);
     flex-shrink: 0;
 }
 
-.phone-convo-main {
+.phone-thread-main {
     flex: 1;
     min-width: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 6px;
 }
 
-.phone-convo-name {
+.phone-thread-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.phone-thread-name {
     font-size: 11px;
     color: #fff;
-    font-weight: 600;
-    text-overflow: ellipsis;
+    font-weight: 700;
     overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.phone-convo-last {
+.phone-thread-time {
     font-size: 10px;
-    color: #bbb;
-    text-overflow: ellipsis;
+    color: rgba(255, 255, 255, 0.65);
+    flex-shrink: 0;
+}
+
+.phone-thread-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.phone-thread-preview {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.75);
     overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.phone-convo-delete {
-    border: none;
-    background: transparent;
-    font-size: 14px;
-    cursor: pointer;
-    color: #f87171;
-    padding: 0;
+.phone-thread-unread {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4da3ff;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+    flex-shrink: 0;
 }
 
-/* chat mode */
+/* ✅ Trash icon button (NO emoji, fixes weird background) */
+.phone-thread-delete {
+    width: 18px;
+    height: 18px;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    position: relative;
+    opacity: 0.8;
+    cursor: pointer;
+    flex-shrink: 0;
+}
 
+.phone-thread-delete::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    /* RECOMMENDED: if icon is in /public/icons/, use: url("/icons/trash_icon.png") */
+    background: url("../../icons/trash_icon.png") center/contain no-repeat;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+}
+
+.phone-thread-row:hover .phone-thread-delete {
+    opacity: 1;
+}
+
+/* Chat view container */
 .phone-messages-chat-view {
     flex: 1;
     display: flex;
@@ -496,11 +607,6 @@ Messages
     overflow: hidden;
 }
 
-.phone-chat-header {
-    display: none;
-    /* header is handled in .phone-subheader for chat mode */
-}
-
 .phone-chat-body {
     flex: 1;
     padding: 10px 12px;
@@ -509,8 +615,7 @@ Messages
     color: #fff;
 }
 
-/* empty-state style (like your reference image) */
-
+/* empty-state style */
 .phone-chat-empty {
     height: 100%;
     display: flex;
@@ -525,7 +630,6 @@ Messages
     width: 56px;
     height: 40px;
     margin-bottom: 4px;
-    //background: url('../../icons/phone-bubble.png') center/contain no-repeat;
     opacity: 0.95;
     filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45));
 }
@@ -540,30 +644,7 @@ Messages
     opacity: 0.9;
 }
 
-/* chat bubbles */
-
-.phone-chat-bubble {
-    max-width: 80%;
-    padding: 6px 9px;
-    border-radius: 16px;
-    margin-bottom: 4px;
-    line-height: 1.3;
-    word-break: break-word;
-}
-
-.phone-chat-bubble.in {
-    align-self: flex-start;
-    background: rgba(0, 0, 0, 0.7);
-}
-
-.phone-chat-bubble.out {
-    align-self: flex-end;
-    background: #f3c858;
-    color: #222;
-}
-
-/* chat input */
-
+/* Chat input */
 .phone-chat-input {
     padding: 6px;
     display: flex;
@@ -593,8 +674,7 @@ Messages
     color: #222;
 }
 
-/* chat title avatar inline in header when in chat mode */
-
+/* chat title avatar inline */
 .phone-chat-title {
     display: flex;
     align-items: center;
@@ -607,87 +687,6 @@ Messages
     border-radius: 50%;
     background: radial-gradient(circle at 30% 20%, #ffe69a, #f3c858);
     box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4);
-}
-
-
-/* ---------- Chat area (when a thread is open) ---------- */
-
-.phone-messages-chat {
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 10px;
-    display: flex;
-    flex-direction: column;
-}
-
-.phone-chat-header {
-    padding: 4px 6px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    font-size: 11px;
-    color: #fff;
-}
-
-.phone-chat-body {
-    flex: 1;
-    padding: 4px 6px;
-    overflow-y: auto;
-    font-size: 11px;
-    color: #fff;
-}
-
-.phone-chat-empty {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-}
-
-.phone-chat-bubble {
-    max-width: 80%;
-    padding: 4px 8px;
-    border-radius: 12px;
-    margin-bottom: 4px;
-}
-
-.phone-chat-bubble.in {
-    background: rgba(255, 255, 255, 0.2);
-    align-self: flex-start;
-}
-
-.phone-chat-bubble.out {
-    background: #f3c858;
-    color: #222;
-    align-self: flex-end;
-}
-
-/* Input area */
-.phone-chat-input {
-    padding: 4px;
-    display: flex;
-    gap: 4px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.phone-chat-input input {
-    flex: 1;
-    border-radius: 999px;
-    border: none;
-    padding: 4px 8px;
-    font-size: 11px;
-    background: rgba(0, 0, 0, 0.7);
-    color: #fff;
-    outline: none;
-}
-
-.phone-chat-input button {
-    border-radius: 999px;
-    border: none;
-    font-size: 11px;
-    padding: 4px 10px;
-    cursor: pointer;
-    background: #f3c858;
-    color: #222;
 }
 
 /* ---------- Settings ---------- */
@@ -720,7 +719,7 @@ DoorDash App
     flex-direction: column;
 }
 
-/* Generic card used in DoorDash app */
+/* Generic card */
 .phone-card {
     background: rgba(0, 0, 0, 0.55);
     border-radius: 16px;
@@ -757,7 +756,7 @@ DoorDash App
     }
 }
 
-/* Primary “Order Pizza” button */
+/* Primary button */
 .phone-primary-btn {
     display: inline-flex;
     align-items: center;
@@ -770,25 +769,19 @@ DoorDash App
     cursor: pointer;
     background: linear-gradient(145deg, #f9d365, #f3c858 50%, #e6b436 0, #e6b436);
     color: #222;
-    box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.4),
-        0 2px 0 rgba(0, 0, 0, 0.6);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4), 0 2px 0 rgba(0, 0, 0, 0.6);
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
     transition: transform 80ms ease-out, box-shadow 80ms ease-out, filter 80ms ease-out;
 
     &:hover {
         filter: brightness(1.05);
         transform: translateY(-1px);
-        box-shadow:
-            inset 0 0 0 1px rgba(255, 255, 255, 0.45),
-            0 3px 0 rgba(0, 0, 0, 0.7);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45), 0 3px 0 rgba(0, 0, 0, 0.7);
     }
 
     &:active {
         transform: translateY(1px);
-        box-shadow:
-            inset 0 0 0 1px rgba(0, 0, 0, 0.3),
-            0 1px 0 rgba(0, 0, 0, 0.6);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(0, 0, 0, 0.6);
     }
 
     &:disabled {
@@ -798,7 +791,6 @@ DoorDash App
     }
 }
 
-/* Status text under Order button */
 .phone-status-text {
     margin-top: 4px;
     font-size: 10px;
@@ -806,10 +798,7 @@ DoorDash App
     opacity: 0.9;
 }
 
-/* =======================
-Driver orders list
-======================= */
-
+/* Driver orders list */
 .dd-order-list {
     margin-top: 4px;
     max-height: 180px;
@@ -860,7 +849,7 @@ Driver orders list
     color: #bbb;
 }
 
-/* “Accept” button for drivers */
+/* Accept button */
 .dd-order-accept-btn {
     border: none;
     border-radius: 999px;
@@ -871,25 +860,19 @@ Driver orders list
     white-space: nowrap;
     background: linear-gradient(145deg, #4caf50, #3f9143);
     color: #f5f5f5;
-    box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.35),
-        0 2px 0 rgba(0, 0, 0, 0.6);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35), 0 2px 0 rgba(0, 0, 0, 0.6);
     text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
     transition: transform 80ms ease-out, box-shadow 80ms ease-out, filter 80ms ease-out;
 
     &:hover {
         filter: brightness(1.05);
         transform: translateY(-1px);
-        box-shadow:
-            inset 0 0 0 1px rgba(255, 255, 255, 0.4),
-            0 3px 0 rgba(0, 0, 0, 0.7);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4), 0 3px 0 rgba(0, 0, 0, 0.7);
     }
 
     &:active {
         transform: translateY(1px);
-        box-shadow:
-            inset 0 0 0 1px rgba(0, 0, 0, 0.3),
-            0 1px 0 rgba(0, 0, 0, 0.6);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(0, 0, 0, 0.6);
     }
 }
 
@@ -934,15 +917,9 @@ Driver orders list
 }
 
 /* =========================================================================
-DoorDash styling – red brand look
+DoorDash brand strip (optional)
 ========================================================================= */
 
-.phone-app.phone-doordash {
-    display: flex;
-    flex-direction: column;
-}
-
-/* header strip with DoorDash red */
 .dd-header {
     background: linear-gradient(135deg, #ff3b30, #e32719);
     border-radius: 18px 18px 0 0;
@@ -960,164 +937,4 @@ DoorDash styling – red brand look
     text-transform: uppercase;
     letter-spacing: 0.04em;
     font-size: 11px;
-}
-
-/* scroll area */
-.dd-scroll {
-    padding: 4px 6px 8px;
-}
-
-/* generic phone cards tuned for DoorDash */
-
-.phone-card {
-    border-radius: 14px;
-    margin-bottom: 8px;
-    overflow: hidden;
-}
-
-.dd-card {
-    background: rgba(0, 0, 0, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(4px);
-}
-
-.dd-card-customer {
-    border-left: 3px solid #ff3b30;
-}
-
-.dd-card-driver {
-    border-left: 3px solid #ff9500;
-}
-
-.phone-card-title {
-    padding: 6px 10px;
-}
-
-.dd-card-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.phone-card-body {
-    padding: 6px 10px 8px;
-}
-
-.dd-card-body {
-    font-size: 11px;
-    color: #f5f5f5;
-}
-
-.dd-card-text-main {
-    margin-bottom: 4px;
-}
-
-.dd-pricing {
-    font-size: 10px;
-    opacity: 0.9;
-    margin-bottom: 6px;
-}
-
-/* primary DoorDash-style call-to-action */
-.dd-primary-btn {
-    width: 100%;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #ff3b30, #ff5e3a);
-    border: none;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 6px 0;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    box-shadow: 0 3px 0 #a31616, 0 4px 10px rgba(0, 0, 0, 0.5);
-    cursor: pointer;
-    margin-top: 2px;
-}
-
-.dd-primary-btn:disabled {
-    opacity: 0.7;
-    cursor: default;
-    box-shadow: 0 2px 0 #7f1010, 0 3px 8px rgba(0, 0, 0, 0.45);
-}
-
-.dd-status {
-    margin-top: 6px;
-    font-size: 10px;
-    color: #ffd9d6;
-}
-
-/* empty driver text */
-.dd-empty {
-    font-size: 10px;
-    opacity: 0.9;
-}
-
-/* orders list */
-.dd-order-list {
-    margin-top: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.dd-order-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 5px 6px;
-    border-radius: 10px;
-    background: rgba(20, 20, 20, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.dd-order-main {
-    flex: 1;
-    min-width: 0;
-    margin-right: 6px;
-}
-
-.dd-order-customer {
-    font-size: 11px;
-    font-weight: 600;
-    color: #ffffff;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-}
-
-.dd-order-location {
-    font-size: 10px;
-    color: #ffcc80;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-}
-
-.dd-order-meta {
-    font-size: 9px;
-    color: #bbbbbb;
-}
-
-/* Accept button – smaller, red pill */
-.dd-order-accept-btn {
-    border-radius: 999px;
-    border: none;
-    font-size: 10px;
-    padding: 4px 10px;
-    cursor: pointer;
-    background: linear-gradient(135deg, #ff3b30, #ff5e3a);
-    color: #fff;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    box-shadow: 0 2px 0 #a31616;
-    flex-shrink: 0;
-}
-
-.dd-order-accept-btn:hover {
-    filter: brightness(1.05);
 }

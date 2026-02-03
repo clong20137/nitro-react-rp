@@ -20,9 +20,11 @@ ALWAYS-ON "NOW PLAYING" OVERLAY (separate from queue UI)
 =========================================================== */
 .jukebox-overlay {
     position: fixed;
-    left: 50%;
-    bottom: 14px;
+    top: 12px;
+    right: 200px;
+    background: #0d6091;
     transform: translateX(-50%);
+    border: 3px solid #2077ab;
     z-index: 1390;
     /* below the open window (1450), above most UI */
     pointer-events: none;
@@ -40,10 +42,7 @@ ALWAYS-ON "NOW PLAYING" OVERLAY (separate from queue UI)
 
     padding: 8px 10px;
     border-radius: 10px;
-
-    background: rgba(30, 114, 149, 0.22);
     /* opacity shell */
-    border: 1px solid rgba(255, 255, 255, 0.75);
     box-shadow:
         0 10px 24px rgba(0, 0, 0, 0.18),
         0 2px 0 rgba(0, 0, 0, 0.20);

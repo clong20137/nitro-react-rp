@@ -574,11 +574,9 @@ Achievements
     padding: 8px;
     color: #000;
 
-    /* make achievements area scroll vertically */
     max-height: 420px;
     overflow-y: auto;
 
-    /* nicer scroll bar */
     scrollbar-width: thin;
     scrollbar-color: #7a9ccf #d5d9e6;
 
@@ -597,12 +595,36 @@ Achievements
     }
 }
 
+.achievements-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+
+.ach-collapse-all {
+    background: #2478b7;
+    color: #fff;
+    border: 1px solid #fff;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+
+    &:hover {
+        filter: brightness(1.05);
+    }
+
+    &:active {
+        transform: translateY(1px);
+    }
+}
+
 /* groups wrapper */
 .achievements-list {
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    /* more space between groups */
+    gap: 12px;
 }
 
 .ach-group {
@@ -639,8 +661,47 @@ Achievements
 }
 
 .ach-group-arrow {
-    font-size: 11px;
-    color: #ffffff;
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
+}
+
+.ach-arrow {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    transition: transform 220ms ease;
+
+    &.down {
+        border-top: 7px solid #fff;
+        transform: translateY(1px);
+    }
+
+    &.up {
+        border-bottom: 7px solid #fff;
+        transform: translateY(-1px);
+    }
+}
+
+/* ✅ Smooth accordion:
+We animate grid rows (0fr -> 1fr) + opacity. */
+.ach-group-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows 240ms ease, opacity 180ms ease;
+}
+
+.ach-group.open .ach-group-body {
+    grid-template-rows: 1fr;
+    opacity: 1;
+}
+
+/* inner wrapper must hide overflow for the animation */
+.ach-group-inner {
+    overflow: hidden;
 }
 
 /* grid of square-ish cards inside each open group */
@@ -663,31 +724,109 @@ Achievements
     border: 1px solid #e5e7f0;
     border-radius: 6px;
     padding: 8px 8px;
-    transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease,
+        background 0.15s ease, filter 0.15s ease;
+
+    &:hover {
+        background: #ffffff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+        transform: translateY(-1px);
+
+        .ach-progress .ach-fill {
+            filter: brightness(1.1);
+        }
+    }
+}
+
+/* icon + overlay wrapper */
+.ach-icon-wrap {
+    grid-row: 1 / span 2;
+    width: 42px;
+    height: 42px;
+    position: relative;
+    border-radius: 4px;
+    background: #fff;
+    overflow: hidden;
 
     .ach-icon {
-        grid-row: 1 / span 2;
         width: 42px;
         height: 42px;
-        border-radius: 4px;
-        background: #fff;
         image-rendering: pixelated;
+        display: block;
     }
 
-    .ach-line {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 6px;
+    /* ✅ checkmark overlay */
+    .ach-check {
+        position: absolute;
+        right: -4px;
+        bottom: -4px;
+        width: 22px;
+        height: 22px;
+        image-rendering: pixelated;
+        pointer-events: none;
+        filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.35));
+    }
+}
 
-        .ach-title {
-            font-weight: 700;
-            font-size: 13px;
-        }
+/* completed state */
+.ach-row.completed {
+    border-color: rgba(34, 197, 94, 0.35);
+    background: #effdf4;
 
-        .ach-reward {
-            font-size: 11px;
-            color: #666;
+    .ach-title {
+        color: #14532d;
+    }
+
+    .ach-reward {
+        color: #14532d;
+    }
+
+    .ach-progress .ach-fill {
+        background: repeating-linear-gradient(#22c55e, #22c55e 50%, #16a34a 0, #16a34a);
+    }
+}
+
+.ach-line {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+
+    .ach-title {
+        font-weight: 700;
+        font-size: 13px;
+    }
+
+    .ach-reward {
+        font-size: 11px;
+        color: #666;
+    }
+}
+
+.ach-text {
+    font-size: 11px;
+    color: #555;
+    margin-top: 2px;
+    grid-column: 2 / -1;
+}
+
+.ach-progress {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+
+    .ach-bar {
+        background: #e9edf3;
+        height: 24px;
+        border-radius: 4px;
+        overflow: hidden;
+        width: 100%;
+
+        .ach-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 4px;
+            background: repeating-linear-gradient(#2dabc2, #2dabc2 50%, #2b91a7 0, #2b91a7);
+            transition: width 0.35s ease-out, background 0.25s ease;
         }
     }
 
@@ -695,45 +834,7 @@ Achievements
         font-size: 11px;
         color: #555;
         margin-top: 2px;
-        grid-column: 2 / -1;
-    }
-
-    .ach-progress {
-        grid-column: 1 / -1;
-        margin-top: 4px;
-
-        .ach-bar {
-            background: #e9edf3;
-            height: 24px;
-            border-radius: 4px;
-            overflow: hidden;
-            width: 100%;
-
-            .ach-fill {
-                height: 100%;
-                width: 0%;
-                border-radius: 4px;
-                background: repeating-linear-gradient(#2dabc2, #2dabc2 50%, #2b91a7 0, #2b91a7);
-                transition: width .35s ease-out, background .25s ease;
-            }
-        }
-
-        .ach-text {
-            font-size: 11px;
-            color: #555;
-            margin-top: 2px;
-            text-align: right;
-        }
-    }
-
-    &:hover {
-        background: #ffffff;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, .25);
-        transform: translateY(-1px);
-
-        .ach-progress .ach-fill {
-            filter: brightness(1.1);
-        }
+        text-align: right;
     }
 }
 

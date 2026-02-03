@@ -290,6 +290,11 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
     const [gangRanks, setGangRanks] = useState<GangRank[]>([]);
     const [collapsedRanks, setCollapsedRanks] = useState<number[]>([]);
 
+    /* ---- load state for reliability ---- */
+    const [membersLoading, setMembersLoading] = useState(false);
+    const [ranksLoading, setRanksLoading] = useState(false);
+    const [membersError, setMembersError] = useState<string | null>(null);
+
     /* ---- modals / role editing ---- */
     const [showEditRoleModal, setShowEditRoleModal] = useState(false);
     const [editRoleId, setEditRoleId] = useState<number | null>(null);
@@ -423,7 +428,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             if (gangRanks.length) {
                 const incomingOrder = Number(m.rankOrder);
 
-                // *** KEY FIX: only trust incoming order if it's non-negative.
+                // only trust incoming order if it's non-negative.
                 if (Number.isFinite(incomingOrder) && incomingOrder >= 0) {
                     rankOrder = incomingOrder;
                 } else if (
@@ -569,6 +574,8 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             }));
 
             setMembersRaw(mapped);
+            setMembersLoading(false);
+            setMembersError(null);
         };
 
         const handleRanks = (ev: Event) => {
@@ -590,7 +597,9 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                 administrator: !!(r.administrator ?? r.admin),
                 canAccessBank: !!(r.canAccessBank ?? r.bank),
             }));
+
             setGangRanks(mapped);
+            setRanksLoading(false);
         };
 
         window.addEventListener(
@@ -706,21 +715,48 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         };
     }, [refreshAll, applyTurfData]);
 
-    /* refresh ranks/members when switching to Members tab */
+    /* refresh ranks/members when switching to Members tab (with retry) */
     useEffect(() => {
         if (activeTab !== "members") return;
 
-        try {
-            if (GetGangMembersComposer)
-                SendMessageComposer(new GetGangMembersComposer());
-        } catch {}
-        try {
-            if (GetGangRanksComposer)
-                SendMessageComposer(new GetGangRanksComposer());
-        } catch {}
+        setMembersLoading(true);
+        setRanksLoading(true);
+        setMembersError(null);
 
-        window.dispatchEvent(new CustomEvent("request_gang_members"));
-        window.dispatchEvent(new CustomEvent("request_gang_ranks"));
+        const request = () => {
+            try {
+                if (GetGangMembersComposer)
+                    SendMessageComposer(new GetGangMembersComposer());
+            } catch {}
+            try {
+                if (GetGangRanksComposer)
+                    SendMessageComposer(new GetGangRanksComposer());
+            } catch {}
+
+            window.dispatchEvent(new CustomEvent("request_gang_members"));
+            window.dispatchEvent(new CustomEvent("request_gang_ranks"));
+        };
+
+        request();
+
+        const retry = window.setTimeout(() => {
+            const noMembers = membersRaw.length === 0;
+            const noRanks = gangRanks.length === 0;
+
+            if (noMembers || noRanks) request();
+
+            window.setTimeout(() => {
+                if (activeTab !== "members") return;
+                if (membersRaw.length === 0 && gangRanks.length === 0) {
+                    setMembersError("Couldn’t load gang data. Try Refresh.");
+                    setMembersLoading(false);
+                    setRanksLoading(false);
+                }
+            }, 650);
+        }, 650);
+
+        return () => window.clearTimeout(retry);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
 
     /* clamp when resizing */
@@ -858,8 +894,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                 (gangIcon || "").toUpperCase()
         )?.src ?? (gangIcon ? keyToIconPath(gangIcon) : "");
 
-    /* ===== Modal render helpers (single source of truth) ===== */
-
+    /* ===== Modal render helpers ===== */
     const renderConfirmDisband = () =>
         showConfirmDeleteModal && (
             <div className="gangs-modal-overlay">
@@ -880,7 +915,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
 
                         <div className="popup-actions">
                             <button
-                                className="habbo-btn danger"
+                                className="gang-btn gang-btn--danger"
                                 onClick={() => {
                                     SendMessageComposer(
                                         new DeleteGangMessageComposer()
@@ -900,7 +935,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                             </button>
 
                             <button
-                                className="habbo-btn default"
+                                className="gang-btn gang-btn--default"
                                 onClick={() => setShowConfirmDeleteModal(false)}
                             >
                                 Cancel
@@ -992,7 +1027,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
 
                         <div className="popup-actions">
                             <button
-                                className="habbo-btn default"
+                                className="gang-btn gang-btn--success"
                                 onClick={() => {
                                     const name = newRoleName.trim();
                                     if (!name) return;
@@ -1020,7 +1055,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                             </button>
 
                             <button
-                                className="habbo-btn danger"
+                                className="gang-btn gang-btn--danger"
                                 onClick={() => setShowNewRoleModal(false)}
                             >
                                 Cancel
@@ -1109,14 +1144,14 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
 
                         <div className="popup-actions">
                             <button
-                                className="habbo-btn default"
+                                className="gang-btn gang-btn--success"
                                 onClick={handleEditRoleSubmit}
                             >
                                 Save Changes
                             </button>
 
                             <button
-                                className="habbo-btn danger"
+                                className="gang-btn gang-btn--danger"
                                 onClick={() => setShowEditRoleModal(false)}
                             >
                                 Cancel
@@ -1144,14 +1179,14 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
 
                         <div className="popup-actions">
                             <button
-                                className="habbo-btn danger"
+                                className="gang-btn gang-btn--danger"
                                 onClick={confirmDeleteRole}
                             >
                                 Yes, Delete
                             </button>
 
                             <button
-                                className="habbo-btn default"
+                                className="gang-btn gang-btn--default"
                                 onClick={() => {
                                     setShowConfirmRoleDeleteModal(false);
                                     setConfirmDeleteRoleId(null);
@@ -1166,7 +1201,6 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         );
 
     /* ---- render ---- */
-
     return (
         <div
             ref={rootRef}
@@ -1378,24 +1412,20 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                         <span>{membersNorm.length}</span>
                                     </div>
                                     <div className="gang-stat">
-                                        Total Kills:
-                                        <span>{gangKills}</span>
+                                        Total Kills:<span>{gangKills}</span>
                                     </div>
                                     <div className="gang-stat">
-                                        Total Deaths:
-                                        <span>{gangDeaths}</span>
+                                        Total Deaths:<span>{gangDeaths}</span>
                                     </div>
                                     <div className="gang-stat">
-                                        Robberies:
-                                        <span>{gangRobberies}</span>
+                                        Robberies:<span>{gangRobberies}</span>
                                     </div>
                                     <div className="gang-stat">
                                         Pick Pockets:
                                         <span>{gangPickpockets}</span>
                                     </div>
                                     <div className="gang-stat">
-                                        Total Damage:
-                                        <span>{gangDamage}</span>
+                                        Total Damage:<span>{gangDamage}</span>
                                     </div>
                                     <div className="gang-stat">
                                         Turfs Controlled:
@@ -1406,119 +1436,136 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                         </div>
                     )}
 
-                    {/* ===== MEMBERS TAB ===== */}
+                    {/* ===== MEMBERS TAB (OVERHAULED) ===== */}
                     {activeTab === "members" && (
                         <div className="manage-tab">
-                            <div className="gangs-subheader">
-                                <div className="gangs-subheader-left">
-                                    <span className="gangs-subheader-title">
-                                        {gangName || "Gang Name"}
-                                    </span>
+                            <div className="members-toolbar">
+                                <div className="members-toolbar__left">
+                                    <div className="members-title">
+                                        <span className="name">
+                                            {gangName || "Gang"}
+                                        </span>
+                                        <span className="meta">
+                                            {membersLoading || ranksLoading
+                                                ? "Loading…"
+                                                : `${membersNorm.length} members`}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="gangs-subheader-right">
-                                    <input
-                                        type="text"
-                                        placeholder="Enter username to invite"
-                                        value={inviteUsername}
-                                        onChange={(e) =>
-                                            setInviteUsername(e.target.value)
-                                        }
-                                        className="gangs-invite-input"
-                                    />
-                                    <button
-                                        className="habbo-btn default"
-                                        onClick={sendGangInvite}
-                                    >
-                                        Send Invite
-                                    </button>
 
-                                    {!isGangOwner && (
-                                        <button
-                                            className="habbo-btn danger"
-                                            onClick={handleLeaveGangClick}
-                                        >
-                                            Leave Gang
-                                        </button>
-                                    )}
-                                    {isGangOwner && (
-                                        <button
-                                            className="habbo-btn danger"
-                                            onClick={() =>
-                                                setShowConfirmDeleteModal(true)
+                                <div className="members-toolbar__right">
+                                    <div className="invite-row">
+                                        <input
+                                            type="text"
+                                            placeholder="Invite username…"
+                                            value={inviteUsername}
+                                            onChange={(e) =>
+                                                setInviteUsername(
+                                                    e.target.value
+                                                )
                                             }
+                                            className="gangs-invite-input"
+                                        />
+
+                                        <button
+                                            className="gang-btn gang-btn--default"
+                                            onClick={sendGangInvite}
+                                            disabled={!inviteUsername.trim()}
+                                            title="Send gang invite"
                                         >
-                                            Disband Gang
+                                            Invite
                                         </button>
-                                    )}
+
+                                        <button
+                                            className="gang-btn gang-btn--default"
+                                            onClick={() => {
+                                                setMembersLoading(true);
+                                                setRanksLoading(true);
+                                                setMembersError(null);
+                                                refreshAll();
+                                            }}
+                                            title="Refresh members & ranks"
+                                        >
+                                            Refresh
+                                        </button>
+
+                                        {!isGangOwner && (
+                                            <button
+                                                className="gang-btn gang-btn--danger"
+                                                onClick={handleLeaveGangClick}
+                                            >
+                                                Leave
+                                            </button>
+                                        )}
+
+                                        {isGangOwner && (
+                                            <button
+                                                className="gang-btn gang-btn--danger"
+                                                onClick={() =>
+                                                    setShowConfirmDeleteModal(
+                                                        true
+                                                    )
+                                                }
+                                            >
+                                                Disband
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Ranks + members */}
-                            {gangRanks
-                                .slice()
-                                .sort((a, b) => a.position - b.position)
-                                .map((rank) => {
-                                    const members =
-                                        groupedMembers[rank.position] || [];
+                            {membersError && (
+                                <div className="members-error">
+                                    {membersError}
+                                </div>
+                            )}
 
-                                    return (
-                                        <div
-                                            key={rank.id}
-                                            className="gang-rank-group"
-                                        >
+                            {(membersLoading || ranksLoading) && (
+                                <div className="members-skeleton">
+                                    <div className="s-row" />
+                                    <div className="s-row" />
+                                    <div className="s-row" />
+                                </div>
+                            )}
+
+                            {!ranksLoading &&
+                                gangRanks
+                                    .slice()
+                                    .sort((a, b) => a.position - b.position)
+                                    .map((rank) => {
+                                        const members =
+                                            groupedMembers[rank.position] || [];
+                                        const isCollapsed =
+                                            collapsedRanks.includes(
+                                                rank.position
+                                            );
+
+                                        return (
                                             <div
-                                                className="rank-label"
-                                                style={{
-                                                    display: "flex",
-                                                    justifyContent:
-                                                        "space-between",
-                                                    alignItems: "center",
-                                                }}
+                                                key={rank.id}
+                                                className="rank-group"
                                             >
-                                                <div
+                                                <button
+                                                    type="button"
+                                                    className={`rank-head ${
+                                                        isCollapsed
+                                                            ? "is-collapsed"
+                                                            : "is-open"
+                                                    }`}
                                                     onClick={() =>
                                                         toggleCollapse(
                                                             rank.position
                                                         )
                                                     }
-                                                    style={{
-                                                        cursor: "pointer",
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: 8,
-                                                        flexWrap: "wrap",
-                                                    }}
                                                 >
-                                                    <span
-                                                        className={`rank-toggle-arrow ${
-                                                            collapsedRanks.includes(
-                                                                rank.position
-                                                            )
-                                                                ? "collapsed"
-                                                                : "expanded"
-                                                        }`}
-                                                        style={{
-                                                            transition:
-                                                                "transform 0.2s ease",
-                                                        }}
-                                                    >
-                                                        ▼
-                                                    </span>
-
-                                                    <div
-                                                        style={{
-                                                            display: "flex",
-                                                            alignItems:
-                                                                "center",
-                                                            gap: 6,
-                                                        }}
-                                                    >
+                                                    <div className="rank-head__left">
                                                         <span
-                                                            style={{
-                                                                fontWeight:
-                                                                    "bold",
-                                                            }}
+                                                            className="rank-arrow"
+                                                            aria-hidden="true"
                                                         >
+                                                            ▼
+                                                        </span>
+                                                        <span className="rank-name">
                                                             {rank.name}
                                                         </span>
 
@@ -1554,229 +1601,219 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                                                 </span>
                                                             )}
                                                         </div>
-                                                    </div>
-                                                </div>
 
-                                                {ownerOrAdmin && (
-                                                    <div className="role-actions">
-                                                        <button
-                                                            className="habbo-btn default"
-                                                            onClick={() => {
-                                                                setEditRoleId(
-                                                                    rank.id
-                                                                );
-                                                                setRoleName(
-                                                                    rank.name
-                                                                );
-                                                                setRolePermissions(
-                                                                    {
-                                                                        bankAccess:
-                                                                            !!rank.canAccessBank,
-                                                                        kickMembers:
-                                                                            !!rank.canKick,
-                                                                        inviteMembers:
-                                                                            !!rank.canInvite,
-                                                                        administrator:
-                                                                            !!rank.administrator,
-                                                                    }
-                                                                );
-                                                                setShowEditRoleModal(
-                                                                    true
-                                                                );
-                                                            }}
-                                                        >
-                                                            Edit Role
-                                                        </button>
-                                                        <button
-                                                            className="habbo-btn danger"
-                                                            onClick={() =>
-                                                                deleteRole(
-                                                                    rank.id
-                                                                )
+                                                        <span className="rank-count">
+                                                            {members.length}
+                                                        </span>
+                                                    </div>
+
+                                                    {ownerOrAdmin && (
+                                                        <div
+                                                            className="rank-head__right"
+                                                            onClick={(e) =>
+                                                                e.stopPropagation()
                                                             }
                                                         >
-                                                            Delete
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {!collapsedRanks.includes(
-                                                rank.position
-                                            ) && (
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        flexWrap: "wrap",
-                                                        gap: 12,
-                                                        marginTop: 8,
-                                                    }}
-                                                >
-                                                    {members.length > 0 ? (
-                                                        members.map(
-                                                            (member) => (
-                                                                <div
-                                                                    key={
-                                                                        member.userId
-                                                                    }
-                                                                    className="gang-member-card"
-                                                                >
-                                                                    <img
-                                                                        src={`https://www.habbo.com/habbo-imaging/avatarimage?figure=${encodeURIComponent(
-                                                                            member.figure
-                                                                        )}&headonly=1&direction=2&gesture=sml`}
-                                                                        alt={
-                                                                            member.username
-                                                                        }
-                                                                    />
-                                                                    <span>
+                                                            <button
+                                                                className="gang-btn gang-btn--default is-small"
+                                                                onClick={() => {
+                                                                    setEditRoleId(
+                                                                        rank.id
+                                                                    );
+                                                                    setRoleName(
+                                                                        rank.name
+                                                                    );
+                                                                    setRolePermissions(
                                                                         {
-                                                                            member.username
+                                                                            bankAccess:
+                                                                                !!rank.canAccessBank,
+                                                                            kickMembers:
+                                                                                !!rank.canKick,
+                                                                            inviteMembers:
+                                                                                !!rank.canInvite,
+                                                                            administrator:
+                                                                                !!rank.administrator,
                                                                         }
-                                                                    </span>
+                                                                    );
+                                                                    setShowEditRoleModal(
+                                                                        true
+                                                                    );
+                                                                }}
+                                                            >
+                                                                Edit
+                                                            </button>
 
-                                                                    {ownerOrAdmin &&
-                                                                        viewer?.userId !==
-                                                                            member.userId && (
-                                                                            <select
-                                                                                value={
-                                                                                    member.rankOrder
-                                                                                }
-                                                                                onChange={(
-                                                                                    e
-                                                                                ) =>
-                                                                                    handleRankChange(
-                                                                                        member.userId,
-                                                                                        parseInt(
-                                                                                            e
-                                                                                                .target
-                                                                                                .value,
-                                                                                            10
-                                                                                        )
-                                                                                    )
-                                                                                }
-                                                                                style={{
-                                                                                    marginTop: 6,
-                                                                                }}
-                                                                            >
-                                                                                {gangRanks.map(
-                                                                                    (
-                                                                                        r
-                                                                                    ) => (
-                                                                                        <option
-                                                                                            key={
-                                                                                                r.position
-                                                                                            }
-                                                                                            value={
-                                                                                                r.position
-                                                                                            }
-                                                                                        >
-                                                                                            {
-                                                                                                r.name
-                                                                                            }
-                                                                                        </option>
-                                                                                    )
-                                                                                )}
-                                                                            </select>
-                                                                        )}
-                                                                </div>
-                                                            )
-                                                        )
-                                                    ) : (
-                                                        <span className="members-info">
-                                                            No members in this
-                                                            role.
-                                                        </span>
+                                                            <button
+                                                                className="gang-btn gang-btn--danger is-small"
+                                                                onClick={() =>
+                                                                    deleteRole(
+                                                                        rank.id
+                                                                    )
+                                                                }
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </div>
                                                     )}
+                                                </button>
+
+                                                <div
+                                                    className={`rank-body ${
+                                                        isCollapsed
+                                                            ? "is-collapsed"
+                                                            : "is-open"
+                                                    }`}
+                                                >
+                                                    <div className="rank-body__inner">
+                                                        {members.length > 0 ? (
+                                                            <div className="member-grid">
+                                                                {members.map(
+                                                                    (
+                                                                        member
+                                                                    ) => (
+                                                                        <div
+                                                                            key={
+                                                                                member.userId
+                                                                            }
+                                                                            className="member-card"
+                                                                        >
+                                                                            <img
+                                                                                src={`https://www.habbo.com/habbo-imaging/avatarimage?figure=${encodeURIComponent(
+                                                                                    member.figure
+                                                                                )}&headonly=1&direction=2&gesture=sml`}
+                                                                                alt={
+                                                                                    member.username
+                                                                                }
+                                                                                draggable={
+                                                                                    false
+                                                                                }
+                                                                            />
+
+                                                                            <div
+                                                                                className="member-name"
+                                                                                title={
+                                                                                    member.username
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    member.username
+                                                                                }
+                                                                            </div>
+
+                                                                            {ownerOrAdmin &&
+                                                                                viewer?.userId !==
+                                                                                    member.userId && (
+                                                                                    <select
+                                                                                        className="member-rank-select"
+                                                                                        value={
+                                                                                            member.rankOrder
+                                                                                        }
+                                                                                        onChange={(
+                                                                                            e
+                                                                                        ) =>
+                                                                                            handleRankChange(
+                                                                                                member.userId,
+                                                                                                parseInt(
+                                                                                                    e
+                                                                                                        .target
+                                                                                                        .value,
+                                                                                                    10
+                                                                                                )
+                                                                                            )
+                                                                                        }
+                                                                                    >
+                                                                                        {gangRanks
+                                                                                            .slice()
+                                                                                            .sort(
+                                                                                                (
+                                                                                                    a,
+                                                                                                    b
+                                                                                                ) =>
+                                                                                                    a.position -
+                                                                                                    b.position
+                                                                                            )
+                                                                                            .map(
+                                                                                                (
+                                                                                                    r
+                                                                                                ) => (
+                                                                                                    <option
+                                                                                                        key={
+                                                                                                            r.position
+                                                                                                        }
+                                                                                                        value={
+                                                                                                            r.position
+                                                                                                        }
+                                                                                                    >
+                                                                                                        {
+                                                                                                            r.name
+                                                                                                        }
+                                                                                                    </option>
+                                                                                                )
+                                                                                            )}
+                                                                                    </select>
+                                                                                )}
+                                                                        </div>
+                                                                    )
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="members-empty">
+                                                                No members in
+                                                                this role.
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                                            </div>
+                                        );
+                                    })}
 
                             {/* Orphan positions (no matching rank object) */}
                             {orphanPositions.map((pos) => (
                                 <div
                                     key={`orphan-${pos}`}
-                                    className="gang-rank-group"
+                                    className="rank-group"
                                 >
-                                    <div
-                                        className="rank-label"
-                                        style={{
-                                            fontStyle: "italic",
-                                            opacity: 0.8,
-                                        }}
+                                    <button
+                                        type="button"
+                                        className={`rank-head ${
+                                            collapsedRanks.includes(pos)
+                                                ? "is-collapsed"
+                                                : "is-open"
+                                        }`}
+                                        onClick={() => toggleCollapse(pos)}
                                     >
-                                        Unknown Role (pos {pos})
-                                    </div>
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            flexWrap: "wrap",
-                                            gap: 12,
-                                            marginTop: 8,
-                                        }}
-                                    >
-                                        {groupedMembers[pos].map((member) => (
-                                            <div
-                                                key={member.userId}
-                                                className="gang-member-card"
+                                        <div className="rank-head__left">
+                                            <span
+                                                className="rank-arrow"
+                                                aria-hidden="true"
                                             >
-                                                <img
-                                                    src={`https://www.habbo.com/habbo-imaging/avatarimage?figure=${encodeURIComponent(
-                                                        member.figure
-                                                    )}&headonly=1&direction=2&gesture=sml`}
-                                                    alt={member.username}
-                                                />
-                                                <span>{member.username}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
+                                                ▼
+                                            </span>
+                                            <span className="rank-name is-muted">
+                                                Unknown Role (pos {pos})
+                                            </span>
+                                            <span className="rank-count">
+                                                {groupedMembers[pos]?.length ??
+                                                    0}
+                                            </span>
+                                        </div>
+                                    </button>
 
-                            {/* Unranked */}
-                            {groupedMembers[-1] && (
-                                <div
-                                    className="gang-rank-group"
-                                    style={{ marginTop: 20 }}
-                                >
                                     <div
-                                        className="rank-label"
-                                        onClick={() => toggleCollapse(-1)}
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "center",
-                                            cursor: "pointer",
-                                        }}
+                                        className={`rank-body ${
+                                            collapsedRanks.includes(pos)
+                                                ? "is-collapsed"
+                                                : "is-open"
+                                        }`}
                                     >
-                                        <span
-                                            style={{
-                                                fontWeight: "bold",
-                                                fontStyle: "italic",
-                                                color: "gray",
-                                            }}
-                                        >
-                                            No Role
-                                        </span>
-                                    </div>
-
-                                    {!collapsedRanks.includes(-1) && (
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                flexWrap: "wrap",
-                                                gap: 12,
-                                                marginTop: 10,
-                                            }}
-                                        >
-                                            {groupedMembers[-1].length > 0 ? (
-                                                groupedMembers[-1].map(
+                                        <div className="rank-body__inner">
+                                            <div className="member-grid">
+                                                {groupedMembers[pos].map(
                                                     (member) => (
                                                         <div
-                                                            className="gang-member-card"
                                                             key={member.userId}
+                                                            className="member-card"
                                                         >
                                                             <img
                                                                 src={`https://www.habbo.com/habbo-imaging/avatarimage?figure=${encodeURIComponent(
@@ -1785,30 +1822,104 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                                                 alt={
                                                                     member.username
                                                                 }
+                                                                draggable={
+                                                                    false
+                                                                }
                                                             />
-                                                            <span>
+                                                            <div className="member-name">
                                                                 {
                                                                     member.username
                                                                 }
-                                                            </span>
+                                                            </div>
                                                         </div>
                                                     )
-                                                )
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Unranked */}
+                            {groupedMembers[-1] && (
+                                <div className="rank-group">
+                                    <button
+                                        type="button"
+                                        className={`rank-head ${
+                                            collapsedRanks.includes(-1)
+                                                ? "is-collapsed"
+                                                : "is-open"
+                                        }`}
+                                        onClick={() => toggleCollapse(-1)}
+                                    >
+                                        <div className="rank-head__left">
+                                            <span
+                                                className="rank-arrow"
+                                                aria-hidden="true"
+                                            >
+                                                ▼
+                                            </span>
+                                            <span className="rank-name is-muted">
+                                                No Role
+                                            </span>
+                                            <span className="rank-count">
+                                                {groupedMembers[-1].length}
+                                            </span>
+                                        </div>
+                                    </button>
+
+                                    <div
+                                        className={`rank-body ${
+                                            collapsedRanks.includes(-1)
+                                                ? "is-collapsed"
+                                                : "is-open"
+                                        }`}
+                                    >
+                                        <div className="rank-body__inner">
+                                            {groupedMembers[-1].length > 0 ? (
+                                                <div className="member-grid">
+                                                    {groupedMembers[-1].map(
+                                                        (member) => (
+                                                            <div
+                                                                key={
+                                                                    member.userId
+                                                                }
+                                                                className="member-card"
+                                                            >
+                                                                <img
+                                                                    src={`https://www.habbo.com/habbo-imaging/avatarimage?figure=${encodeURIComponent(
+                                                                        member.figure
+                                                                    )}&headonly=1&direction=2&gesture=sml`}
+                                                                    alt={
+                                                                        member.username
+                                                                    }
+                                                                    draggable={
+                                                                        false
+                                                                    }
+                                                                />
+                                                                <div className="member-name">
+                                                                    {
+                                                                        member.username
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    )}
+                                                </div>
                                             ) : (
-                                                <span className="members-info">
+                                                <div className="members-empty">
                                                     No members without roles.
-                                                </span>
+                                                </div>
                                             )}
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
                             )}
 
-                            {/* Add role */}
                             {ownerOrAdmin && (
-                                <div style={{ marginTop: 20 }}>
+                                <div className="members-footer">
                                     <button
-                                        className="habbo-btn default"
+                                        className="gang-btn gang-btn--success"
                                         onClick={() =>
                                             setShowNewRoleModal(true)
                                         }
@@ -1904,7 +2015,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
 
                                     <div className="pagination-controls">
                                         <button
-                                            className="habbo-btn default"
+                                            className="gang-btn gang-btn--default is-small"
                                             onClick={() =>
                                                 setIconsPage((p) =>
                                                     Math.max(p - 1, 0)
@@ -1918,7 +2029,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                             {iconsPage + 1} / {totalIconPages}
                                         </span>
                                         <button
-                                            className="habbo-btn default"
+                                            className="gang-btn gang-btn--default is-small"
                                             onClick={() =>
                                                 setIconsPage((p) =>
                                                     Math.min(
@@ -1960,7 +2071,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
 
                                     <div className="settings-actions right">
                                         <button
-                                            className="habbo-btn default"
+                                            className="gang-btn gang-btn--success"
                                             onClick={() => {
                                                 SendMessageComposer(
                                                     new EditGangComposer(
@@ -1985,7 +2096,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                 </div>
             </div>
 
-            {/* Modal layer – single source for all popups */}
+            {/* Modal layer */}
             <div className="gangs-modal-layer">
                 {renderConfirmDisband()}
                 {renderNewRole()}
