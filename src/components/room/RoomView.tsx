@@ -40,6 +40,7 @@ import { HotRoomsView } from "../roleplay/HotRoomsView";
 import { JobBoardView } from "../roleplay/JobBoardView";
 import { OnboardingOverlay } from "../../components/roleplay/OnboardingOverlay";
 import { CombatCooldownView } from "../../components/roleplay/CombatCooldownView";
+import { HeistTimerWidget } from "../roleplay/HeistTimerWidget";
 
 /* -----------------------------------------------------------
 Click-through helpers
@@ -214,6 +215,7 @@ Render
                     <RoomWidgetsView />
                     <GatheringProgressBar />
                     <GangClaimView />
+                    <HeistTimerWidget></HeistTimerWidget>
                     <TaxiView />
                     <JukeboxView />
                     <ATMView></ATMView>
