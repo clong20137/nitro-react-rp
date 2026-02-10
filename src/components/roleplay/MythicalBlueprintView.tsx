@@ -6,7 +6,6 @@ import React, {
     useRef,
     useState,
 } from "react";
-
 import { GetCommunication } from "../../api/nitro/GetCommunication";
 import { GetNitroInstance } from "../../api/nitro/GetNitroInstance";
 
@@ -14,7 +13,7 @@ import { RequestInventoryItemsComposer } from "@nitrots/nitro-renderer/src/nitro
 import { InventoryStore } from "@nitrots/nitro-renderer/src/nitro/communication/messages/parser/roleplay/InventoryStore";
 import { InventoryContext } from "../../api/contexts/inventory/InventoryContext";
 
-// ✅ Your new outgoing composers (client -> server)
+// ✅ Your blueprint outgoing composers (make sure these exist in your client)
 import { MythicalBlueprintCloseComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/MythicalBlueprintCloseComposer";
 import { MythicalBlueprintAddItemComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/MythicalBlueprintAddItemComposer";
 import { MythicalBlueprintRemoveItemComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/MythicalBlueprintRemoveItemComposer";
@@ -24,12 +23,10 @@ import "./MythicalBlueprintView.scss";
 
 type BlueprintState = {
     isOpen: boolean;
-
     sessionId: number;
     blueprintItemId: number;
 
-    slotCount: number;
-
+    // left slots (inventory row ids)
     weaponInvItemId: number;
     augmentInvItemId: number;
     optionalInvItemId: number;
@@ -38,37 +35,21 @@ type BlueprintState = {
     craftable: boolean;
 };
 
-type DragPayload = { kind: "inv"; invRowId: number; quantity: number };
-const DRAG_MIME = "application/x-olympus-blueprint";
-
 const EMPTY: BlueprintState = {
     isOpen: false,
-
     sessionId: 0,
     blueprintItemId: 0,
-
-    slotCount: 3,
-
     weaponInvItemId: 0,
     augmentInvItemId: 0,
     optionalInvItemId: 0,
-
     predictedUpgradeId: 0,
     craftable: false,
 };
 
-const isType = (it: InventoryContext | undefined, t: string) =>
-    (it?.item_type || "").toLowerCase() === t.toLowerCase();
+type DragPayload = { kind: "inv"; invRowId: number; quantity: number };
+const DRAG_MIME = "application/x-olympus-blueprint";
 
-const slotAccepts = (slotIndex: number, it: InventoryContext | undefined) => {
-    if (slotIndex === 0) return isType(it, "weapon");
-    if (slotIndex === 1) return isType(it, "augment");
-    return true; // optional slot
-};
-
-export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
-    onClose,
-}) => {
+export const MythicalBlueprintView: FC = () => {
     const [bp, setBp] = useState<BlueprintState>(EMPTY);
     const [invItems, setInvItems] = useState<InventoryContext[]>([]);
 
@@ -78,23 +59,22 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
     const [isEntering, setIsEntering] = useState(true);
     const [isExiting, setIsExiting] = useState(false);
 
-    // persisted position (same as trade)
+    // persisted position (same style as Trade)
     const [position, setPosition] = useState<{ x: number; y: number }>(() => {
         try {
             const s = localStorage.getItem("blueprintPos");
             if (s) return JSON.parse(s);
         } catch {}
-        return { x: Math.round(window.innerWidth * 0.1), y: 120 };
+        return { x: Math.round(window.innerWidth * 0.18), y: 120 };
     });
 
-    // window drag (same pattern as trade)
+    // window drag
     const rafRef = useRef<number | null>(null);
     const dragRef = useRef<{ dx: number; dy: number } | null>(null);
     const [headerGrabbing, setHeaderGrabbing] = useState(false);
 
     const clamp = useCallback((x: number, y: number) => {
         const nitro = GetNitroInstance?.() as any;
-
         const sw = nitro?.renderer?.width ?? window.innerWidth;
         const sh = nitro?.renderer?.height ?? window.innerHeight;
 
@@ -122,7 +102,6 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
 
     const moveDrag = (cx: number, cy: number) => {
         if (!dragRef.current) return;
-
         const nx = cx - dragRef.current.dx;
         const ny = cy - dragRef.current.dy;
         const next = clamp(nx, ny);
@@ -162,7 +141,7 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
         window.addEventListener("mouseup", onUp);
     };
 
-    // transparent drag image (same as trade/inventory)
+    // Transparent drag image (same as Trade)
     const transparentImgRef = useRef<HTMLImageElement | null>(null);
     useEffect(() => {
         const img = new Image();
@@ -187,74 +166,73 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
         };
     }, []);
 
-    // helpers
-    const slots = useMemo(
-        () => [bp.weaponInvItemId, bp.augmentInvItemId, bp.optionalInvItemId],
-        [bp.weaponInvItemId, bp.augmentInvItemId, bp.optionalInvItemId]
+    // ✅ helper: find an inventory item by inventory row id (this fixes “icon not showing”)
+    const invByRowId = useCallback(
+        (invRowId: number) => {
+            if (!invRowId) return undefined;
+            return invItems.find((i) => i.id === invRowId);
+        },
+        [invItems]
     );
 
-    const setSlot = (slotIndex: number, invRowId: number) => {
-        setBp((prev) => {
-            if (slotIndex === 0) return { ...prev, weaponInvItemId: invRowId };
-            if (slotIndex === 1) return { ...prev, augmentInvItemId: invRowId };
-            return { ...prev, optionalInvItemId: invRowId };
-        });
-    };
-
-    const openFromBridge = (d: any) => {
-        // IMPORTANT: do NOT auto-close here.
-        setIsExiting(false);
-        setIsEntering(true);
-
-        setBp({
-            isOpen: true,
-            sessionId: Number(d?.sessionId ?? 0),
-            blueprintItemId: Number(d?.blueprintItemId ?? 0),
-            slotCount: Number(d?.slotCount ?? 3),
-
-            weaponInvItemId: Number(d?.weaponInvItemId ?? 0),
-            augmentInvItemId: Number(d?.augmentInvItemId ?? 0),
-            optionalInvItemId: Number(d?.optionalInvItemId ?? 0),
-
-            predictedUpgradeId: Number(d?.predictedUpgradeId ?? 0),
-            craftable: !!d?.craftable,
-        });
-
-        // refresh inventory when blueprint opens (same as trade)
-        GetCommunication().connection.send(new RequestInventoryItemsComposer());
-    };
-
-    const updateFromBridge = (d: any) => {
-        setBp((prev) => ({
-            ...prev,
-            isOpen: true,
-            sessionId: Number(d?.sessionId ?? prev.sessionId),
-            blueprintItemId: Number(d?.blueprintItemId ?? prev.blueprintItemId),
-            slotCount: Number(d?.slotCount ?? prev.slotCount),
-
-            weaponInvItemId: Number(d?.weaponInvItemId ?? prev.weaponInvItemId),
-            augmentInvItemId: Number(
-                d?.augmentInvItemId ?? prev.augmentInvItemId
-            ),
-            optionalInvItemId: Number(
-                d?.optionalInvItemId ?? prev.optionalInvItemId
-            ),
-
-            predictedUpgradeId: Number(
-                d?.predictedUpgradeId ?? prev.predictedUpgradeId
-            ),
-            craftable:
-                typeof d?.craftable === "boolean"
-                    ? d.craftable
-                    : prev.craftable,
-        }));
-    };
-
-    // bridge listeners
+    // bridge listeners (events dispatched by your bridges)
     useEffect(() => {
-        const onOpen = (e: any) => openFromBridge(e?.detail ?? {});
-        const onUpdate = (e: any) => updateFromBridge(e?.detail ?? {});
-        const onResult = (e: any) => updateFromBridge(e?.detail ?? {});
+        const onOpen = (e: any) => {
+            const d = e?.detail ?? {};
+
+            setIsExiting(false);
+            setIsEntering(true);
+
+            setBp({
+                isOpen: true,
+                sessionId: Number(d.sessionId ?? 0),
+                blueprintItemId: Number(d.blueprintItemId ?? 0),
+                weaponInvItemId: Number(d.weaponInvItemId ?? 0),
+                augmentInvItemId: Number(d.augmentInvItemId ?? 0),
+                optionalInvItemId: Number(d.optionalInvItemId ?? 0),
+                predictedUpgradeId: Number(d.predictedUpgradeId ?? 0),
+                craftable: !!d.craftable,
+            });
+
+            GetCommunication().connection.send(
+                new RequestInventoryItemsComposer()
+            );
+            console.log("[Blueprint] open", d);
+        };
+
+        const onUpdate = (e: any) => {
+            const d = e?.detail ?? {};
+            setBp((prev) => ({
+                ...prev,
+                sessionId: Number(d.sessionId ?? prev.sessionId),
+                blueprintItemId: Number(
+                    d.blueprintItemId ?? prev.blueprintItemId
+                ),
+                weaponInvItemId: Number(
+                    d.weaponInvItemId ?? prev.weaponInvItemId
+                ),
+                augmentInvItemId: Number(
+                    d.augmentInvItemId ?? prev.augmentInvItemId
+                ),
+                optionalInvItemId: Number(
+                    d.optionalInvItemId ?? prev.optionalInvItemId
+                ),
+                predictedUpgradeId: Number(
+                    d.predictedUpgradeId ?? prev.predictedUpgradeId
+                ),
+                craftable:
+                    typeof d.craftable === "boolean"
+                        ? d.craftable
+                        : prev.craftable,
+            }));
+        };
+
+        const onResult = (e: any) => {
+            const d = e?.detail ?? {};
+            // if you want, show toast here
+            if (d?.success) setIsExiting(true);
+        };
+
         const onCloseEvent = () => setIsExiting(true);
 
         window.addEventListener("mythical_blueprint_open", onOpen as any);
@@ -285,25 +263,41 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
         };
     }, []);
 
-    // outgoing packets
+    const handleAnimEnd: React.AnimationEventHandler<HTMLDivElement> = (e) => {
+        if (e.currentTarget !== winRef.current) return;
+
+        if (isExiting) {
+            setBp(EMPTY);
+            setIsExiting(false);
+            return;
+        }
+
+        if (isEntering) setIsEntering(false);
+    };
+
     const sendClose = () => {
-        if (!bp.sessionId || !bp.blueprintItemId) return;
+        if (!bp.sessionId || !bp.blueprintItemId) {
+            setIsExiting(true);
+            return;
+        }
 
         GetCommunication().connection.send(
             new MythicalBlueprintCloseComposer(bp.sessionId, bp.blueprintItemId)
         );
+
+        setIsExiting(true);
     };
 
     const sendCraft = () => {
         if (!bp.sessionId || !bp.blueprintItemId) return;
+        if (!bp.craftable) return;
 
         GetCommunication().connection.send(
             new MythicalBlueprintCraftComposer(bp.sessionId, bp.blueprintItemId)
         );
-        // wait for mythical_blueprint_result to update UI
     };
 
-    const sendRemove = (slotIndex: number) => {
+    const sendRemoveSlot = (slotIndex: number) => {
         if (!bp.sessionId || !bp.blueprintItemId) return;
 
         GetCommunication().connection.send(
@@ -315,25 +309,6 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
         );
     };
 
-    const sendAdd = (
-        slotIndex: number,
-        invRowId: number,
-        quantity: number = 1
-    ) => {
-        if (!bp.sessionId || !bp.blueprintItemId) return;
-
-        GetCommunication().connection.send(
-            new MythicalBlueprintAddItemComposer(
-                bp.sessionId,
-                bp.blueprintItemId,
-                invRowId,
-                quantity,
-                slotIndex
-            )
-        );
-    };
-
-    // DnD from inventory -> blueprint slot
     const onInvDragStart = (
         e: React.DragEvent,
         invRowId: number,
@@ -365,50 +340,39 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
             return;
         }
 
-        if (!parsed || parsed.kind !== "inv") return;
+        if (!parsed) return;
+        if (parsed.kind !== "inv") return;
 
-        const it = invItems.find((i) => i.id === parsed!.invRowId);
-        if (!slotAccepts(slotIndex, it)) return;
-
-        // optimistic UI
-        setSlot(slotIndex, parsed.invRowId);
-
-        // server (consumes 1 augment on craft, not on add)
-        sendAdd(slotIndex, parsed.invRowId, 1);
+        // trade-style: place 1 from stack
+        GetCommunication().connection.send(
+            new MythicalBlueprintAddItemComposer(
+                bp.sessionId,
+                bp.blueprintItemId,
+                parsed.invRowId,
+                1,
+                slotIndex
+            )
+        );
     };
 
-    const handleClose = () => {
-        if (isExiting) return;
-        setIsExiting(true);
+    // slot rendering
+    const slotLabel = (idx: number) => {
+        if (idx === 0) return "Weapon";
+        if (idx === 1) return "Augment";
+        return "Optional";
     };
 
-    const handleAnimEnd: React.AnimationEventHandler<HTMLDivElement> = (e) => {
-        if (e.currentTarget !== winRef.current) return;
-
-        if (isExiting) {
-            // send close AFTER animation starts (same style as your trade cancel fallback)
-            sendClose();
-
-            setBp(EMPTY);
-            setIsExiting(false);
-            onClose?.();
-            return;
-        }
-
-        if (isEntering) setIsEntering(false);
+    const slotInvId = (idx: number) => {
+        if (idx === 0) return bp.weaponInvItemId;
+        if (idx === 1) return bp.augmentInvItemId;
+        return bp.optionalInvItemId;
     };
 
-    const upgradeName = useMemo(() => {
-        const id = bp.predictedUpgradeId;
-        if (!id) return "—";
-        if (id === 1) return "Panacea";
-        if (id === 2) return "Poison";
-        if (id === 3) return "Executioner";
-        return `Upgrade #${id}`;
-    }, [bp.predictedUpgradeId]);
-
-    // Don’t render unless open or exiting animation
+    // If not open, render nothing (same as Trade)
     if (!bp.isOpen && !isExiting) return null;
+
+    // 12-slot inventory layout (one row)
+    const invSlots = useMemo(() => Array.from({ length: 12 }, (_, i) => i), []);
 
     return (
         <div
@@ -421,7 +385,6 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
             role="dialog"
             aria-label="Mythical Blueprint"
         >
-            {/* header: exact same as trade/inventory */}
             <div
                 className={`inventory-header ${
                     headerGrabbing ? "is-grabbing" : ""
@@ -435,85 +398,100 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
                         type="button"
                         className="inventory-close"
                         aria-label="Close blueprint"
-                        onClick={handleClose}
+                        onClick={sendClose}
                     />
                 </div>
             </div>
 
-            <div className="trade-body">
-                <div className="trade-offers">
-                    {/* LEFT */}
-                    <div className="trade-side">
-                        <div className="trade-side-title">Slots</div>
+            <div className="blueprint-body">
+                <div className="blueprint-top">
+                    {/* Left slots */}
+                    <div className="blueprint-slots">
+                        <div className="blueprint-side-title">Slots</div>
 
-                        <div className="trade-slots-grid">
-                            {Array.from(
-                                { length: bp.slotCount },
-                                (_, slotIndex) => {
-                                    const rowId = slots[slotIndex] || 0;
-                                    const filled = rowId > 0;
+                        <div className="blueprint-slots-row">
+                            {[0, 1, 2].map((slotIndex) => {
+                                const invId = slotInvId(slotIndex);
+                                const invItem = invByRowId(invId);
 
-                                    return (
+                                return (
+                                    <div
+                                        key={`slot-${slotIndex}`}
+                                        className="blueprint-slot-wrap"
+                                        onDragOver={(e) => {
+                                            e.preventDefault();
+                                            e.dataTransfer.dropEffect = "move";
+                                        }}
+                                        onDrop={(e) => onSlotDrop(e, slotIndex)}
+                                    >
+                                        <div className="blueprint-slot-title">
+                                            {slotLabel(slotIndex)}
+                                        </div>
+
                                         <div
-                                            key={`bp-slot-${slotIndex}`}
-                                            className="slot-wrapper"
-                                            onDragOver={(e) => {
-                                                e.preventDefault();
-                                                e.dataTransfer.dropEffect =
-                                                    "move";
-                                            }}
-                                            onDrop={(e) =>
-                                                onSlotDrop(e, slotIndex)
-                                            }
+                                            className={`inventory-slot blueprint-slot`}
                                         >
-                                            <div className="inventory-slot">
-                                                {!filled && (
-                                                    <div className="slot-number centered">
-                                                        {slotIndex === 0
-                                                            ? "Weapon"
-                                                            : slotIndex === 1
-                                                            ? "Augment"
-                                                            : "Optional"}
-                                                    </div>
-                                                )}
+                                            {!invId && (
+                                                <div className="slot-number centered">
+                                                    {slotIndex + 1}
+                                                </div>
+                                            )}
 
-                                                {filled && (
-                                                    <div className="inventory-item-wrapper">
-                                                        {/* You can replace this with icon renderer later.
-For now we show rowId just like debug */}
-                                                        <div className="slot-number centered">
-                                                            {rowId}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {filled && (
-                                                <button
-                                                    type="button"
-                                                    className="bp-remove-mini"
-                                                    onClick={() => {
-                                                        setSlot(slotIndex, 0);
-                                                        sendRemove(slotIndex);
-                                                    }}
+                                            {!!invId && invItem && (
+                                                <div
+                                                    className="inventory-item-wrapper"
+                                                    title={invItem.name}
                                                 >
-                                                    Remove
-                                                </button>
+                                                    {!!invItem.icon_path && (
+                                                        <img
+                                                            src={
+                                                                invItem.icon_path
+                                                            }
+                                                            alt={invItem.name}
+                                                            draggable={false}
+                                                        />
+                                                    )}
+
+                                                    {(invItem.quantity ?? 0) >
+                                                        1 && (
+                                                        <div className="quantity-label">
+                                                            x{invItem.quantity}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* ✅ If server says slot is filled but item not found locally yet */}
+                                            {!!invId && !invItem && (
+                                                <div className="slot-number centered">
+                                                    {invId}
+                                                </div>
                                             )}
                                         </div>
-                                    );
-                                }
-                            )}
+
+                                        {invId > 0 && (
+                                            <button
+                                                className="blueprint-remove-btn"
+                                                type="button"
+                                                onClick={() =>
+                                                    sendRemoveSlot(slotIndex)
+                                                }
+                                            >
+                                                Remove
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
 
-                        <div className="trade-inventory-hint">
-                            Drag a <strong>Weapon</strong> +{" "}
-                            <strong>Augment</strong> into slots.
+                        <div className="blueprint-hint">
+                            Drag a Weapon + Augment into slots.
                         </div>
                     </div>
 
-                    {/* CENTER */}
-                    <div className="trade-center">
+                    {/* Center actions */}
+                    <div className="blueprint-center">
                         <button
                             className="trade-btn trade-confirm"
                             disabled={!bp.craftable}
@@ -524,32 +502,30 @@ For now we show rowId just like debug */}
 
                         <button
                             className="trade-btn trade-cancel"
-                            onClick={handleClose}
+                            onClick={sendClose}
                         >
                             Close
                         </button>
 
-                        <div className="trade-status">
+                        <div className="blueprint-session">
                             <div>Session: {bp.sessionId}</div>
                             <div>Blueprint: {bp.blueprintItemId}</div>
                         </div>
                     </div>
 
-                    {/* RIGHT */}
-                    <div className="trade-side">
-                        <div className="trade-side-title">Outcome</div>
+                    {/* Outcome */}
+                    <div className="blueprint-outcome">
+                        <div className="blueprint-side-title">Outcome</div>
 
-                        <div className="bp-outcome-panel">
-                            <div className="bp-outcome-title">
-                                {upgradeName}
-                            </div>
-                            <div className="bp-outcome-sub">
-                                Upgrade ID: {bp.predictedUpgradeId || 0}
+                        <div className="blueprint-outcome-box">
+                            <div className="blueprint-outcome-line">
+                                Upgrade ID:{" "}
+                                <strong>{bp.predictedUpgradeId}</strong>
                             </div>
 
                             <div
-                                className={`bp-outcome-badge ${
-                                    bp.craftable ? "ok" : "bad"
+                                className={`blueprint-outcome-badge ${
+                                    bp.craftable ? "ok" : "no"
                                 }`}
                             >
                                 {bp.craftable ? "Craftable" : "Not craftable"}
@@ -558,19 +534,17 @@ For now we show rowId just like debug */}
                     </div>
                 </div>
 
-                {/* Inventory grid (same as trade) */}
-                <div className="trade-inventory">
-                    <div className="trade-inventory-title">
+                {/* Inventory - ✅ 1 row of 12 slots */}
+                <div className="blueprint-inventory">
+                    <div className="blueprint-inventory-title">
                         Your Inventory (drag into the slots)
                     </div>
 
-                    <div className="inventory-grid trade-inventory-grid">
-                        {Array.from({ length: 12 }, (_, slotIndex) => {
+                    <div className="inventory-grid blueprint-inventory-grid">
+                        {invSlots.map((slotIndex) => {
                             const it = invItems.find(
                                 (i) => i.slot === slotIndex
                             );
-                            const numberLabel =
-                                slotIndex >= 3 ? String(slotIndex - 2) : null;
 
                             return (
                                 <div
@@ -578,9 +552,9 @@ For now we show rowId just like debug */}
                                     className="slot-wrapper"
                                 >
                                     <div className="inventory-slot">
-                                        {!it && numberLabel && (
+                                        {!it && (
                                             <div className="slot-number centered">
-                                                {numberLabel}
+                                                {slotIndex + 1}
                                             </div>
                                         )}
 
@@ -615,9 +589,8 @@ For now we show rowId just like debug */}
                         })}
                     </div>
 
-                    <div className="trade-inventory-hint">
-                        Slot 1 only accepts <strong>weapon</strong>. Slot 2 only
-                        accepts <strong>augment</strong>.
+                    <div className="blueprint-footnote">
+                        Slot 1 only accepts weapon. Slot 2 only accepts augment.
                     </div>
                 </div>
             </div>

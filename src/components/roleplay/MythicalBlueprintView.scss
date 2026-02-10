@@ -15,7 +15,7 @@
     will-change: transform, opacity, box-shadow;
 }
 
-/* Open / Close animations (same as Inventory) */
+/* Open / Close animations */
 @keyframes invEnter {
     0% {
         opacity: 0;
@@ -56,7 +56,7 @@
     }
 }
 
-/* Header copied from InventoryView */
+/* Header (same as your Trade/Inventory header) */
 .inventory-header {
     position: relative;
     display: flex;
@@ -141,19 +141,18 @@
     transform: translateY(0);
 }
 
-/* Body layout */
-.trade-body {
+.blueprint-body {
     padding: 0 10px 12px;
 }
 
-.trade-offers {
+.blueprint-top {
     display: grid;
     grid-template-columns: 1fr 170px 1fr;
     gap: 12px;
     align-items: start;
 }
 
-.trade-side-title {
+.blueprint-side-title {
     font-size: 14px;
     font-weight: 800;
     margin: 2px 0 6px;
@@ -161,32 +160,57 @@
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
-.trade-slots-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 48px);
-    grid-auto-rows: 48px;
+/* ✅ tighter slot spacing */
+.blueprint-slots-row {
+    display: flex;
     gap: 8px;
+    /* reduced */
     padding: 8px;
+    /* reduced */
     background: rgba(0, 0, 0, 0.06);
     border-radius: 8px;
     border: 1px solid rgba(0, 0, 0, 0.12);
+    align-items: flex-start;
 }
 
-.trade-side-lock {
-    margin-top: 6px;
-    font-weight: 700;
-    color: #333;
-    text-align: center;
-}
-
-.trade-center {
+.blueprint-slot-wrap {
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    padding-top: 24px;
+    align-items: center;
+    gap: 6px;
 }
 
+.blueprint-slot-title {
+    font-weight: 800;
+    font-size: 11px;
+    color: #222;
+    opacity: 0.9;
+}
+
+/* Remove button under each slot */
+.blueprint-remove-btn {
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-weight: 800;
+    cursor: pointer;
+    border: 2px solid rgba(0, 0, 0, 0.18);
+    background: #ffffff;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
+}
+
+.blueprint-remove-btn:hover {
+    filter: brightness(0.98);
+}
+
+.blueprint-hint {
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #333;
+}
+
+/* Center column buttons reuse trade button style */
 .trade-btn {
     height: 34px;
     border-radius: 6px;
@@ -216,7 +240,14 @@
     filter: brightness(0.98);
 }
 
-.trade-status {
+.blueprint-center {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 24px;
+}
+
+.blueprint-session {
     margin-top: 2px;
     font-size: 11px;
     color: #222;
@@ -224,10 +255,42 @@
     text-align: center;
 }
 
-/* Inventory grid copied from InventoryView */
+/* Outcome */
+.blueprint-outcome-box {
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.blueprint-outcome-line {
+    margin-bottom: 8px;
+}
+
+.blueprint-outcome-badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-weight: 900;
+    font-size: 11px;
+    border: 2px solid rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+}
+
+.blueprint-outcome-badge.ok {
+    background: linear-gradient(#4aa3d4, #2f7fb8);
+    border-color: #1f5f92;
+    color: #fff;
+}
+
+.blueprint-outcome-badge.no {
+    background: #ffffff;
+    color: #111;
+}
+
+/* Inventory grid base (same as TradeView) */
 .inventory-grid {
     display: grid;
-    grid-template-columns: repeat(3, 0.2fr);
     gap: 8px;
     padding: 6px 8px 12px 8px;
 }
@@ -294,138 +357,38 @@
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    font-size: 12px;
+    font-size: 16px;
     color: rgba(0, 0, 0, 0.55);
     pointer-events: none;
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
-    padding: 0 3px;
-    text-align: center;
 }
 
-/* Rarities (same as Inventory) */
-.rarity-common {
-    background-color: #bbbbbb;
-}
-
-.rarity-uncommon {
-    background-color: #a8d08d;
-}
-
-.rarity-rare {
-    background-color: #6fa8dc;
-}
-
-.rarity-epic {
-    background-color: #8e7cc3;
-}
-
-.rarity-legendary {
-    background-color: #f4b942;
-}
-
-/* Trade-specific disabled look */
-.inventory-slot.is-disabled {
-    cursor: not-allowed;
-    filter: grayscale(0.35);
-    opacity: 0.75;
-}
-
-.inventory-slot.is-disabled::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.08);
-    pointer-events: none;
-}
-
-/* Trade inventory section */
-.trade-inventory {
+/* ✅ Inventory becomes 1 row of 12 */
+.blueprint-inventory {
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid rgba(0, 0, 0, 0.15);
 }
 
-.trade-inventory-title {
+.blueprint-inventory-title {
     font-weight: 800;
     font-size: 12px;
     margin: 0 0 6px 2px;
     color: #111;
 }
 
-.trade-inventory-hint {
+/* KEY FIX */
+.blueprint-inventory-grid {
+    grid-template-columns: repeat(12, 48px);
+    justify-content: start;
+    gap: 8px;
+    padding-bottom: 8px;
+}
+
+.blueprint-footnote {
     margin-top: 6px;
     font-size: 11px;
     font-weight: 700;
     color: #333;
     text-align: center;
-}
-
-/* Make trade inventory grid slightly tighter */
-.trade-inventory-grid {
-    padding-bottom: 8px;
-}
-
-/* -------------------- Blueprint-specific extras -------------------- */
-
-.bp-remove-mini {
-    margin-top: 6px;
-    height: 22px;
-    padding: 0 8px;
-    border-radius: 6px;
-    font-weight: 800;
-    cursor: pointer;
-    border: 1px solid rgba(0, 0, 0, 0.18);
-    background: #ffffff;
-    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
-    font-size: 11px;
-}
-
-.bp-remove-mini:hover {
-    filter: brightness(0.98);
-}
-
-.bp-outcome-panel {
-    padding: 10px;
-    background: rgba(0, 0, 0, 0.06);
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    min-height: 96px;
-}
-
-.bp-outcome-title {
-    font-size: 14px;
-    font-weight: 900;
-    margin-bottom: 4px;
-    color: #111;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
-}
-
-.bp-outcome-sub {
-    font-size: 11px;
-    font-weight: 800;
-    color: rgba(0, 0, 0, 0.72);
-    margin-bottom: 8px;
-}
-
-.bp-outcome-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 8px;
-    border-radius: 8px;
-    font-weight: 900;
-    font-size: 11px;
-    border: 1px solid rgba(0, 0, 0, 0.18);
-    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
-}
-
-.bp-outcome-badge.ok {
-    background: linear-gradient(#4aa3d4, #2f7fb8);
-    border: 1px solid #1f5f92;
-    color: #fff;
-}
-
-.bp-outcome-badge.bad {
-    background: #ffffff;
-    color: #111;
 }
