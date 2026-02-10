@@ -41,6 +41,7 @@ import { JobBoardView } from "../roleplay/JobBoardView";
 import { OnboardingOverlay } from "../../components/roleplay/OnboardingOverlay";
 import { CombatCooldownView } from "../../components/roleplay/CombatCooldownView";
 import { HeistTimerWidget } from "../roleplay/HeistTimerWidget";
+import { TradeView } from "../roleplay/TradeView";
 
 /* -----------------------------------------------------------
 Click-through helpers
@@ -225,6 +226,7 @@ Render
                     <JobBoardView></JobBoardView>
                     <OnboardingOverlay />
                     <CombatCooldownView></CombatCooldownView>
+                    <TradeView></TradeView>
                     {/*
                     <ArenaQueueView visible={true}></ArenaQueueView>
                     */}

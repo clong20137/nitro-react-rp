@@ -5,7 +5,6 @@ import { UpgradeStatComposer } from "@nitrots/nitro-renderer/src/nitro/communica
 import { ProfileAchievementsRequestComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ProfileAchievementsRequestComposer";
 import { FriendlyTime } from "@nitrots/nitro-renderer";
 
-// ⬇️ imports for profile + badges
 import {
     UserCurrentBadgesComposer,
     UserCurrentBadgesEvent,
@@ -14,7 +13,6 @@ import {
 import { GetSessionDataManager, GetUserProfile } from "../../api";
 import { useMessageEvent } from "../../hooks";
 import { BadgesContainerView } from "../user-profile/views/BadgesContainerView";
-// ⬆️ imports
 
 import { setRPStats } from "./rpStatsCache";
 
@@ -27,7 +25,6 @@ interface RelationshipCounts {
 }
 
 interface StatsProps {
-    /** id of the profile owner (self OR opponent) */
     userId?: number;
 
     kills: number;
@@ -43,7 +40,6 @@ interface StatsProps {
     defense: number;
     gathering: number;
 
-    /** Server can send either casing; we normalize */
     healthlevel?: number;
     healthLevel?: number;
 
@@ -56,27 +52,22 @@ interface StatsProps {
     figure: string;
     motto?: string;
 
-    // Employment/corp
     jobTitle?: string;
     corporationName?: string;
     corporationIconUrl?: string;
 
-    // Presence
     isOnline?: boolean;
 
-    // Gang visuals
     gangName?: string;
     gangId?: number;
     gangIconKey?: string;
-    gangPrimaryColor?: string; // "FF0000" or "#FF0000"
-    gangSecondaryColor?: string; // "00FF00" or "#00FF00"
+    gangPrimaryColor?: string;
+    gangSecondaryColor?: string;
 
-    // Extras for left column
-    createdAt?: string; // e.g., "10-11-2025"
-    lastLogin?: string; // e.g., "3 minutes ago"
+    createdAt?: string;
+    lastLogin?: string;
     relationships?: RelationshipCounts;
 
-    // badges (optional)
     badges?: string[];
 }
 
@@ -97,7 +88,6 @@ export interface AchievementRow {
     badgeUrl: string;
     description?: string;
 
-    // grouping + ordering from server
     groupKey: string;
     groupOrder: number;
     levelOrder: number;
@@ -118,17 +108,18 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
     stats,
     onUpgrade,
     isOnline = stats.isOnline ?? true,
-    achievements,
 }) => {
-    // 🔹 Tell the app that the RP profile is active, so Nitro profile should stay closed
+    // ✅ set this to YOUR checkmark image (png/gif)
+    const CHECKMARK_SRC = "/icons/checkmark.png";
+
+    // Keep Nitro profile closed while RP profile is active
     useEffect(() => {
         (window as any).__rpProfileActive = true;
-
         return () => {
             (window as any).__rpProfileActive = false;
         };
     }, []);
-    // ----- which user is this profile for? (self OR opponent) -----
+
     const sessionUserId = GetSessionDataManager().userId;
     const viewedUserId = stats.userId ?? sessionUserId;
     const targetUserIdRef = useRef<number | null>(viewedUserId ?? null);
@@ -165,7 +156,6 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
         lastLogin: stats.lastLogin,
     });
 
-    // keep viewed user in ref so event handlers always have the latest
     useEffect(() => {
         targetUserIdRef.current = viewedUserId ?? null;
     }, [viewedUserId]);
@@ -230,13 +220,10 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
     useEffect(() => {
         if (!viewedUserId) return;
 
-        // store in ref
         targetUserIdRef.current = viewedUserId;
 
-        // profile (created / last login)
         GetUserProfile(viewedUserId);
 
-        // badges
         try {
             GetCommunication().connection.send(
                 new UserCurrentBadgesComposer(viewedUserId)
@@ -437,14 +424,30 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
         [groupedAchievements]
     );
 
-    useEffect(() => {
-        if (sortedGroupNames.length && !openGroup) {
-            setOpenGroup(sortedGroupNames[0]);
-        }
-    }, [sortedGroupNames, openGroup]);
+    // ✅ IMPORTANT CHANGE:
+    // remove the "force one open" behavior. You can now have NONE open.
+    // (no useEffect that sets openGroup automatically)
 
     const handleToggleGroup = (groupName: string) => {
         setOpenGroup((prev) => (prev === groupName ? null : groupName));
+    };
+
+    const prettyGroupName = (groupName: string) => {
+        return groupName === "kills"
+            ? "Kills"
+            : groupName === "deaths"
+            ? "Deaths"
+            : groupName === "punches"
+            ? "Punches Thrown"
+            : groupName === "damage"
+            ? "Damage"
+            : groupName === "gathering"
+            ? "Gathering"
+            : groupName === "pizza"
+            ? "Pizzas Sold"
+            : groupName === "mining"
+            ? "Mining"
+            : groupName.charAt(0).toUpperCase() + groupName.slice(1);
     };
 
     /* ----------------------------------- UI ----------------------------------- */
@@ -477,6 +480,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                 >
                     General
                 </button>
+
                 <button
                     className={`tab-btn ${
                         tab === "achievements" ? "active" : ""
@@ -512,6 +516,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                     alt="avatar"
                                     draggable={false}
                                 />
+
                                 <div className="avatar-meta">
                                     <div className="username">
                                         {stats.username}
@@ -563,6 +568,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                                 }}
                                             />
                                         </span>
+
                                         {gangIconSrc && (
                                             <img
                                                 className="gang-icon"
@@ -571,7 +577,9 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                                 draggable={false}
                                             />
                                         )}
+
                                         <span>{gangName || "No gang"}</span>
+
                                         {typeof gangId === "number" && (
                                             <span style={{ opacity: 0.6 }}>
                                                 (#{gangId})
@@ -626,12 +634,9 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                             height={22}
                                         />
                                     )}
+
                                     <div>
-                                        <div
-                                            style={{
-                                                fontWeight: 700,
-                                            }}
-                                        >
+                                        <div style={{ fontWeight: 700 }}>
                                             {stats.jobTitle || "Unemployed"}
                                         </div>
                                         <div
@@ -690,6 +695,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                         <div className="skill-name">
                                             {stat.toUpperCase()}
                                         </div>
+
                                         <div className="skill-bar-wrapper">
                                             <div
                                                 className="skill-bar-fill"
@@ -704,6 +710,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                                 </span>
                                             </div>
                                         </div>
+
                                         {uiStats.points > 0 && (
                                             <button
                                                 onClick={() =>
@@ -797,6 +804,15 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                 /* --------------------------- ACHIEVEMENTS TAB --------------------------- */
                 <div className="tab-content">
                     <div className="achievements-panel">
+                        <div className="achievements-toolbar">
+                            <button
+                                className="ach-collapse-all"
+                                onClick={() => setOpenGroup(null)}
+                            >
+                                Collapse All
+                            </button>
+                        </div>
+
                         {achRows.length === 0 ? (
                             <div className="achievements-empty">
                                 No achievements to show yet.
@@ -809,26 +825,8 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                     if (!group) return null;
 
                                     const isOpen = openGroup === groupName;
-
                                     const prettyName =
-                                        groupName === "kills"
-                                            ? "Kills"
-                                            : groupName === "deaths"
-                                            ? "Deaths"
-                                            : groupName === "punches"
-                                            ? "Punches Thrown"
-                                            : groupName === "damage"
-                                            ? "Damage"
-                                            : groupName === "gathering"
-                                            ? "Gathering"
-                                            : groupName === "pizza"
-                                            ? "Pizzas Sold"
-                                            : groupName === "mining"
-                                            ? "Mining"
-                                            : groupName
-                                                  .charAt(0)
-                                                  .toUpperCase() +
-                                              groupName.slice(1);
+                                        prettyGroupName(groupName);
 
                                     return (
                                         <div
@@ -842,78 +840,126 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                                                 onClick={() =>
                                                     handleToggleGroup(groupName)
                                                 }
+                                                aria-expanded={isOpen}
                                             >
                                                 <span className="ach-group-title">
                                                     {prettyName}
                                                 </span>
+
                                                 <span className="ach-group-arrow">
-                                                    {isOpen ? "▲" : "▼"}
+                                                    <span
+                                                        className={`ach-arrow ${
+                                                            isOpen
+                                                                ? "up"
+                                                                : "down"
+                                                        }`}
+                                                    />
                                                 </span>
                                             </button>
 
-                                            {isOpen && (
-                                                <div className="ach-group-grid">
-                                                    {group.rows.map((a) => (
-                                                        <div
-                                                            className="ach-row"
-                                                            key={a.id}
-                                                        >
-                                                            <img
-                                                                className="ach-icon"
-                                                                src={a.badgeUrl}
-                                                                alt={a.name}
-                                                                draggable={
-                                                                    false
-                                                                }
-                                                            />
+                                            {/* ✅ Always render body, animate open/close with CSS */}
+                                            <div className="ach-group-body">
+                                                <div className="ach-group-inner">
+                                                    <div className="ach-group-grid">
+                                                        {group.rows.map((a) => {
+                                                            const completed =
+                                                                a.target > 0 &&
+                                                                a.current >=
+                                                                    a.target;
 
-                                                            <div className="ach-line">
-                                                                <div className="ach-title">
-                                                                    {a.name}
-                                                                </div>
-                                                                <div className="ach-reward">
-                                                                    +
-                                                                    {a.xpReward}{" "}
-                                                                    XP
-                                                                </div>
-                                                            </div>
+                                                            const progPct =
+                                                                a.target > 0
+                                                                    ? Math.min(
+                                                                          100,
+                                                                          (a.current /
+                                                                              a.target) *
+                                                                              100
+                                                                      )
+                                                                    : 0;
 
-                                                            {a.description && (
-                                                                <div className="ach-text">
-                                                                    {
-                                                                        a.description
-                                                                    }
-                                                                </div>
-                                                            )}
+                                                            return (
+                                                                <div
+                                                                    className={`ach-row ${
+                                                                        completed
+                                                                            ? "completed"
+                                                                            : ""
+                                                                    }`}
+                                                                    key={a.id}
+                                                                >
+                                                                    <div className="ach-icon-wrap">
+                                                                        <img
+                                                                            className="ach-icon"
+                                                                            src={
+                                                                                a.badgeUrl
+                                                                            }
+                                                                            alt={
+                                                                                a.name
+                                                                            }
+                                                                            draggable={
+                                                                                false
+                                                                            }
+                                                                        />
 
-                                                            <div className="ach-progress">
-                                                                <div className="ach-bar">
-                                                                    <div
-                                                                        className="ach-fill"
-                                                                        style={{
-                                                                            width: `${
-                                                                                a.target >
-                                                                                0
-                                                                                    ? Math.min(
-                                                                                          100,
-                                                                                          (a.current /
-                                                                                              a.target) *
-                                                                                              100
-                                                                                      )
-                                                                                    : 0
-                                                                            }%`,
-                                                                        }}
-                                                                    />
+                                                                        {/* ✅ Checkmark overlay */}
+                                                                        {completed && (
+                                                                            <img
+                                                                                className="ach-check"
+                                                                                src={
+                                                                                    CHECKMARK_SRC
+                                                                                }
+                                                                                alt="completed"
+                                                                                draggable={
+                                                                                    false
+                                                                                }
+                                                                            />
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div className="ach-line">
+                                                                        <div className="ach-title">
+                                                                            {
+                                                                                a.name
+                                                                            }
+                                                                        </div>
+                                                                        <div className="ach-reward">
+                                                                            +
+                                                                            {
+                                                                                a.xpReward
+                                                                            }{" "}
+                                                                            XP
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {a.description && (
+                                                                        <div className="ach-text">
+                                                                            {
+                                                                                a.description
+                                                                            }
+                                                                        </div>
+                                                                    )}
+
+                                                                    <div className="ach-progress">
+                                                                        <div className="ach-bar">
+                                                                            <div
+                                                                                className="ach-fill"
+                                                                                style={{
+                                                                                    width: `${progPct}%`,
+                                                                                }}
+                                                                            />
+                                                                        </div>
+
+                                                                        <div className="ach-text">
+                                                                            {completed
+                                                                                ? "Completed"
+                                                                                : `${a.current}/${a.target}`}
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="ach-text">
-                                                                    {a.current}/
-                                                                    {a.target}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
                                     );
                                 })}
