@@ -42,6 +42,7 @@ import { OnboardingOverlay } from "../../components/roleplay/OnboardingOverlay";
 import { CombatCooldownView } from "../../components/roleplay/CombatCooldownView";
 import { HeistTimerWidget } from "../roleplay/HeistTimerWidget";
 import { TradeView } from "../roleplay/TradeView";
+import { MythicalBlueprintView } from "../roleplay/MythicalBlueprintView";
 
 /* -----------------------------------------------------------
 Click-through helpers
@@ -227,6 +228,7 @@ Render
                     <OnboardingOverlay />
                     <CombatCooldownView></CombatCooldownView>
                     <TradeView></TradeView>
+                    <MythicalBlueprintView></MythicalBlueprintView>
                     {/*
                     <ArenaQueueView visible={true}></ArenaQueueView>
                     */}
