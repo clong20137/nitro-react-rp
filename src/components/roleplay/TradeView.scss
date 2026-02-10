@@ -1,317 +1,173 @@
+/* Reuse Inventory styling so slots/header match exactly */
+@import "./InventoryView.scss";
+
 .trade-module {
-    width: 760px;
-    border: 2px solid #2b2b2b;
-    border-radius: 6px;
-    background: #e8dfcf;
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
-    overflow: hidden;
-    user-select: none;
+    /* inventory-module already supplies background/border/shadow/etc. */
+    width: max-content;
 }
 
-.trade-header {
-    height: 34px;
-    display: flex;
-    align-items: center;
-    padding: 0 10px;
-    font-weight: 700;
-    color: #fff;
-    background: linear-gradient(#2f6f87, #1b4d60);
-    cursor: grab;
-
-    &.is-grabbing {
-        cursor: grabbing;
-    }
+.trade-content {
+    padding: 6px 8px 10px 8px;
 }
 
-.trade-header-buttons {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-}
-
-.trade-close {
-    width: 22px;
-    height: 22px;
-    border: none;
-    background: #c83a3a;
-    border-radius: 3px;
-    cursor: pointer;
-    position: relative;
-
-    &:before {
-        content: "×";
-        color: #fff;
-        position: absolute;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        font-size: 18px;
-        line-height: 1;
-        font-weight: 900;
-    }
-}
-
-.trade-body {
-    padding: 10px;
-}
-
-.trade-columns {
+.trade-top {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 14px;
+    padding: 0 4px 10px 4px;
 }
 
-.trade-col {
-    background: rgba(255, 255, 255, 0.55);
-    border: 1px solid rgba(0, 0, 0, 0.22);
-    border-radius: 6px;
-    padding: 10px;
+.trade-side {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.trade-panel-title {
+.trade-side-title {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-weight: 800;
-    margin-bottom: 8px;
+    justify-content: space-between;
+
+    font-size: 13px;
+    font-weight: 900;
+    color: #111;
+    padding: 0 2px;
 }
 
-.badge {
-    font-size: 12px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.1);
-}
-
-.badge.ok {
-    background: rgba(38, 162, 73, 0.18);
+.trade-side-status {
+    font-size: 11px;
+    font-weight: 900;
+    opacity: 0.85;
 }
 
 .trade-slots {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, 0.2fr);
+    /* same density feel as inventory-grid */
     gap: 8px;
-    margin-bottom: 10px;
-
-    &.is-readonly .trade-slot {
-        cursor: default;
-    }
-
-    &.is-locked {
-        opacity: 0.85;
-    }
+    padding: 4px 2px 2px 2px;
 }
 
+/* We reuse .inventory-slot, but add trade-specific behavior */
 .trade-slot {
-    height: 78px;
-    border: 2px solid rgba(0, 0, 0, 0.22);
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.75);
-    display: grid;
-    grid-template-rows: 1fr auto;
-    align-items: center;
-    justify-items: center;
-    padding: 6px;
-    cursor: pointer;
-    position: relative;
-
-    &:hover {
-        background: rgba(255, 255, 255, 0.9);
-    }
-
-    .slot-empty {
-        font-weight: 900;
-        opacity: 0.6;
-        font-size: 22px;
-        margin-top: 6px;
-    }
-
-    .slot-icon {
-        width: 34px;
-        height: 34px;
-        object-fit: contain;
-        image-rendering: pixelated;
-    }
-
-    .slot-name {
-        font-size: 12px;
-        font-weight: 700;
-        text-align: center;
-        max-width: 92%;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        margin-top: 2px;
-    }
-
-    .slot-qty {
-        position: absolute;
-        right: 6px;
-        bottom: 6px;
-        font-weight: 900;
-        font-size: 12px;
-        background: rgba(0, 0, 0, 0.15);
-        padding: 1px 6px;
-        border-radius: 999px;
-    }
+    cursor: default;
 }
 
+.trade-side.is-locked .trade-slot {
+    opacity: 0.75;
+    filter: grayscale(0.35);
+}
+
+/* My slots lock hard when I confirm (no dropping) */
+.trade-slot-locked {
+    pointer-events: none;
+    opacity: 0.65;
+    filter: grayscale(0.5);
+}
+
+/* Inventory panel */
 .trade-inventory {
-    border-top: 1px solid rgba(0, 0, 0, 0.18);
-    padding-top: 10px;
+    margin-top: 6px;
+    padding: 8px 8px 10px 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.15);
 }
 
-.trade-inv-header {
+.trade-inventory.is-locked {
+    opacity: 0.75;
+    filter: grayscale(0.35);
+    pointer-events: none;
+}
+
+.trade-inventory-header {
     display: flex;
     align-items: center;
     gap: 8px;
     margin-bottom: 8px;
 }
 
-.trade-inv-title {
+.trade-inventory-title {
+    font-size: 13px;
     font-weight: 900;
 }
 
-.trade-inv-actions {
+.trade-inventory-search {
     margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.trade-inv-search {
     height: 26px;
-    border-radius: 6px;
-    border: 1px solid rgba(0, 0, 0, 0.25);
     padding: 0 8px;
-    background: rgba(255, 255, 255, 0.9);
+    border-radius: 6px;
+    border: 2px solid rgba(0, 0, 0, 0.2);
     outline: none;
+    font-weight: 700;
 }
 
-.trade-inv-refresh {
-    width: 30px;
-    height: 26px;
+.trade-inventory-refresh {
+    min-width: 34px;
+    height: 28px;
     border-radius: 6px;
-    border: 1px solid rgba(0, 0, 0, 0.25);
-    background: rgba(255, 255, 255, 0.85);
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    background: #fff;
     cursor: pointer;
     font-weight: 900;
 }
 
-.trade-inv-grid {
+.trade-inventory-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(6, 0.2fr);
     gap: 8px;
-    min-height: 120px;
+    padding: 2px;
 }
 
-.trade-inv-item {
-    height: 54px;
-    border: 2px solid rgba(0, 0, 0, 0.18);
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.8);
-    display: grid;
-    place-items: center;
-    position: relative;
+/* reuse inventory-slot sizing exactly */
+.trade-inv-slot {
     cursor: grab;
-
-    &:active {
-        cursor: grabbing;
-    }
-
-    img {
-        width: 34px;
-        height: 34px;
-        object-fit: contain;
-        image-rendering: pixelated;
-    }
-
-    .qty {
-        position: absolute;
-        right: 6px;
-        bottom: 4px;
-        font-size: 12px;
-        font-weight: 900;
-        background: rgba(0, 0, 0, 0.15);
-        padding: 1px 6px;
-        border-radius: 999px;
-    }
 }
 
-.trade-inv-empty {
+.trade-inventory-empty {
     grid-column: 1 / -1;
-    padding: 18px;
-    opacity: 0.7;
-    font-weight: 700;
+    padding: 6px 0 2px;
     text-align: center;
+    font-weight: 800;
+    opacity: 0.65;
 }
 
-.trade-hint {
-    margin-top: 8px;
-    font-size: 12px;
-    opacity: 0.85;
-    font-weight: 700;
-}
-
-.trade-controls {
-    margin-top: 10px;
-    display: grid;
-    gap: 8px;
+.trade-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 8px 0 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.15);
 }
 
 .trade-btn {
-    height: 34px;
+    min-width: 120px;
+    height: 32px;
     border-radius: 6px;
-    border: 1px solid rgba(0, 0, 0, 0.25);
     font-weight: 900;
     cursor: pointer;
 }
 
 .trade-confirm {
-    background: linear-gradient(#4fb2d1, #2c7f9b);
+    background: linear-gradient(#4aa3d4, #2f7fb8);
+    border: 2px solid #1f5f92;
     color: #fff;
-
-    &:disabled {
-        opacity: 0.6;
-        cursor: default;
-    }
+    box-shadow: 0 2px 0 rgba(0, 0, 0, .18);
 }
 
 .trade-cancel {
-    background: rgba(255, 255, 255, 0.85);
+    background: #ffffff;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    color: #111;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, .18);
 }
 
-.trade-status {
-    font-size: 12px;
-    font-weight: 800;
-    opacity: 0.9;
+.trade-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+    filter: grayscale(0.35);
 }
 
-.trade-footer {
-    margin-top: 10px;
+.trade-finalizing {
+    margin-left: auto;
+    font-weight: 900;
     opacity: 0.8;
-    font-size: 12px;
-    font-weight: 700;
-    text-align: center;
-}
-
-/* Optional rarity border colors */
-.rarity-common {
-    border-color: rgba(0, 0, 0, 0.18);
-}
-
-.rarity-uncommon {
-    border-color: rgba(50, 160, 80, 0.55);
-}
-
-.rarity-rare {
-    border-color: rgba(60, 120, 210, 0.65);
-}
-
-.rarity-epic {
-    border-color: rgba(170, 70, 210, 0.65);
-}
-
-.rarity-legendary {
-    border-color: rgba(210, 140, 40, 0.75);
 }

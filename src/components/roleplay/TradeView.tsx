@@ -11,14 +11,11 @@ import { GetNitroInstance } from "../../api/nitro/GetNitroInstance";
 
 import { TradeConfirmComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/TradeConfirmComposer";
 import { TradeCancelComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/TradeCancelComposer";
-
-// ✅ You said these already exist. If your names differ, change the imports.
 import { TradeAddItemComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/TradeAddItemComposer";
-import { TradeRemoveItemComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/TradeRemoveItemComposer";
 
-// Inventory inside Trade
 import { RequestInventoryItemsComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/RequestInventoryItemsComposer";
 import { InventoryStore } from "@nitrots/nitro-renderer/src/nitro/communication/messages/parser/roleplay/InventoryStore";
+import { InventoryContext } from "../../api/contexts/inventory/InventoryContext";
 
 import "./TradeView.scss";
 
@@ -52,9 +49,11 @@ const EMPTY_SLOTS: TradeSlot[] = Array.from({ length: 6 }, () => ({
     hasItem: false,
 }));
 
-type InvItem = any; // InventoryContext-like shape from your InventoryStore
+type DragPayload =
+    | { kind: "inv"; invRowId: number; quantity: number }
+    | { kind: "trade"; slotIndex: number; invRowId: number };
 
-type DragPayload = { id: number; from?: "inv" | "trade"; slotIndex?: number };
+const DRAG_MIME = "application/x-olympus-trade";
 
 export const TradeView: FC<{ onClose?: () => void }> = ({ onClose }) => {
     const [trade, setTrade] = useState<TradeState>({
@@ -70,9 +69,7 @@ export const TradeView: FC<{ onClose?: () => void }> = ({ onClose }) => {
         bSlots: EMPTY_SLOTS,
     });
 
-    const [invItems, setInvItems] = useState<InvItem[]>([]);
-    const [invFilter, setInvFilter] = useState("");
-    const [invRefreshing, setInvRefreshing] = useState(false);
+    const [invItems, setInvItems] = useState<InventoryContext[]>([]);
 
     const winRef = useRef<HTMLDivElement>(null);
 
@@ -94,24 +91,14 @@ export const TradeView: FC<{ onClose?: () => void }> = ({ onClose }) => {
     const dragRef = useRef<{ dx: number; dy: number } | null>(null);
     const [headerGrabbing, setHeaderGrabbing] = useState(false);
 
-    // Transparent drag image to avoid native ghost jump
-    const transparentImgRef = useRef<HTMLImageElement | null>(null);
-    useEffect(() => {
-        const img = new Image();
-        img.width = 1;
-        img.height = 1;
-        img.src =
-            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
-        transparentImgRef.current = img;
-    }, []);
-
     const clamp = useCallback((x: number, y: number) => {
         const nitro = GetNitroInstance?.() as any;
+
         const sw = nitro?.renderer?.width ?? window.innerWidth;
         const sh = nitro?.renderer?.height ?? window.innerHeight;
 
-        const w = winRef.current?.offsetWidth ?? 760;
-        const h = winRef.current?.offsetHeight ?? 430;
+        const w = winRef.current?.offsetWidth ?? 740;
+        const h = winRef.current?.offsetHeight ?? 520;
 
         const pad = 8;
         const maxX = Math.max(pad, sw - w - pad);
@@ -134,6 +121,7 @@ export const TradeView: FC<{ onClose?: () => void }> = ({ onClose }) => {
 
     const moveDrag = (cx: number, cy: number) => {
         if (!dragRef.current) return;
+
         const nx = cx - dragRef.current.dx;
         const ny = cy - dragRef.current.dy;
         const next = clamp(nx, ny);
@@ -159,7 +147,7 @@ export const TradeView: FC<{ onClose?: () => void }> = ({ onClose }) => {
         } catch {}
     }, [position]);
 
-    // My userId
+    // Who am I?
     const myUserId = useMemo(() => {
         const nitro = GetNitroInstance?.() as any;
         return nitro?.sessionDataManager?.userId ?? 0;
@@ -181,42 +169,56 @@ export const TradeView: FC<{ onClose?: () => void }> = ({ onClose }) => {
         ? trade.aConfirmed
         : false;
 
-    const mySlots = iAmA ? trade.aSlots : iAmB ? trade.bSlots : trade.aSlots;
-    const otherSlots = iAmA ? trade.bSlots : iAmB ? trade.aSlots : trade.bSlots;
+    const mySideSlots = iAmA
+        ? trade.aSlots
+        : iAmB
+        ? trade.bSlots
+        : trade.aSlots;
+    const otherSideSlots = iAmA
+        ? trade.bSlots
+        : iAmB
+        ? trade.aSlots
+        : trade.bSlots;
 
-    // Inventory subscription
+    const otherName = iAmA
+        ? trade.usernameB
+        : iAmB
+        ? trade.usernameA
+        : trade.usernameB;
+    const myName = iAmA
+        ? trade.usernameA
+        : iAmB
+        ? trade.usernameB
+        : trade.usernameA;
+
+    // transparent drag image
+    const transparentImgRef = useRef<HTMLImageElement | null>(null);
     useEffect(() => {
-        if (!trade.isOpen) return;
+        const img = new Image();
+        img.width = 1;
+        img.height = 1;
+        img.src =
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
+        transparentImgRef.current = img;
+    }, []);
 
+    // Inventory subscription (so Trade window can show inventory)
+    useEffect(() => {
         const comm = GetCommunication();
-        setInvRefreshing(true);
         comm.connection.send(new RequestInventoryItemsComposer());
 
-        setInvItems(InventoryStore.getItems?.() ?? []);
-        const unsub = InventoryStore.onUpdate?.((next: any) => {
-            setInvItems(next ?? []);
-            setInvRefreshing(false);
-        });
-
-        const fallbackTimer = window.setTimeout(
-            () => setInvRefreshing(false),
-            1200
-        );
+        setInvItems(InventoryStore.getItems());
+        const unsub = InventoryStore.onUpdate((next) => setInvItems(next));
 
         return () => {
-            window.clearTimeout(fallbackTimer);
             unsub?.();
+            InventoryStore.clearListeners?.();
         };
-    }, [trade.isOpen]);
+    }, []);
 
-    const refreshInv = () => {
-        const comm = GetCommunication();
-        setInvRefreshing(true);
-        comm.connection.send(new RequestInventoryItemsComposer());
-        window.setTimeout(() => setInvRefreshing(false), 1200);
-    };
+    // bridge listeners
+    const cancelTimeoutRef = useRef<number | null>(null);
 
-    // Bridge listeners
     useEffect(() => {
         const onOpen = (e: any) => {
             const d = e?.detail ?? {};
@@ -236,31 +238,53 @@ export const TradeView: FC<{ onClose?: () => void }> = ({ onClose }) => {
                 aSlots: (d.aSlots ?? EMPTY_SLOTS) as TradeSlot[],
                 bSlots: (d.bSlots ?? EMPTY_SLOTS) as TradeSlot[],
             });
+
+            // refresh inventory when trade opens
+            GetCommunication().connection.send(
+                new RequestInventoryItemsComposer()
+            );
         };
 
         const onUpdate = (e: any) => {
             const d = e?.detail ?? {};
-            setTrade((prev) => ({
-                ...prev,
-                ...d,
-                aSlots: d.aSlots ?? prev.aSlots,
-                bSlots: d.bSlots ?? prev.bSlots,
-                aConfirmed:
-                    typeof d.aConfirmed === "boolean"
-                        ? d.aConfirmed
-                        : prev.aConfirmed,
-                bConfirmed:
-                    typeof d.bConfirmed === "boolean"
-                        ? d.bConfirmed
-                        : prev.bConfirmed,
-            }));
+
+            setTrade((prev) => {
+                const next = {
+                    ...prev,
+                    ...d,
+                    aSlots: d.aSlots ?? prev.aSlots,
+                    bSlots: d.bSlots ?? prev.bSlots,
+                    aConfirmed:
+                        typeof d.aConfirmed === "boolean"
+                            ? d.aConfirmed
+                            : prev.aConfirmed,
+                    bConfirmed:
+                        typeof d.bConfirmed === "boolean"
+                            ? d.bConfirmed
+                            : prev.bConfirmed,
+                };
+
+                // ✅ Close once both confirmed (requested)
+                if (next.aConfirmed && next.bConfirmed) {
+                    setIsExiting(true);
+                }
+
+                return next;
+            });
         };
 
-        const onCloseEvent = () => setIsExiting(true);
+        const onCloseEvent = () => {
+            if (cancelTimeoutRef.current) {
+                window.clearTimeout(cancelTimeoutRef.current);
+                cancelTimeoutRef.current = null;
+            }
+            setIsExiting(true);
+        };
 
         const onResult = (e: any) => {
-            // optional: show a toast later
-            // console.log("[TradeView] trade_result", e?.detail);
+            // If server sends result -> also close
+            const d = e?.detail ?? {};
+            if (d?.success) setIsExiting(true);
         };
 
         window.addEventListener("trade_open", onOpen as any);
@@ -278,88 +302,36 @@ export const TradeView: FC<{ onClose?: () => void }> = ({ onClose }) => {
 
     const sendConfirm = () => {
         if (!trade.sessionId) return;
+        if (myConfirmed) return;
+
         GetCommunication().connection.send(
             new TradeConfirmComposer(trade.sessionId)
         );
+        // Wait for trade_update / trade_close
     };
 
     const sendCancel = () => {
         if (!trade.sessionId) return;
+
         GetCommunication().connection.send(
             new TradeCancelComposer(trade.sessionId)
         );
-        // don’t force close locally; wait for server trade_close
-    };
 
-    // Drag from inventory -> trade slot
-    const onInvDragStart = (e: React.DragEvent, item: InvItem) => {
-        if (myConfirmed) return;
-        const payload: DragPayload = { id: Number(item.id), from: "inv" };
-        e.dataTransfer.setData("application/x-trade", JSON.stringify(payload));
-        e.dataTransfer.effectAllowed = "copy";
-
-        if (transparentImgRef.current) {
-            e.dataTransfer.setDragImage(transparentImgRef.current, 0, 0);
-        }
-    };
-
-    const onTradeSlotDragOver = (e: React.DragEvent) => {
-        if (myConfirmed) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "copy";
-    };
-
-    const addToTradeSlot = (slotIndex: number, invRowId: number) => {
-        if (!trade.sessionId) return;
-
-        // quantity: for now send 1 (you can add a quantity picker later)
-        const quantity = 1;
-
-        GetCommunication().connection.send(
-            new TradeAddItemComposer(
-                trade.sessionId,
-                invRowId,
-                quantity,
-                slotIndex
-            )
-        );
-    };
-
-    const onTradeSlotDrop = (e: React.DragEvent, slotIndex: number) => {
-        if (myConfirmed) return;
-        e.preventDefault();
-
-        const raw = e.dataTransfer.getData("application/x-trade");
-        if (!raw) return;
-
-        let payload: DragPayload | null = null;
-        try {
-            payload = JSON.parse(raw);
-        } catch {
-            return;
-        }
-
-        if (!payload?.id) return;
-        const invRowId = payload.id;
-
-        // only allow dropping onto MY side slots
-        addToTradeSlot(slotIndex, invRowId);
-    };
-
-    const removeFromTradeSlot = (slotIndex: number) => {
-        if (myConfirmed) return;
-        if (!trade.sessionId) return;
-        GetCommunication().connection.send(
-            new TradeRemoveItemComposer(trade.sessionId, slotIndex)
-        );
+        // ✅ Do not instantly close (prevents “closed but still in trade”)
+        // Fallback if server doesn't respond:
+        if (cancelTimeoutRef.current)
+            window.clearTimeout(cancelTimeoutRef.current);
+        cancelTimeoutRef.current = window.setTimeout(() => {
+            setIsExiting(true);
+            cancelTimeoutRef.current = null;
+        }, 900);
     };
 
     const handleAnimEnd: React.AnimationEventHandler<HTMLDivElement> = (e) => {
         if (e.currentTarget !== winRef.current) return;
 
         if (isExiting) {
-            setTrade((prev) => ({
-                ...prev,
+            setTrade({
                 isOpen: false,
                 sessionId: 0,
                 userAId: 0,
@@ -370,7 +342,8 @@ export const TradeView: FC<{ onClose?: () => void }> = ({ onClose }) => {
                 bConfirmed: false,
                 aSlots: EMPTY_SLOTS,
                 bSlots: EMPTY_SLOTS,
-            }));
+            });
+
             setIsExiting(false);
             onClose?.();
             return;
@@ -394,17 +367,80 @@ export const TradeView: FC<{ onClose?: () => void }> = ({ onClose }) => {
         window.addEventListener("mouseup", onUp);
     };
 
-    const filteredInv = useMemo(() => {
-        const q = invFilter.trim().toLowerCase();
-        const list = Array.isArray(invItems) ? invItems : [];
-        if (!q) return list;
-        return list.filter((it: any) =>
-            String(it?.name ?? "")
-                .toLowerCase()
-                .includes(q)
-        );
-    }, [invItems, invFilter]);
+    // Trade DnD
+    const offerItemToSlot = (
+        slotIndex: number,
+        invRowId: number,
+        quantity: number = 1
+    ) => {
+        if (!trade.sessionId) return;
+        if (myConfirmed) return; // cannot change once confirmed
 
+        GetCommunication().connection.send(
+            new TradeAddItemComposer(
+                trade.sessionId,
+                invRowId,
+                quantity,
+                slotIndex
+            )
+        );
+    };
+
+    const onInvDragStart = (
+        e: React.DragEvent,
+        invRowId: number,
+        quantity: number
+    ) => {
+        const payload: DragPayload = {
+            kind: "inv",
+            invRowId,
+            quantity: Number(quantity ?? 1),
+        };
+        e.dataTransfer.setData(DRAG_MIME, JSON.stringify(payload));
+        e.dataTransfer.effectAllowed = "move";
+
+        if (transparentImgRef.current)
+            e.dataTransfer.setDragImage(transparentImgRef.current, 0, 0);
+    };
+
+    const onTradeSlotDrop = (e: React.DragEvent, slotIndex: number) => {
+        e.preventDefault();
+        if (myConfirmed) return;
+
+        const raw = e.dataTransfer.getData(DRAG_MIME);
+        if (!raw) return;
+
+        let parsed: DragPayload | null = null;
+        try {
+            parsed = JSON.parse(raw);
+        } catch {
+            return;
+        }
+
+        if (!parsed) return;
+
+        if (parsed.kind === "inv") {
+            // Default: offer 1 from stack
+            offerItemToSlot(slotIndex, parsed.invRowId, 1);
+
+            // If you want drag = full stack instead, swap to:
+            // offerItemToSlot(slotIndex, parsed.invRowId, parsed.quantity);
+        }
+    };
+
+    // render helpers
+    const slotClass = (it: TradeSlot, disabled: boolean) => {
+        const base =
+            "inventory-slot trade-slot" +
+            (it?.rarity ? ` rarity-${String(it.rarity).toLowerCase()}` : "");
+
+        return disabled ? `${base} is-disabled` : base;
+    };
+
+    const invSlotNumberFor = (slot: number) =>
+        slot >= 3 ? String(slot - 2) : null;
+
+    // Don’t render unless open or exiting animation
     if (!trade.isOpen && !isExiting) return null;
 
     return (
@@ -418,18 +454,19 @@ export const TradeView: FC<{ onClose?: () => void }> = ({ onClose }) => {
             role="dialog"
             aria-label="Trade"
         >
+            {/* ✅ Header copied from InventoryView styling */}
             <div
-                className={`trade-header ${
+                className={`trade-header inventory-header ${
                     headerGrabbing ? "is-grabbing" : ""
                 }`}
                 onMouseDown={onHeaderMouseDown}
                 aria-grabbed={headerGrabbing}
             >
-                Trade: {trade.usernameA} ↔ {trade.usernameB}
-                <div className="trade-header-buttons">
+                Trading: {trade.usernameA} - {trade.usernameB}
+                <div className="inventory-header-buttons">
                     <button
                         type="button"
-                        className="trade-close"
+                        className="inventory-close"
                         aria-label="Close trade"
                         onClick={sendCancel}
                     />
@@ -437,219 +474,210 @@ export const TradeView: FC<{ onClose?: () => void }> = ({ onClose }) => {
             </div>
 
             <div className="trade-body">
-                <div className="trade-columns">
-                    {/* LEFT: My offer + my inventory */}
-                    <div className="trade-col">
-                        <div className="trade-panel-title">
-                            Your Offer{" "}
-                            {myConfirmed ? (
-                                <span className="badge ok">Confirmed</span>
-                            ) : (
-                                <span className="badge">Editing</span>
-                            )}
+                {/* Offers */}
+                <div className="trade-offers">
+                    <div className="trade-side">
+                        <div className="trade-side-title">
+                            {myName} {myConfirmed ? "✅" : "❌"}
                         </div>
 
                         <div
-                            className={`trade-slots ${
-                                myConfirmed ? "is-locked" : ""
+                            className={`trade-slots-grid ${
+                                myConfirmed ? "side-confirmed" : ""
                             }`}
                         >
-                            {mySlots.map((slot, idx) => (
+                            {mySideSlots.map((it, idx) => (
                                 <div
-                                    key={idx}
-                                    className={`trade-slot ${
-                                        slot?.hasItem ? "has-item" : ""
-                                    } ${
-                                        slot?.rarity
-                                            ? `rarity-${slot.rarity}`
-                                            : ""
-                                    }`}
-                                    onDragOver={onTradeSlotDragOver}
+                                    key={`my-${idx}`}
+                                    className="slot-wrapper"
+                                    onDragOver={(e) => {
+                                        if (myConfirmed) return;
+                                        e.preventDefault();
+                                        e.dataTransfer.dropEffect = "move";
+                                    }}
                                     onDrop={(e) => onTradeSlotDrop(e, idx)}
-                                    onClick={() =>
-                                        slot?.hasItem &&
-                                        removeFromTradeSlot(idx)
-                                    }
-                                    title={
-                                        slot?.hasItem
-                                            ? "Click to remove"
-                                            : "Drop item here"
-                                    }
                                 >
-                                    {slot?.hasItem ? (
-                                        <>
-                                            <img
-                                                className="slot-icon"
-                                                src={slot.icon}
-                                                alt={slot.name ?? "Item"}
-                                                draggable={false}
-                                            />
-                                            <div className="slot-name">
-                                                {slot.name}
-                                            </div>
-                                            {slot.quantity &&
-                                                slot.quantity > 1 && (
-                                                    <div className="slot-qty">
-                                                        x{slot.quantity}
+                                    <div className={slotClass(it, myConfirmed)}>
+                                        {it?.hasItem && (
+                                            <div
+                                                className="inventory-item-wrapper"
+                                                title={it.name || ""}
+                                            >
+                                                {!!it.icon && (
+                                                    <img
+                                                        src={it.icon}
+                                                        alt={it.name || ""}
+                                                        draggable={false}
+                                                    />
+                                                )}
+                                                {(it.quantity ?? 0) > 1 && (
+                                                    <div className="quantity-label">
+                                                        x{it.quantity}
                                                     </div>
                                                 )}
-                                        </>
-                                    ) : (
-                                        <div className="slot-empty">+</div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="trade-inventory">
-                            <div className="trade-inv-header">
-                                <div className="trade-inv-title">
-                                    Your Inventory
-                                </div>
-                                <div className="trade-inv-actions">
-                                    <input
-                                        className="trade-inv-search"
-                                        value={invFilter}
-                                        onChange={(e) =>
-                                            setInvFilter(e.target.value)
-                                        }
-                                        placeholder="Search..."
-                                    />
-                                    <button
-                                        className="trade-inv-refresh"
-                                        onClick={refreshInv}
-                                        type="button"
-                                    >
-                                        {invRefreshing ? "..." : "↻"}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="trade-inv-grid">
-                                {filteredInv.map((it: any) => (
-                                    <div
-                                        key={it.id}
-                                        className={`trade-inv-item ${
-                                            it?.rarity
-                                                ? `rarity-${it.rarity}`
-                                                : ""
-                                        }`}
-                                        draggable={!myConfirmed}
-                                        onDragStart={(e) =>
-                                            onInvDragStart(e, it)
-                                        }
-                                        title={it.name}
-                                    >
-                                        <img
-                                            src={it.icon_path}
-                                            alt={it.name}
-                                            draggable={false}
-                                        />
-                                        {it.quantity > 1 && (
-                                            <div className="qty">
-                                                x{it.quantity}
                                             </div>
                                         )}
                                     </div>
-                                ))}
-                                {filteredInv.length === 0 && (
-                                    <div className="trade-inv-empty">
-                                        No items
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="trade-hint">
-                                {myConfirmed
-                                    ? "You confirmed — changes are locked."
-                                    : "Drag items into the 6 offer boxes. Click an offered item to remove it."}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* RIGHT: Other offer */}
-                    <div className="trade-col">
-                        <div className="trade-panel-title">
-                            Their Offer{" "}
-                            {otherConfirmed ? (
-                                <span className="badge ok">Confirmed</span>
-                            ) : (
-                                <span className="badge">Waiting</span>
-                            )}
-                        </div>
-
-                        <div className="trade-slots is-readonly">
-                            {otherSlots.map((slot, idx) => (
-                                <div
-                                    key={idx}
-                                    className={`trade-slot ${
-                                        slot?.hasItem ? "has-item" : ""
-                                    } ${
-                                        slot?.rarity
-                                            ? `rarity-${slot.rarity}`
-                                            : ""
-                                    }`}
-                                    title={slot?.hasItem ? slot.name : ""}
-                                >
-                                    {slot?.hasItem ? (
-                                        <>
-                                            <img
-                                                className="slot-icon"
-                                                src={slot.icon}
-                                                alt={slot.name ?? "Item"}
-                                                draggable={false}
-                                            />
-                                            <div className="slot-name">
-                                                {slot.name}
-                                            </div>
-                                            {slot.quantity &&
-                                                slot.quantity > 1 && (
-                                                    <div className="slot-qty">
-                                                        x{slot.quantity}
-                                                    </div>
-                                                )}
-                                        </>
-                                    ) : (
-                                        <div className="slot-empty">—</div>
-                                    )}
                                 </div>
                             ))}
                         </div>
 
-                        <div className="trade-controls">
-                            <button
-                                className="trade-btn trade-confirm"
-                                disabled={myConfirmed}
-                                onClick={sendConfirm}
-                            >
-                                {myConfirmed ? "Confirmed" : "Confirm"}
-                            </button>
-                            <button
-                                className="trade-btn trade-cancel"
-                                onClick={sendCancel}
-                            >
-                                Cancel
-                            </button>
+                        {myConfirmed && (
+                            <div className="trade-side-lock">
+                                Confirmed and locked!
+                            </div>
+                        )}
+                    </div>
 
-                            <div className="trade-status">
-                                <div>Session: {trade.sessionId}</div>
-                                <div>
-                                    A: {trade.usernameA}{" "}
-                                    {trade.aConfirmed ? "✅" : "❌"} | B:{" "}
-                                    {trade.usernameB}{" "}
-                                    {trade.bConfirmed ? "✅" : "❌"}
-                                </div>
+                    <div className="trade-center">
+                        <button
+                            className="trade-btn trade-confirm"
+                            disabled={
+                                myConfirmed ||
+                                (trade.aConfirmed && trade.bConfirmed)
+                            }
+                            onClick={sendConfirm}
+                        >
+                            {myConfirmed ? "Confirmed" : "Confirm"}
+                        </button>
+
+                        <button
+                            className="trade-btn trade-cancel"
+                            onClick={sendCancel}
+                        >
+                            Cancel
+                        </button>
+
+                        <div className="trade-status">
+                            <div>Session: {trade.sessionId}</div>
+                            <div>
+                                A: {trade.usernameA}{" "}
+                                {trade.aConfirmed ? "✅" : "❌"} | B:{" "}
+                                {trade.usernameB}{" "}
+                                {trade.bConfirmed ? "✅" : "❌"}
                             </div>
                         </div>
                     </div>
+
+                    <div className="trade-side">
+                        <div className="trade-side-title">
+                            {otherName} {otherConfirmed ? "✅" : "❌"}
+                        </div>
+
+                        <div
+                            className={`trade-slots-grid ${
+                                otherConfirmed ? "side-confirmed" : ""
+                            }`}
+                        >
+                            {otherSideSlots.map((it, idx) => (
+                                <div
+                                    key={`other-${idx}`}
+                                    className="slot-wrapper"
+                                >
+                                    <div
+                                        className={slotClass(
+                                            it,
+                                            true /* other side always non-droppable */
+                                        )}
+                                    >
+                                        {it?.hasItem && (
+                                            <div
+                                                className="inventory-item-wrapper"
+                                                title={it.name || ""}
+                                            >
+                                                {!!it.icon && (
+                                                    <img
+                                                        src={it.icon}
+                                                        alt={it.name || ""}
+                                                        draggable={false}
+                                                    />
+                                                )}
+                                                {(it.quantity ?? 0) > 1 && (
+                                                    <div className="quantity-label">
+                                                        x{it.quantity}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {otherConfirmed && (
+                            <div className="trade-side-lock">
+                                Confirmed — locked
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                {/* Optional footer */}
-                <div className="trade-footer">
-                    <div className="trade-footer-note">
-                        Tip: both players must confirm. If someone edits an
-                        item, confirmations reset server-side.
+                {/* My Inventory (same slot size/style as InventoryView) */}
+                <div className="trade-inventory">
+                    <div className="trade-inventory-title">
+                        Your Inventory (drag into your trade slots)
                     </div>
+
+                    <div className="inventory-grid trade-inventory-grid">
+                        {Array.from({ length: 12 }, (_, slotIndex) => {
+                            const it = invItems.find(
+                                (i) => i.slot === slotIndex
+                            );
+                            const numberLabel = invSlotNumberFor(slotIndex);
+
+                            return (
+                                <div
+                                    key={`inv-${slotIndex}`}
+                                    className="slot-wrapper"
+                                >
+                                    <div
+                                        className={`inventory-slot ${
+                                            myConfirmed ? "is-disabled" : ""
+                                        }`}
+                                    >
+                                        {!it && numberLabel && (
+                                            <div className="slot-number centered">
+                                                {numberLabel}
+                                            </div>
+                                        )}
+
+                                        {it && (
+                                            <div
+                                                className="inventory-item-wrapper"
+                                                draggable={!myConfirmed}
+                                                onDragStart={(e) =>
+                                                    onInvDragStart(
+                                                        e,
+                                                        it.id,
+                                                        Number(it.quantity ?? 1)
+                                                    )
+                                                }
+                                                title={it.name}
+                                            >
+                                                <img
+                                                    src={it.icon_path}
+                                                    alt={it.name}
+                                                    draggable={false}
+                                                />
+                                                {it.quantity > 1 && (
+                                                    <div className="quantity-label">
+                                                        x{it.quantity}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {myConfirmed && (
+                        <div className="trade-inventory-hint">
+                            You have confirmed your trade, the trade is now
+                            locked.
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
