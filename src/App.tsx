@@ -54,9 +54,7 @@ import SlotMachineView from "./components/roleplay/SlotMachineView";
 import { HotelAlertView } from "./components/roleplay/HotelAlertView";
 import { initClickThroughUsers } from "./components/roleplay/ClickThroughUsers";
 import { CasinoJackpotWidget } from "./components/roleplay/CasinoJackpotWidget";
-
-// optional: if you later restore big wheel
-// import BigWheelView from "./components/roleplay/BigWheelView";
+import { DiscordVerificationView } from "./components/roleplay/DiscordVerificationView";
 
 NitroVersion.UI_VERSION = GetUIVersion();
 
@@ -71,9 +69,6 @@ export const App: FC = () => {
     const [dcVisible, setDcVisible] = useState(false);
     const [dcSeconds, setDcSeconds] = useState(15);
 
-    /* ==============================================
-Bootstrap Nitro
-===============================================*/
     if (!GetNitroInstance()) {
         //@ts-ignore
         if (!NitroConfig) throw new Error("NitroConfig is not defined!");
@@ -83,9 +78,6 @@ Bootstrap Nitro
         Nitro.instance.setWorker(worker);
     }
 
-    /* ==============================================
-Core init handler
-===============================================*/
     const handler = useCallback((event: NitroEvent) => {
         switch (event.type) {
             case ConfigurationEvent.LOADED:
@@ -267,6 +259,7 @@ Render
                 <MarketplaceView />
                 <HotelAlertView />
                 <CasinoJackpotWidget></CasinoJackpotWidget>
+                <DiscordVerificationView></DiscordVerificationView>
 
                 {/* <BigWheelView /> */}
                 <PoliceCallView />
