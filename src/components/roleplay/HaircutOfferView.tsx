@@ -26,6 +26,7 @@ import { AvatarEditorFigurePreviewView } from "../avatar-editor/views/AvatarEdit
 
 // ✅ keep palettes using the working component
 import { AvatarEditorPaletteSetView } from "../avatar-editor/views/palette-set/AvatarEditorPaletteSetView";
+import { GetCommunication } from "../../api/nitro/GetCommunication";
 
 interface HaircutOfferPayload {
     offerId: number;
@@ -456,22 +457,21 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
         const hr = extractHrSegment(figureData.getFigureString());
         if (!hr) return;
 
-        try {
-            const anyWin = window as any;
+        console.log(
+            "[HaircutOfferView] sending HaircutSelectStyleComposer →",
+            payload.offerId,
+            hr
+        );
 
-            // ✅ This is the correct send path for Nitro
-            if (anyWin?.Nitro?.connection) {
-                anyWin.Nitro.connection.send(
-                    new HaircutSelectStyleComposer(payload.offerId, hr)
-                );
-            } else {
-                window.dispatchEvent(
-                    new CustomEvent("haircut_submit", {
-                        detail: { offerId: payload.offerId, hr },
-                    })
-                );
-            }
-        } catch {}
+        try {
+            // ✅ SAME method as TradeView
+            GetCommunication().connection.send(
+                new HaircutSelectStyleComposer(payload.offerId, hr)
+            );
+        } catch (e) {
+            console.error("[HaircutOfferView] send failed", e);
+            return;
+        }
 
         setClosing(true);
     };
