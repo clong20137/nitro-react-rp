@@ -340,11 +340,31 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
         return (inv as any).icon_path || (inv as any).iconPath || "";
     };
 
+    const invKind = (inv: InventoryContext | undefined) => {
+        const anyInv: any = inv as any;
+
+        // try all common fields that different parsers use
+        return lower(
+            anyInv?.item_type ??
+                anyInv?.itemType ??
+                anyInv?.type ??
+                anyInv?.category ??
+                anyInv?.item_category
+        );
+    };
+
     const canDropIntoSlot = useCallback(
         (slotIndex: number, inv: InventoryContext | undefined) => {
-            const t = lower((inv as any)?.item_type);
+            const t = invKind(inv);
+
             if (slotIndex === 0) return t === "weapon";
-            if (slotIndex === 1) return t === "augment";
+
+            // accept augment + (optional safety aliases)
+            if (slotIndex === 1)
+                return (
+                    t === "augment" || t === "upgrade" || t === "augmentitem"
+                );
+
             return true;
         },
         []
