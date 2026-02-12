@@ -239,74 +239,115 @@ TOOLTIP
 }
 
 /* ========================================
-MOBILE RULES
+MOBILE RULES (improved dock)
 ======================================== */
 @media (max-width: 768px) {
   :root {
-    --chatbar-h: 56px;
+    --chatbar-h: 56px; // set this to your actual chatbar height
+    --dock-gap: 10px; // space between chatbar and dock
+    --dock-pad-x: 10px;
+    --dock-pad-y: 8px;
+    --dock-radius: 14px;
+    --dock-max-w: calc(100vw - 16px);
   }
 
   .left-sidebar-wrapper {
     position: fixed;
     left: 50%;
-    bottom: calc(var(--chatbar-h) + 14px);
     top: auto;
+
+    /* sits ABOVE chatbar and safe-area */
+    bottom: calc(env(safe-area-inset-bottom) + var(--chatbar-h) + var(--dock-gap));
+
     transform: translateX(-50%);
-    z-index: 2200;
+    z-index: 9999;
     pointer-events: none;
   }
 
   .left-sidebar-container {
     pointer-events: auto;
-    transform: translateX(0);
+    transform: none;
+    transition: transform .2s ease;
 
+    /* Optional: allow hide/show by sliding down */
     &.closed,
     &.collapsed {
-      transform: translateY(calc(var(--chatbar-h) + 24px));
+      transform: translateY(calc(var(--chatbar-h) + env(safe-area-inset-bottom) + 24px));
     }
   }
 
   .left-sidebar {
+    /* Dock container */
     flex-direction: row;
+    align-items: center;
     gap: 8px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    width: auto;
-    background: rgba(24, 24, 24, .88);
 
+    width: auto;
+    max-width: var(--dock-max-w);
+
+    padding: var(--dock-pad-y) var(--dock-pad-x);
+    border-radius: var(--dock-radius);
+
+    /* keep your theme, but slightly translucent for mobile */
+    background: rgba(13, 96, 145, .92);
+    border: 2px solid rgba(32, 119, 171, .95);
+    box-shadow: $shadow-panel;
+
+    /* IMPORTANT: one-line dock, scroll if needed */
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+
+    /* hide scrollbar (still scrollable) */
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* no toggle tab on mobile */
     &__toggle {
       display: none !important;
     }
   }
 
   .sidebar-chip {
-    width: 52px;
-    height: 52px;
+    /* Apple tap target friendly */
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+
+    flex: 0 0 auto;
+    /* prevent shrinking in scroll container */
+    position: relative;
   }
 
+  .sidebar-chip .chip-icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  /* chat icon was taller; normalize it on mobile */
+  .chip-chat .chip-icon,
+  .chip-chat.is-on .chip-icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  /* Tooltips are hover-based; disable on touch */
   .sidebar-chip[data-tip]::before,
   .sidebar-chip[data-tip]::after {
-    left: 50%;
-    top: auto;
-    bottom: calc(100% + 8px);
-    transform: translateX(-50%);
-  }
-
-  .sidebar-chip[data-tip]::after {
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 6px solid rgba(0, 0, 0, .9);
-    margin-left: 0;
+    display: none !important;
   }
 }
 
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
 
-  .left-sidebar-container,
+@media (max-width: 768px) {
+
   .left-sidebar,
-  .left-sidebar__toggle,
   .sidebar-chip {
-    transition: none !important;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 }
