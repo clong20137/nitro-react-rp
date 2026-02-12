@@ -790,3 +790,13 @@ Mobile / Small screens
         width: min(92vw, 430px);
     }
 }
+
+.corporations-header {
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.corporations-view.dragging,
+.corporations-view.dragging * {
+    user-select: none !important;
+}

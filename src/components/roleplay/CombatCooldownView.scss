@@ -85,3 +85,138 @@
     color: #ffffff;
     letter-spacing: 0.5px;
 }
+
+/* =========================================================
+Combat Cooldown Radial — Mobile Friendly
+- safe-area aware
+- sits above chatbar/docks
+- scales down on small phones
+- avoids hover-only behavior issues
+========================================================= */
+
+/* Desktop stays as-is (your current code) */
+
+/* -------------------------
+Mobile placement + sizing
+------------------------- */
+@media (max-width: 768px) {
+    :root {
+        --chatbar-h: 60px;
+        /* match your mobile chatbar var */
+        --chatbar-gap: 8px;
+        /* match your mobile chatbar var */
+        --hud-gap: 10px;
+        /* gap between HUD blocks */
+    }
+
+    .combat-cd-svg {
+        width: 64px; // your desktop size (change if you want)
+        height: 64px;
+        display: block;
+    }
+
+    .combat-cd-svg {
+        width: 56px; // ✅ matches screenshot
+        height: 56px; // ✅ matches screenshot
+    }
+
+
+
+    .combat-cd-radial {
+        position: fixed;
+
+        /* move from bottom-left to bottom-center on mobile */
+
+        transform: translateX(-50%);
+        left: 394px;
+        bottom: 380px;
+
+        /* slightly slimmer pill */
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border-width: 2px;
+
+        background: rgba(13, 96, 145, 0.92);
+
+        z-index: 3400;
+
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+
+    .combat-cd-wheel {
+        width: 48px;
+        height: 48px;
+    }
+
+    .combat-cd-icon img {
+        width: 26px;
+        height: 26px;
+    }
+
+    .combat-cd-text {
+        min-width: 56px;
+    }
+
+    .combat-cd-title {
+        font-size: 12px;
+    }
+
+    .combat-cd-sub {
+        font-size: 14px;
+        letter-spacing: 0.3px;
+    }
+}
+
+/* -------------------------
+Smaller phones
+------------------------- */
+@media (max-width: 480px) {
+    .combat-cd-radial {
+        padding: 6px 8px;
+        gap: 6px;
+    }
+
+    .combat-cd-wheel {
+        width: 44px;
+        height: 44px;
+    }
+
+    .combat-cd-icon img {
+        width: 32px;
+        height: 32px;
+    }
+
+    .combat-cd-title {
+        font-size: 11px;
+    }
+
+    .combat-cd-sub {
+        font-size: 13px;
+    }
+}
+
+/* -------------------------
+Ultra small (<= 380px)
+------------------------- */
+@media (max-width: 380px) {
+    .combat-cd-text {
+        display: none;
+        /* keep only the wheel if space is tiny */
+    }
+
+    .combat-cd-radial {
+        padding: 6px;
+    }
+}
+
+/* -------------------------
+Optional: when keyboard is open (if you add body.keyboard-open)
+------------------------- */
+@media (max-width: 768px) {
+    body.keyboard-open .combat-cd-radial {
+        opacity: 0.85;
+        transform: translateX(-50%) translateY(8px);
+    }
+}

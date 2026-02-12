@@ -275,11 +275,12 @@ RIGHT SIDE: MOBILE COMPACT / VERTICAL
 @media (max-width: 600px) {
     .nitro-right-compact {
         right: 6px;
-        top: 70px;
+        top: 6px;
+        display: flex;
+        flex-direction: column;
         /* clears compact stats pill */
-        width: 148px;
+        width: 100px;
         /* ↓ from ~180–340 */
-        max-width: 148px;
         gap: 6px;
         z-index: 2200;
     }
@@ -287,6 +288,8 @@ RIGHT SIDE: MOBILE COMPACT / VERTICAL
     .rs-mini {
         gap: 4px;
         padding: 6px;
+        display: flex;
+        flex-direction: column;
     }
 
     .rs-mini .chip {
@@ -303,6 +306,8 @@ RIGHT SIDE: MOBILE COMPACT / VERTICAL
     }
 
     .rs-card {
+        display: flex;
+        flex-direction: column;
         padding: 6px;
         width: 100%;
     }

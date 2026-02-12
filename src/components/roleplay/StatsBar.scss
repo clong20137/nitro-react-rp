@@ -749,122 +749,138 @@ XP tooltip (shared)
     }
 }
 
-/* ===== Responsive tweaks ===== */
+/* =========================================================
+StatsBar — Mobile Friendly + iPhone Safe Areas
+Drop-in patch: add/replace these MOBILE blocks at bottom
+========================================================= */
 
-/* Tablets (<= 1024px) */
-@media (max-width: 1024px) {
-    .stats-bar-container {
-        top: 10px;
-        left: 10px;
-        padding: 8px;
-        flex-direction: row;
-        border-radius: 6px;
-    }
-
-    .bar,
-    .aggression-bar-wrapper {
-        width: 160px;
-    }
-
-    .qa-btn {
-        width: 32px;
-        height: 32px;
-    }
-}
-
-/* Small tablets / large phones (<= 768px) */
+/* ---------------------------------------------------------
+1) iOS safe-area + prevent collisions with notch/toolbars
+--------------------------------------------------------- */
 @media (max-width: 768px) {
+
+    /* keep your opponent anchor aligned on mobile */
+    .stats-bar-container,
+    .opponent-anchor {
+        z-index: 3500;
+    }
+
+    /* pin to safe area + center if needed */
     .stats-bar-container {
-        flex-direction: column;
-        align-items: stretch;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 90%;
-        top: 10px;
+        position: fixed;
+        /* mobile should be fixed HUD */
+        top: calc(env(safe-area-inset-top) + 6px);
+        left: 2px;
+        right: auto;
+        transform-origin: top left;
+        will-change: transform;
     }
 
-    .stats-left {
-        flex-direction: row;
-        justify-content: flex-start;
-        margin-bottom: 8px;
+    /* if you used the 768 rule that centers it, override that */
+    .stats-bar-container {
+        transform: none !important;
+        width: auto !important;
+        max-width: none !important;
     }
 
-    .stats-right {
-        flex-direction: column;
-        margin-left: 0;
+    /* opponent stays to the right of self bar */
+    .opponent-anchor {
+        top: 0;
+        left: calc(100% + 8px);
     }
 
-    .bar,
-    .aggression-bar-wrapper {
-        width: 100%;
-    }
-
-    .quick-actions {
-        flex-direction: row;
-        justify-content: center;
-        margin: 10px 0 0;
+    /* disable the vertical divider on mobile (it misaligns in compact layouts) */
+    .stats-bar-container::before {
+        display: none;
     }
 }
 
-/* base shrink + pin on small phones */
+/* ---------------------------------------------------------
+2) Scaling strategy (good on iPhone 16 Pro Max + smaller)
+- keeps it one compact row
+- bars shrink slightly
+- buttons remain tappable
+--------------------------------------------------------- */
 @media (max-width: 600px) {
     :root {
         --stats-scale: 0.82;
     }
 
     .stats-bar-container {
-        position: fixed;
-        top: 8px;
-        left: 8px;
-        transform: scale(var(--stats-scale));
+        transform: scale(var(--stats-scale)) !important;
         transform-origin: top left;
-        will-change: transform;
-        z-index: 2200;
-        flex-direction: row !important;
-        align-items: center !important;
-        width: auto !important;
-        max-width: none !important;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, .20), 0 2px 0 rgba(0, 0, 0, .22), inset 0 -3px rgba(0, 0, 0, .10);
+        box-shadow:
+            0 6px 16px rgba(0, 0, 0, .22),
+            0 2px 0 rgba(0, 0, 0, .25),
+            inset 0 -3px rgba(0, 0, 0, .10);
     }
 
-    .opponent-anchor {
-        top: 0;
+    /* keep layout as a single horizontal bar */
+    .stats-bar-container {
+        flex-direction: row !important;
+        align-items: stretch !important;
+    }
+
+    /* bars: slightly narrower */
+    .bar,
+    .aggression-bar-wrapper {
+        width: 155px;
+    }
+
+    /* avatar circle shrinks a bit */
+    .stats-left .greek-circle {
+        width: 58px;
+        height: 58px;
+    }
+
+    .stats-left .greek-circle .greek-xp-ring,
+    .stats-left .greek-circle .xp-ring-svg {
+        width: 50px;
+        height: 50px;
+    }
+
+    .stats-left .greek-circle .avatar-head {
+        width: 40px;
+        height: 40px;
+    }
+
+    /* keep quick actions tappable */
+    .qa-btn {
+        width: 34px;
+        height: 34px;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+
+    .qa-svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* popover should not spill off-screen */
+    .qa-pop {
+        right: auto;
         left: calc(100% + 8px);
-        transform: translateZ(0);
+        /* open to the right */
+        width: min(220px, calc(100vw - 20px));
     }
 }
 
-/* ultra compact phones */
+/* ---------------------------------------------------------
+3) Ultra-compact phones (<= 480px)
+--------------------------------------------------------- */
 @media (max-width: 480px) {
     :root {
         --stats-scale: 0.72;
     }
 
     .stats-bar-container {
-        padding: 6px;
-        border-radius: 4px;
-    }
-
-    .avatar-column,
-    .stats-left {
-        flex-direction: column;
-        align-items: center;
+        transform: scale(var(--stats-scale)) !important;
     }
 
     .bar,
     .aggression-bar-wrapper {
-        width: 100%;
-        height: 14px;
-    }
-
-    .qa-btn {
-        width: 28px;
-        height: 28px;
-    }
-
-    .qa-svg {
-        width: 18px;
-        height: 18px;
+        width: 140px;
     }
 
     .avatar-name {
@@ -875,15 +891,48 @@ XP tooltip (shared)
         font-size: 10px;
     }
 
-    .work-toggle-btn {
-        font-size: 11px;
-        padding: 6px 8px;
+    .qa-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    .qa-svg {
+        width: 18px;
+        height: 18px;
     }
 }
 
-/* ultra small (e.g., 360–380px) */
+/* ---------------------------------------------------------
+4) SUPER small (<= 380px) — final clamp
+--------------------------------------------------------- */
 @media (max-width: 380px) {
     :root {
         --stats-scale: 0.64;
+    }
+
+    .stats-bar-container {
+        transform: scale(var(--stats-scale)) !important;
+    }
+
+    .bar,
+    .aggression-bar-wrapper {
+        width: 128px;
+    }
+}
+
+/* ---------------------------------------------------------
+5) Touch behavior polish (recommended)
+- prevents iOS from selecting text when tapping HUD
+--------------------------------------------------------- */
+@media (max-width: 768px) {
+
+    .stats-bar-container,
+    .stats-bar-container * {
+        user-select: none;
+    }
+
+    /* allow textarea selection inside popover */
+    .qa-pop textarea {
+        user-select: text;
     }
 }

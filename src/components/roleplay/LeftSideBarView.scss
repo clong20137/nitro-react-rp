@@ -216,7 +216,7 @@ TOOLTIP
 
 .sidebar-chip[data-tip]::before {
   content: attr(data-tip);
-  background: rgba(0, 0, 0, .6);
+
   color: #fff;
   font-size: 12px;
   padding: 6px 8px;

@@ -208,3 +208,155 @@
 .phone-glyph {
     display: none;
 }
+
+/* =========================================================
+Bottom Right Dock — Mobile Friendly Upgrade
+(safe-area aware, smaller tiles, scroll when needed,
+no hover-tooltips on touch, optional compact mode)
+========================================================= */
+
+/* Desktop stays as-is (your current code) */
+
+/* =========================
+MOBILE RULES
+========================= */
+@media (max-width: 768px) {
+    :root {
+        --chatbar-h: 60px;
+        /* should match your mobile chatbar var */
+        --chatbar-gap: 8px;
+        /* should match your mobile chatbar var */
+        --dock-gap: 10px;
+        /* gap above chatbar */
+    }
+
+    /* Dock becomes a bottom-centered pill above chatbar */
+    .bottom-right-dock {
+        right: -28px;
+        margin-bottom: 80px;
+        display: flex;
+        flex-direction: column;
+        transform: translateX(-50%);
+
+        /* sit above chatbar + iOS home indicator */
+        bottom: calc(env(safe-area-inset-bottom) + var(--chatbar-gap) + var(--chatbar-h) + var(--dock-gap));
+
+        /* prevent taking full width but allow fitting on small screens */
+        max-width: calc(100vw - 16px);
+        width: auto;
+
+        padding: 6px 8px;
+        gap: 6px;
+
+        /* slightly more translucent on mobile */
+        background: rgba(13, 96, 145, 0.92);
+        border-width: 2px;
+        border-radius: 14px;
+
+        /* one-line row; scroll horizontally if more tiles appear */
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+
+        /* hide scrollbar (still scrolls) */
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+
+        z-index: 3200;
+    }
+
+    .dock-tile {
+        /* Apple tap target friendly, but tighter than desktop */
+        width: 44px;
+        height: 44px;
+        border-width: 2px;
+        border-radius: 10px;
+
+        flex: 0 0 auto;
+        /* don’t shrink in scroll container */
+
+        /* less “floaty” motion on mobile */
+        transition: transform 100ms ease-out, filter 100ms ease-out, background 100ms ease-out, border-color 100ms ease-out;
+
+        /* prevent 300ms delay behaviors & highlight */
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+
+    /* reduce hover effects on mobile (they can cause weird “stuck” states) */
+    .dock-tile:hover {
+        transform: none;
+        filter: none;
+        box-shadow: 0 0 4px rgba(0, 0, 0, .4);
+        border-color: #2077ab;
+        background: #0d4366;
+    }
+
+    .dock-tile:active {
+        transform: translateY(1px);
+        filter: brightness(0.98);
+    }
+
+    /* icons scale down */
+    .dock-icon,
+    .phone-icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    /* badges scale down */
+    .dock-notification-badge {
+        top: -3px;
+        right: -3px;
+        min-width: 14px;
+        height: 14px;
+        font-size: 9px;
+        line-height: 14px;
+        box-shadow: 0 0 0 2px rgba(0, 103, 179, 0.9);
+    }
+
+    /* Tooltips are hover-based; disable on touch */
+    .dock-tile::before,
+    .dock-tile::after {
+        display: none !important;
+    }
+}
+
+/* =========================
+EXTRA SMALL PHONES (optional)
+If someone is on a smaller iPhone, tighten a bit more.
+========================= */
+@media (max-width: 390px) {
+    .bottom-right-dock {
+        padding: 6px 6px;
+        gap: 5px;
+    }
+
+    .dock-tile {
+        width: 42px;
+        height: 42px;
+    }
+
+    .dock-icon,
+    .phone-icon {
+        width: 26px;
+        height: 26px;
+    }
+}
+
+/* =========================
+iOS Keyboard Open Safety (optional, CSS-only best-effort)
+When the keyboard is open, fixed UI can feel cramped.
+If you add a class to body like .keyboard-open, it can tuck.
+========================= */
+@media (max-width: 768px) {
+    body.keyboard-open .bottom-right-dock {
+        /* slide dock down a bit (still above safe area) */
+        opacity: 0.9;
+        transform: translateX(-50%) translateY(8px);
+    }
+}
