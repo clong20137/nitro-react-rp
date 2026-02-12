@@ -1,3 +1,7 @@
+/* HaircutOfferView.scss
+✅ your CSS + added pager styles (keeps your existing look)
+*/
+
 $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 
 .haircut-offer-view {
@@ -134,7 +138,6 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     padding: 10px;
     background-image: url("../../icons/banner_hairstyle.gif");
     background-size: cover;
-
 }
 
 .haircut-meta {
@@ -153,7 +156,7 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
             font-weight: 800;
             color: #ffffff;
             min-width: 60px;
-            background: rgba(0, 0, 0, .50);
+            background: rgba(0, 0, 0, 0.5);
             padding: 6px;
             border-radius: 6px;
             text-shadow: 0 1px rgba(255, 255, 255, 0.55);
@@ -162,7 +165,7 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
         .value {
             font-weight: 900;
             color: #ffffff;
-            background: rgba(0, 0, 0, .50);
+            background: rgba(0, 0, 0, 0.5);
             padding: 6px;
             border-radius: 6px;
             text-shadow: 0 1px rgba(255, 255, 255, 0.55);
@@ -192,8 +195,9 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     min-width: 160px;
 
     .preview-frame {
-        width: 120px;
-        height: 90px;
+        width: 160px;
+        /* slightly larger to fit preview component */
+        height: 110px;
         border-radius: 10px;
         background: rgba(255, 255, 255, 0.6);
         border: 1px solid rgba(0, 0, 0, 0.15);
@@ -202,10 +206,12 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
         box-shadow: inset 0 1px rgba(255, 255, 255, 0.65);
         overflow: hidden;
 
-        img {
-            max-width: 110px;
-            max-height: 80px;
-            image-rendering: pixelated;
+        /* preview component internal layout safety */
+        .figure-preview-container {
+            width: 100%;
+            height: 100%;
+            transform: scale(0.85);
+            transform-origin: center;
         }
     }
 }
@@ -287,12 +293,12 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     padding-right: 4px;
 }
 
-/* grid still 8 wide, but scroll instead of pagination */
+/* grid is 8 wide, 3 rows due to paging (24 items) */
 .styles-grid-scroll {
     display: grid;
     grid-template-columns: repeat(8, minmax(0, 1fr));
     gap: 8px;
-    padding-bottom: 6px;
+    padding-bottom: 8px;
 }
 
 .style-tile {
@@ -391,6 +397,51 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     text-shadow: 0 1px rgba(255, 255, 255, 0.6);
 }
 
+/* ✅ pager styles */
+.styles-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 6px 0 2px;
+    user-select: none;
+}
+
+.pager-btn {
+    min-width: 90px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    background: rgba(255, 255, 255, 0.85);
+    color: #111;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 2px rgba(0, 0, 0, 0.14), inset 0 1px rgba(255, 255, 255, 0.25);
+    transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+
+    &:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.05);
+        box-shadow: 0 3px rgba(0, 0, 0, 0.16), inset 0 1px rgba(255, 255, 255, 0.28);
+    }
+
+    &:active {
+        transform: translateY(0px) scale(0.99);
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        pointer-events: none;
+    }
+}
+
+.pager-info {
+    font-weight: 900;
+    font-size: 12px;
+    opacity: 0.9;
+    text-shadow: 0 1px rgba(255, 255, 255, 0.6);
+}
+
 .palette-block {
     margin-bottom: 10px;
 }
@@ -402,45 +453,7 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     opacity: 0.9;
 }
 
-.colors-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 8px;
-}
-
-.color-swatch {
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.22);
-    background: rgba(255, 255, 255, 0.8);
-    cursor: pointer;
-    padding: 4px;
-    transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
-
-    &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 2px rgba(0, 0, 0, 0.18);
-        filter: brightness(1.05);
-    }
-
-    &:active {
-        transform: translateY(0px) scale(0.99);
-    }
-
-    &.is-selected {
-        border-color: rgba(30, 114, 149, 0.95);
-        box-shadow: 0 0 0 2px rgba(30, 114, 149, 0.25);
-    }
-}
-
-.color-fill {
-    width: 100%;
-    height: 100%;
-    display: block;
-    border-radius: 6px;
-    box-shadow: inset 0 1px rgba(255, 255, 255, 0.65), inset 0 -2px rgba(0, 0, 0, 0.15);
-}
+/* Note: AvatarEditorPaletteSetView renders its own swatches/grid */
 
 .haircut-footer {
     display: flex;

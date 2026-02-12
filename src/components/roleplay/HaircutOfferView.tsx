@@ -16,12 +16,17 @@ import {
     AvatarEditorUtilities,
     FigureData,
     GetSessionDataManager,
-    GetAvatarRenderManager,
 } from "../../api";
-
 import { HeadModel } from "../../api";
+
 import { HaircutSelectStyleComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/HaircutSelectStyleComposer";
+
+// ✅ use the SAME preview pipeline as the avatar editor (guaranteed to render)
+import { AvatarEditorFigurePreviewView } from "../avatar-editor/views/AvatarEditorFigurePreviewView";
+
+// ✅ keep palettes using the working component
 import { AvatarEditorPaletteSetView } from "../avatar-editor/views/palette-set/AvatarEditorPaletteSetView";
+
 interface HaircutOfferPayload {
     offerId: number;
     stylistId: number;
@@ -37,9 +42,14 @@ interface HaircutOfferViewProps {
 const POS_KEY = "haircut-offer-pos";
 const SIZE_KEY = "haircut-offer-size";
 
-const COIN_ICON_SRC = "/icons/coins.png";
-const LOADING_PLACEHOLDER_SRC = "../..//icons/placeholder.png";
-const BANNER_BG = require("../../icons/banner_hairstyle.gif"); // ✅ your banner
+const STYLES_PER_PAGE = 24; // ✅ 3 rows x 8 columns
+
+// if these are in /public/icons
+const COIN_ICON_SRC = "/icons/coins_small.png";
+const LOADING_PLACEHOLDER_SRC = "/icons/placeholder.png";
+
+// ✅ your banner (bundled)
+const BANNER_BG = require("../../icons/banner_hairstyle.gif");
 
 const safeStr = (v: any) => (typeof v === "string" ? v : "");
 const safeNum = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : 0);
@@ -48,24 +58,6 @@ const extractHrSegment = (figure: string) => {
     const parts = safeStr(figure).split(".");
     for (const p of parts) if (p.startsWith("hr-")) return p;
     return "";
-};
-
-const getPaletteColors = (hairCategory: any, paletteIndex: number): any[] => {
-    const p = hairCategory?.getPalette?.(paletteIndex);
-
-    // some forks return { colors: [...] }
-    if (p && Array.isArray((p as any).colors)) return (p as any).colors;
-
-    // many forks return the array directly
-    if (Array.isArray(p)) return p;
-
-    return [];
-};
-
-const rgbNumberToHex = (n: number) => {
-    if (!Number.isFinite(n)) return "#666666";
-    const hex = (n >>> 0).toString(16).padStart(6, "0");
-    return `#${hex.slice(-6)}`;
 };
 
 export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
@@ -91,11 +83,12 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
 
     const [maxPaletteCount, setMaxPaletteCount] = useState(1);
 
-    // force rerender when Nitro thumbnails/parts update
-    const [thumbTick, setThumbTick] = useState(0);
+    // ✅ paging (kills lag)
+    const [page, setPage] = useState(0);
 
-    // preview
-    const [previewUrl, setPreviewUrl] = useState<string>("");
+    // ✅ thumb refresh batching
+    const [thumbTick, setThumbTick] = useState(0);
+    const rafRef = useRef<number>(0);
 
     const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -120,6 +113,7 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
         h: 560,
     });
 
+    // ✅ SAME EVENT the avatar editor uses
     useMessageEvent<FigureSetIdsMessageEvent>(
         FigureSetIdsMessageEvent,
         (event) => {
@@ -154,6 +148,7 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
                 const parsed = JSON.parse(p);
                 const x = Number(parsed?.x);
                 const y = Number(parsed?.y);
+
                 setPosition({
                     x: Number.isFinite(x) ? x : 140,
                     y: Number.isFinite(y) ? y : 140,
@@ -165,6 +160,7 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
                 const parsed = JSON.parse(s);
                 const w = Number(parsed?.width);
                 const h = Number(parsed?.height);
+
                 setSize({
                     width: Math.max(700, Number.isFinite(w) ? w : 760),
                     height: Math.max(520, Number.isFinite(h) ? h : 560),
@@ -191,6 +187,7 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
                 baseFigure: safeStr(detail.baseFigure),
             });
 
+            setPage(0);
             setClosing(false);
             setIsVisible(true);
         };
@@ -230,18 +227,23 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
         if (hair) {
             hair.init?.();
 
-            // hook notify so thumbs trigger rerender
+            // ✅ batch notify updates to avoid re-render spam
             if (Array.isArray(hair.parts)) {
                 for (const p of hair.parts) {
                     if (!p) continue;
 
                     try {
                         const prev = p.notify;
+
                         p.notify = () => {
                             try {
                                 if (typeof prev === "function") prev();
                             } catch {}
-                            setThumbTick((t) => t + 1);
+
+                            cancelAnimationFrame(rafRef.current);
+                            rafRef.current = requestAnimationFrame(() =>
+                                setThumbTick((t) => t + 1)
+                            );
                         };
                     } catch {}
                 }
@@ -265,10 +267,12 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
             (AvatarEditorUtilities as any).CURRENT_FIGURE = undefined;
             (AvatarEditorUtilities as any).FIGURE_SET_IDS = undefined;
             (AvatarEditorUtilities as any).BOUND_FURNITURE_NAMES = undefined;
+
+            cancelAnimationFrame(rafRef.current);
         };
     }, [isVisible, payload.baseFigure, figureSetIds, boundFurnitureNames]);
 
-    // styles list (scrollable)
+    // styles list (ignore "clear")
     const stylesAll = useMemo(() => {
         const parts = hairCategory?.parts || [];
         return parts.filter((p: any) => p && !p.isClear);
@@ -276,65 +280,20 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
 
     const stylesCount = stylesAll.length;
 
-    // palettes (scrollable)
-    const palette1 = useMemo(
-        () => getPaletteColors(hairCategory, 0),
-        [hairCategory, thumbTick]
-    );
-    const palette2 = useMemo(
-        () => getPaletteColors(hairCategory, 1),
-        [hairCategory, thumbTick]
-    );
+    const pageCount = useMemo(() => {
+        return Math.max(1, Math.ceil(stylesCount / STYLES_PER_PAGE));
+    }, [stylesCount]);
 
-    // ✅ LIVE PREVIEW USING NITRO RENDER (always matches palette + part selection)
-    const updatePreview = useCallback(() => {
-        if (!figureData) return;
-
-        try {
-            const figure = figureData.getFigureString();
-            const gender = figureData.gender;
-
-            // ✅ scale must be STRING in your Nitro build
-            // common options: "l" / "large" / "sh" / "small"
-            const avatarImage = GetAvatarRenderManager().createAvatarImage(
-                figure,
-                "l", // ✅ FIXED (was 1)
-                gender
-            );
-
-            if (!avatarImage) return;
-
-            // direction
-            avatarImage.setDirection("full", 2);
-            avatarImage.setDirection("head", 2);
-
-            const bmp =
-                (avatarImage as any).getCroppedImage?.("head") ||
-                (avatarImage as any).getImage?.(true);
-
-            if (bmp) {
-                const canvas = document.createElement("canvas");
-                canvas.width = bmp.width;
-                canvas.height = bmp.height;
-
-                const ctx = canvas.getContext("2d");
-                if (ctx) {
-                    ctx.drawImage(bmp as any, 0, 0);
-                    setPreviewUrl(canvas.toDataURL("image/png"));
-                }
-            }
-
-            (avatarImage as any).dispose?.();
-        } catch {
-            // ignore
-        }
-    }, [figureData]);
-
-    // update preview whenever figure changes / thumbs refresh
+    // keep page valid if count changes
     useEffect(() => {
         if (!isVisible) return;
-        updatePreview();
-    }, [isVisible, figureData, thumbTick, updatePreview]);
+        setPage((p) => Math.min(p, Math.max(0, pageCount - 1)));
+    }, [isVisible, pageCount]);
+
+    const stylesPage = useMemo(() => {
+        const start = page * STYLES_PER_PAGE;
+        return stylesAll.slice(start, start + STYLES_PER_PAGE);
+    }, [stylesAll, page]);
 
     const selectStyle = useCallback(
         (part: any) => {
@@ -350,22 +309,8 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
         [headModel, hairCategory]
     );
 
-    const selectColor = useCallback(
-        (paletteNumber1Based: number, colorIndex: number) => {
-            if (!headModel || !hairCategory) return;
-
-            try {
-                headModel.selectColor?.(
-                    hairCategory.name,
-                    paletteNumber1Based,
-                    colorIndex
-                );
-            } catch {}
-
-            setThumbTick((t) => t + 1);
-        },
-        [headModel, hairCategory]
-    );
+    // NOTE: palette clicks are handled internally by AvatarEditorPaletteSetView
+    // (same as your working avatar editor). We only rerender on thumbTick.
 
     // drag handlers
     const startDragMouse = (e: React.MouseEvent) => {
@@ -391,6 +336,7 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
         if (!dragging.current) return;
         dragging.current = false;
         document.body.style.userSelect = "";
+
         try {
             localStorage.setItem(POS_KEY, JSON.stringify(position));
         } catch {}
@@ -426,6 +372,7 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
         if (!resizing.current) return;
         resizing.current = false;
         document.body.style.userSelect = "";
+
         try {
             localStorage.setItem(SIZE_KEY, JSON.stringify(size));
         } catch {}
@@ -442,9 +389,11 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
                     )
                 );
             }
+
             if (resizing.current) {
                 const dx = e.clientX - resizeStart.current.x;
                 const dy = e.clientY - resizeStart.current.y;
+
                 setSize({
                     width: Math.max(700, resizeStart.current.w + dx),
                     height: Math.max(520, resizeStart.current.h + dy),
@@ -467,10 +416,12 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
                     )
                 );
             }
+
             if (resizing.current) {
                 const t = e.touches[0];
                 const dx = t.clientX - resizeStart.current.x;
                 const dy = t.clientY - resizeStart.current.y;
+
                 setSize({
                     width: Math.max(700, resizeStart.current.w + dx),
                     height: Math.max(520, resizeStart.current.h + dy),
@@ -507,6 +458,8 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
 
         try {
             const anyWin = window as any;
+
+            // ✅ This is the correct send path for Nitro
             if (anyWin?.Nitro?.connection) {
                 anyWin.Nitro.connection.send(
                     new HaircutSelectStyleComposer(payload.offerId, hr)
@@ -531,8 +484,10 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
             className={`haircut-offer-view ${closing ? "exit-br" : "enter-br"}`}
             onAnimationEnd={() => {
                 if (!closing) return;
+
                 setIsVisible(false);
                 setClosing(false);
+
                 if (typeof onClose === "function") onClose();
             }}
             style={{
@@ -549,6 +504,7 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
                 onTouchStart={startDragTouch}
             >
                 <span>Haircut</span>
+
                 <button
                     onClick={handleClose}
                     className="close-button"
@@ -590,13 +546,12 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
                             </div>
                         </div>
 
+                        {/* ✅ Preview ALWAYS renders (same as avatar editor) */}
                         <div className="haircut-preview">
                             <div className="preview-frame">
-                                {!!previewUrl ? (
-                                    <img
-                                        src={previewUrl}
-                                        alt="Preview"
-                                        draggable={false}
+                                {figureData ? (
+                                    <AvatarEditorFigurePreviewView
+                                        figureData={figureData}
                                     />
                                 ) : (
                                     <div className="preview-placeholder">
@@ -615,13 +570,13 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
                 </div>
 
                 <div className="haircut-main">
-                    {/* ✅ Styles now scroll */}
+                    {/* ✅ Styles (paged 3x8) */}
                     <div className="haircut-styles">
                         <div className="haircut-section-title">Styles</div>
 
                         <div className="styles-scroll">
                             <div className="styles-grid-scroll">
-                                {stylesAll.map((p: any) => {
+                                {stylesPage.map((p: any) => {
                                     const isSelected = !!p?.isSelected;
                                     const img = p?.imageUrl;
 
@@ -641,6 +596,8 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
                                                         src={img}
                                                         alt={`Style ${p.id}`}
                                                         draggable={false}
+                                                        loading="lazy"
+                                                        decoding="async"
                                                     />
                                                 ) : (
                                                     <div className="thumb-loading">
@@ -656,15 +613,47 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
                                                     </div>
                                                 )}
                                             </div>
+
                                             <div className="style-label">{`Style ${p.id}`}</div>
                                         </button>
                                     );
                                 })}
                             </div>
+
+                            {/* ✅ pager */}
+                            <div className="styles-pager">
+                                <button
+                                    className="pager-btn"
+                                    type="button"
+                                    onClick={() =>
+                                        setPage((p) => Math.max(0, p - 1))
+                                    }
+                                    disabled={page <= 0}
+                                >
+                                    Prev
+                                </button>
+
+                                <div className="pager-info">
+                                    Page {page + 1} / {pageCount}
+                                </div>
+
+                                <button
+                                    className="pager-btn"
+                                    type="button"
+                                    onClick={() =>
+                                        setPage((p) =>
+                                            Math.min(pageCount - 1, p + 1)
+                                        )
+                                    }
+                                    disabled={page >= pageCount - 1}
+                                >
+                                    Next
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    {/* ✅ Colors now scroll (fixed: uses AvatarEditorPaletteSetView like the working editor) */}
+                    {/* ✅ Colors scroll (uses the working avatar editor palette view) */}
                     <div className="haircut-colors">
                         <div className="haircut-section-title">Color</div>
 
