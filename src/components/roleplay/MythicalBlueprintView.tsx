@@ -84,9 +84,6 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
     // drag info (avoid getData during dragover)
     const draggingInvRowIdRef = useRef<number>(0);
 
-    // debug toggle
-    const [debug, setDebug] = useState(false);
-
     const clamp = useCallback((x: number, y: number) => {
         const nitro = GetNitroInstance?.() as any;
 
@@ -186,10 +183,6 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
                 craftable: !!d.craftable,
             };
 
-            console.log(
-                "[BlueprintView] bridge mythical_blueprint_open detail=",
-                d
-            );
             setIsExiting(false);
             setIsEntering(true);
             setBp(next);
@@ -293,14 +286,6 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
             return { ...prev, optionalInvItemId: invRowId };
         });
 
-        console.log("[BlueprintView] sending AddItem", {
-            sessionId: bp.sessionId,
-            blueprintItemId: bp.blueprintItemId,
-            invRowId,
-            quantity,
-            slotIndex,
-        });
-
         GetCommunication().connection.send(
             new MythicalBlueprintAddItemComposer(
                 bp.sessionId,
@@ -319,7 +304,7 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
 
             const rid = Number(rowId);
 
-            // Most common: id is the inventory_items.id (row id)
+            // Most common: id is the inventory_items.id(row id)
             let it = invItems.find((i) => Number((i as any).id) === rid);
             if (it) return it;
 
@@ -352,7 +337,6 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
 
     const getIcon = (inv?: InventoryContext) => {
         if (!inv) return "";
-        // some projects use icon_path, some iconPath
         return (inv as any).icon_path || (inv as any).iconPath || "";
     };
 
@@ -407,20 +391,7 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
 
         const inv = resolveInventoryRow(parsed.invRowId);
 
-        console.log(
-            "[BlueprintView] drop payload=",
-            parsed,
-            "resolvedInv=",
-            inv
-        );
-
-        if (!canDropIntoSlot(slotIndex, inv)) {
-            console.log("[BlueprintView] drop rejected by slot type", {
-                slotIndex,
-                item_type: (inv as any)?.item_type,
-            });
-            return;
-        }
+        if (!canDropIntoSlot(slotIndex, inv)) return;
 
         addToSlot(slotIndex, parsed.invRowId, 1);
     };
@@ -465,17 +436,7 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
             <div className="blueprint-body">
                 <div className="blueprint-top">
                     <div className="blueprint-slots">
-                        <div className="blueprint-side-title">
-                            Slots
-                            <button
-                                type="button"
-                                className="blueprint-debug-toggle"
-                                onClick={() => setDebug((v) => !v)}
-                                title="Toggle debug"
-                            >
-                                {debug ? "Debug: ON" : "Debug: OFF"}
-                            </button>
-                        </div>
+                        <div className="blueprint-side-title">Slots</div>
 
                         <div className="blueprint-slots-row">
                             {slotInvRowIds.map((invRowId, idx) => {
@@ -530,7 +491,7 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
                                                     "move";
                                             }}
                                             onDrop={(e) => onSlotDrop(e, idx)}
-                                            title={inv?.name || ""}
+                                            title={(inv as any)?.name || ""}
                                         >
                                             {!filled && (
                                                 <div className="slot-number centered">
@@ -544,7 +505,8 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
                                                         <img
                                                             src={icon}
                                                             alt={
-                                                                inv?.name ||
+                                                                (inv as any)
+                                                                    ?.name ||
                                                                 "item"
                                                             }
                                                             draggable={false}
@@ -555,14 +517,17 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
                                                         </div>
                                                     )}
 
-                                                    {(inv as any)?.quantity >
-                                                        1 && (
+                                                    {Number(
+                                                        (inv as any)
+                                                            ?.quantity ?? 0
+                                                    ) > 1 && (
                                                         <div className="quantity-label">
                                                             x
-                                                            {
+                                                            {Number(
                                                                 (inv as any)
-                                                                    .quantity
-                                                            }
+                                                                    ?.quantity ??
+                                                                    1
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
@@ -577,28 +542,6 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
                                         >
                                             Remove
                                         </button>
-
-                                        {debug && (
-                                            <div className="blueprint-debug-line">
-                                                <div>rowId: {invRowId}</div>
-                                                <div>
-                                                    resolved:{" "}
-                                                    {inv ? "YES" : "NO"}
-                                                </div>
-                                                <div>
-                                                    type:{" "}
-                                                    {lower(
-                                                        (inv as any)?.item_type
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    icon:{" "}
-                                                    {getIcon(inv)
-                                                        ? "YES"
-                                                        : "NO"}
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 );
                             })}
@@ -633,17 +576,6 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
                             <div>
                                 Blueprint: <strong>{bp.blueprintItemId}</strong>
                             </div>
-                            {debug && (
-                                <div
-                                    style={{
-                                        marginTop: 6,
-                                        fontSize: 11,
-                                        opacity: 0.85,
-                                    }}
-                                >
-                                    invItems: <strong>{invItems.length}</strong>
-                                </div>
-                            )}
                         </div>
                     </div>
 
@@ -735,7 +667,8 @@ export const MythicalBlueprintView: FC<{ onClose?: () => void }> = ({
                                                     <div className="quantity-label">
                                                         x
                                                         {Number(
-                                                            (it as any).quantity
+                                                            (it as any)
+                                                                .quantity ?? 1
                                                         )}
                                                     </div>
                                                 )}
