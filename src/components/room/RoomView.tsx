@@ -43,6 +43,7 @@ import { CombatCooldownView } from "../../components/roleplay/CombatCooldownView
 import { HeistTimerWidget } from "../roleplay/HeistTimerWidget";
 import { TradeView } from "../roleplay/TradeView";
 import { MythicalBlueprintView } from "../roleplay/MythicalBlueprintView";
+import { HaircutOfferView } from "../roleplay/HaircutOfferView";
 
 /* -----------------------------------------------------------
 Click-through helpers
@@ -229,6 +230,7 @@ Render
                     <CombatCooldownView></CombatCooldownView>
                     <TradeView></TradeView>
                     <MythicalBlueprintView></MythicalBlueprintView>
+                    <HaircutOfferView></HaircutOfferView>
                     {/*
                     <ArenaQueueView visible={true}></ArenaQueueView>
                     */}
