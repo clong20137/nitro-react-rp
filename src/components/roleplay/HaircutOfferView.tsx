@@ -298,17 +298,107 @@ export const HaircutOfferView: FC<HaircutOfferViewProps> = ({ onClose }) => {
 
     const selectStyle = useCallback(
         (part: any) => {
-            if (!part || !headModel || !hairCategory) return;
+            if (!part || !hairCategory) return;
 
-            try {
-                headModel.selectPart?.(hairCategory.name, part.id);
-            } catch {}
+            const catKey = hairCategory.name || "hr";
+            const partId = part.id ?? part.setId ?? part.partId;
 
+            if (partId === undefined || partId === null) return;
+
+            let didSelect = false;
+
+            // 1) Some builds put selectPart on the MODEL
+            if (
+                headModel &&
+                typeof (headModel as any).selectPart === "function"
+            ) {
+                try {
+                    (headModel as any).selectPart(catKey, partId);
+                    didSelect = true;
+                } catch (e) {
+                    console.warn("[Haircut] headModel.selectPart failed", e);
+                }
+            }
+
+            // 2) Some builds put selection on the CATEGORY itself
+            if (
+                !didSelect &&
+                typeof (hairCategory as any).selectPart === "function"
+            ) {
+                try {
+                    (hairCategory as any).selectPart(partId);
+                    didSelect = true;
+                } catch (e) {
+                    console.warn("[Haircut] hairCategory.selectPart failed", e);
+                }
+            }
+
+            // 3) Fallback: write directly to FigureData (many Nitro forks support this)
+            if (!didSelect && figureData) {
+                try {
+                    // common method names across forks:
+                    if (
+                        typeof (figureData as any).savePartSetId === "function"
+                    ) {
+                        (figureData as any).savePartSetId(catKey, partId);
+                        didSelect = true;
+                    } else if (
+                        typeof (figureData as any).setPart === "function"
+                    ) {
+                        (figureData as any).setPart(catKey, partId);
+                        didSelect = true;
+                    }
+                } catch (e) {
+                    console.warn("[Haircut] FigureData part write failed", e);
+                }
+            }
+
+            if (!didSelect) {
+                console.warn(
+                    "[Haircut] Could not select hair style. Available keys:",
+                    {
+                        catKey,
+                        partId,
+                        hasHeadModelSelectPart:
+                            !!headModel &&
+                            typeof (headModel as any).selectPart === "function",
+                        hasCategorySelectPart:
+                            typeof (hairCategory as any).selectPart ===
+                            "function",
+                        hasFigureSavePartSetId:
+                            !!figureData &&
+                            typeof (figureData as any).savePartSetId ===
+                                "function",
+                    }
+                );
+                return;
+            }
+
+            // update palette count if provided
             setMaxPaletteCount(part.maxColorIndex || 1);
+
+            // force redraw (preview + list selection)
             setThumbTick((t) => t + 1);
         },
-        [headModel, hairCategory]
+        [headModel, hairCategory, figureData]
     );
+
+    useEffect(() => {
+        if (!figureData) return;
+
+        const prev = (figureData as any).notify;
+
+        (figureData as any).notify = () => {
+            try {
+                prev?.();
+            } catch {}
+            setThumbTick((t) => t + 1);
+        };
+
+        return () => {
+            (figureData as any).notify = prev ?? null;
+        };
+    }, [figureData]);
 
     // NOTE: palette clicks are handled internally by AvatarEditorPaletteSetView
     // (same as your working avatar editor). We only rerender on thumbTick.
