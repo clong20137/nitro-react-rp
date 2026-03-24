@@ -445,18 +445,9 @@ export const StatsBar: FC = () => {
     return (
         <div ref={containerRef} className="stats-bar-container">
             <div className="stats-left">
-                <div
-                    className="xp-bar-container"
-                    style={{ position: "relative" }}
-                >
-                    <div
-                        className="xp-bar-fill"
-                        style={{ width: `${(xp / maxXP) * 100}%` }}
-                    />
-                    {xpGained && <XPGainPopup amount={xpGained} />}
-                </div>
-
                 <div className="greek-circle">
+                    {xpGained && <XPGainPopup amount={xpGained} />}
+
                     <div className="greek-xp-ring">
                         <svg className="xp-ring-svg" viewBox="0 0 36 36">
                             <path

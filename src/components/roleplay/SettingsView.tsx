@@ -16,6 +16,10 @@ import {
 } from "../../api";
 import { useMessageEvent } from "../../hooks";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+    getStoredRoleplayTheme,
+    saveRoleplayTheme,
+} from "./roleplayTheme";
 
 import {
     NitroSettingsEvent,
@@ -112,13 +116,14 @@ type OwnedItem = { id: number; owned: true };
 /* ---- Component ---- */
 export const SettingsView: FC<Props> = ({ onClose }) => {
     const [entering, setEntering] = useState(true);
-    type TabKey = "general" | "chat" | "icons" | "namecolor";
+    type TabKey = "general" | "chat" | "icons" | "namecolor" | "theme";
     const [activeTab, setActiveTab] = useState<TabKey>(
         () => (localStorage.getItem(ACTIVE_TAB_KEY) as TabKey) || "general"
     );
 
     const { ref: rootRef, onMouseDown: startDrag } =
         useDraggable<HTMLDivElement>();
+    const [themeColor, setThemeColor] = useState(() => getStoredRoleplayTheme());
 
     /* ====== USER SETTINGS (old chat, camera follow, volume) ====== */
     const [userSettings, setUserSettings] = useState<NitroSettingsEvent>(() => {
@@ -415,7 +420,7 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
             }`}
             role="dialog"
             aria-label="Settings"
-            style={{ left: "calc(100vw - 420px)", top: "90px" }}
+            style={{ left: "calc(100vw - 520px)", top: "90px" }}
         >
             <div className="settings-header" onMouseDown={startDrag}>
                 <span>Settings</span>
@@ -433,7 +438,7 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
                 role="tablist"
                 aria-label="Settings tabs"
             >
-                {["general", "chat", "icons", "namecolor"].map((tab) => (
+                {["general", "chat", "icons", "namecolor", "theme"].map((tab) => (
                     <button
                         key={tab}
                         type="button"
@@ -450,7 +455,9 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
                             ? "Chat Bubbles"
                             : tab === "icons"
                             ? "Name Icons"
-                            : "Name Color"}
+                            : tab === "namecolor"
+                            ? "Name Color"
+                            : "Theme"}
                     </button>
                 ))}
             </div>
@@ -728,6 +735,63 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
                                     </button>
                                 );
                             })}
+                        </div>
+                    </div>
+                )}
+
+
+                {activeTab === "theme" && (
+                    <div className="appearance-group">
+                        <div className="group-title with-sub">
+                            <span>HUD Theme</span>
+                            <small>Change the shared roleplay color for your main UI panels</small>
+                        </div>
+
+                        <div className="settings-row theme-row">
+                            <div className="settings-row__copy">
+                                <div className="title">Primary Color</div>
+                                <div className="sub">Updates Inventory, Wanted List, Create Gang, Gang Details, Corporations, Macros, My Profile, Diamond Store, and the shared roleplay HUD.</div>
+                            </div>
+
+                            <div className="theme-controls">
+                                <input
+                                    type="color"
+                                    value={themeColor}
+                                    className="theme-color-input"
+                                    onChange={ event => {
+                                        const value = event.target.value;
+                                        setThemeColor(value);
+                                        saveRoleplayTheme(value);
+                                    }}
+                                />
+                                <input
+                                    type="text"
+                                    value={themeColor.toUpperCase()}
+                                    className="theme-hex-input"
+                                    maxLength={7}
+                                    onChange={ event => setThemeColor(event.target.value) }
+                                    onBlur={ () => setThemeColor(saveRoleplayTheme(themeColor)) }
+                                />
+                                <button
+                                    type="button"
+                                    className="settings-theme-reset"
+                                    onClick={ () => setThemeColor(saveRoleplayTheme("#0d6091")) }
+                                >
+                                    Reset
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="theme-preview-grid">
+                            <div className="theme-preview-card">
+                                <div className="theme-preview-header">Header</div>
+                                <div className="theme-preview-body">Inventory / Gangs / Corporations</div>
+                            </div>
+                            <div className="theme-preview-chip">Sidebar / Dock / Right Compact</div>
+                            <div className="theme-preview-tabs">
+                                <span className="preview-tab active">Active Tab</span>
+                                <span className="preview-tab">Tab</span>
+                            </div>
                         </div>
                     </div>
                 )}

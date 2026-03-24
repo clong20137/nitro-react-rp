@@ -8,6 +8,7 @@ import React, {
     MouseEvent as ReactMouseEvent,
 } from "react";
 import "./ArenaQueueView.scss";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { SendMessageComposer } from "../../api";
 
 import { ArenaJoinQueueComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ArenaJoinQueueComposer";
@@ -599,27 +600,25 @@ export const ArenaQueueView: FC<ArenaQueueViewProps> = ({
                 />
             </div>
 
-            <div className="arena-tabs">
+            <div className="rp-tabs arena-tabs">
                 <button
-                    className={`tab-btn ${
-                        activeTab === "match" ? "active" : ""
-                    }`}
+                    className={`rp-tab ${activeTab === "match" ? "active" : ""}`}
                     onClick={() => setActiveTab("match")}
                 >
-                    Matchmaking
+                    <FontAwesomeIcon className="rp-tab__icon" icon="fist-raised" />
+                    <span className="rp-tab__label">Matchmaking</span>
                 </button>
 
                 <button
-                    className={`tab-btn ${
-                        activeTab === "leaderboard" ? "active" : ""
-                    }`}
+                    className={`rp-tab ${activeTab === "leaderboard" ? "active" : ""}`}
                     onClick={() => setActiveTab("leaderboard")}
                 >
-                    Leaderboards
+                    <FontAwesomeIcon className="rp-tab__icon" icon="trophy" />
+                    <span className="rp-tab__label">Leaderboards</span>
                 </button>
             </div>
 
-            <div className="arena-body">
+            <div className="arena-body rp-tab-panel rp-tab-panel--animated" key={activeTab}>
                 <div className="arena-left">
                     <div className="arena-avatar-section">
                         <div className="arena-avatar-frame">

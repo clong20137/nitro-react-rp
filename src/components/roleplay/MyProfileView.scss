@@ -6,58 +6,58 @@
     width: 850px;
     height: 560px;
     /* JSX sets height dynamically; this is just fallback */
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22), 0 2px 0 rgba(0, 0, 0, 0.25),
-        inset 0 -4px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22), 0 2px 0 rgba(0, 0, 0, 0.25), inset 0 -4px rgba(0, 0, 0, 0.12);
     border: 2px solid #fff;
     background: #dfdfdf;
     color: #000;
     z-index: 9999;
     border-radius: 8px;
     user-select: none;
-
     display: flex;
     flex-direction: column;
-
     /* important for internal overlays (sticker/badge popups) */
     overflow: hidden;
-
     will-change: transform, opacity, top, left, width, height;
+    transform-origin: center center;
 }
 
+
 /* enter/close animation */
+
 .profile-container.enter {
-    animation: profileEnter 160ms ease-out both;
+    animation: profileEnter 180ms ease-out both;
 }
 
 .profile-container.closing {
-    animation: profileExit 160ms ease-in both;
+    animation: profileExit 180ms ease-in both;
+    pointer-events: none;
 }
 
 @keyframes profileEnter {
     from {
         opacity: 0;
-        transform: translateY(6px);
+        transform: scale(0.88);
     }
-
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: scale(1);
     }
 }
 
 @keyframes profileExit {
     from {
         opacity: 1;
-        transform: translateY(0);
+        transform: scale(1);
     }
-
     to {
         opacity: 0;
-        transform: translateY(6px);
+        transform: scale(0.88);
     }
 }
 
+
 /* Wrapper for tab content */
+
 .tab-content {
     background: #dfdfdf;
     border-radius: 0 0 8px 8px;
@@ -67,7 +67,9 @@
     overflow: hidden;
 }
 
+
 /* ✅ This wraps the general tab */
+
 .profile-body-wrap {
     position: relative;
     width: 100%;
@@ -77,7 +79,9 @@
     /* keep stickers inside bounds */
 }
 
+
 /* ✅ UI content always above stickers */
+
 .profile-body {
     position: relative;
     z-index: 2;
@@ -89,9 +93,11 @@
     box-sizing: border-box;
 }
 
+
 /* Header */
+
 .profile-header {
-    background: #1e7295;
+    background: var(--rp-primary);
     color: #fff;
     display: flex;
     align-items: center;
@@ -102,93 +108,53 @@
     border-radius: 8px 8px 0 0;
     cursor: grab;
     position: relative;
-
     .title {
         filter: drop-shadow(0 0 1px black);
-        text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
-            1px 1px 0 #000;
+        text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
         pointer-events: none;
     }
 }
 
+
 /* Tabs */
+
 .profile-tabs {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-    background: #185d79;
-
-    .tab-btn {
-        min-width: 120px;
-        padding: 10px 16px;
-        border: 2px solid #fff;
-        border-bottom: none;
-        background: linear-gradient(180deg,
-                #1e7295,
-                #1e7295 50%,
-                #185d79 0,
-                #185d79);
-        color: #fff;
-        font-weight: 700;
-        border-radius: 8px 8px 0 0;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-        cursor: pointer;
-        transition: background 0.15s ease, transform 0.08s ease;
-        text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
-            1px 1px 0 #000;
-
-        &.active {
-            background: #b6bec5;
-            color: #0b0b0b;
-            text-shadow: none;
-        }
-
-        &:hover:not(.active) {
-            filter: brightness(1.05);
-            transform: translateY(-1px);
-        }
-    }
+    justify-content: flex-start;
+    padding: 8px 12px 0;
+    background: var(--rp-tab-bottom);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
 }
 
+
 /* Pencil button left of close */
+
 .pencil-button {
     position: absolute;
     top: 6px;
     right: 42px;
-    /* leaves room for close button */
+    width: 28px;
     height: 24px;
-    min-width: 34px;
-    padding: 0 6px;
-    border-radius: 6px;
-    border: 2px solid #ffffff;
-    background: linear-gradient(180deg,
-            #2dabc2,
-            #2dabc2 50%,
-            #2b91a7 0,
-            #2b91a7);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
-        0 2px 0 rgba(0, 0, 0, 0.22);
+    min-width: 28px;
+    padding: 0;
+    border-radius: 4px;
+    border: 2px solid var(--rp-primary-border);
+    background: repeating-linear-gradient(var(--rp-primary-light), var(--rp-primary-light) 50%, var(--rp-primary) 0, var(--rp-primary));
+    box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, 0.22);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-
     img {
-        width: 16px;
-        height: 16px;
-        image-rendering: pixelated;
+        width: 20px;
+        height: 20px;
         pointer-events: none;
     }
-
     &:hover {
         filter: brightness(1.05);
     }
-
     &:active {
         transform: translateY(1px);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
-            0 1px 0 rgba(0, 0, 0, 0.35);
+        box-shadow: 0 0 0 1.6px #fff, 0 1px 0 rgba(0, 0, 0, 0.35);
     }
 }
 
@@ -199,15 +165,11 @@
     width: 24px;
     height: 24px;
     border: 2px solid #921911;
-    background: repeating-linear-gradient(#f55041,
-            #f55041 50%,
-            #c23027 0,
-            #c23027);
+    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
     border-radius: 4px;
     box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, 0.22);
     cursor: pointer;
     padding: 0;
-
     &:before,
     &:after {
         content: "";
@@ -220,26 +182,24 @@
         border-radius: 1px;
         transform-origin: center;
     }
-
     &:before {
         transform: translate(-50%, -50%) rotate(45deg);
     }
-
     &:after {
         transform: translate(-50%, -50%) rotate(-45deg);
     }
-
     &:hover {
         filter: brightness(1.05);
     }
-
     &:active {
         transform: translateY(1px);
         box-shadow: 0 0 0 1.6px #fff, 0 1px 0 rgba(0, 0, 0, 0.4);
     }
 }
 
+
 /* Columns */
+
 .profile-left {
     width: 280px;
     min-width: 0;
@@ -250,7 +210,9 @@
     margin-left: 20px;
 }
 
+
 /* Left column */
+
 .avatar-section {
     background: #cdcdcd;
     border-radius: 8px;
@@ -299,12 +261,10 @@
     font-size: 12px;
     border: 1px solid rgba(0, 0, 0, 0.15);
     width: fit-content;
-
     &.on {
         background: #e9f7ef;
         color: #1d7c35;
     }
-
     &.off {
         background: #f7e9e9;
         color: #9b2c2c;
@@ -321,7 +281,9 @@
     white-space: nowrap;
 }
 
+
 /* gang pill next to name */
+
 .gang-pill {
     display: inline-flex;
     align-items: center;
@@ -334,7 +296,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-
     span {
         overflow: hidden;
         text-overflow: ellipsis;
@@ -349,18 +310,15 @@
     border-radius: 3px;
     overflow: hidden;
     border: 1px solid rgba(0, 0, 0, 0.25);
-
     .half {
         position: absolute;
         top: 0;
         bottom: 0;
         width: 50%;
     }
-
     .left {
         left: 0;
     }
-
     .right {
         right: 0;
     }
@@ -372,7 +330,9 @@
     image-rendering: pixelated;
 }
 
+
 /* Info cards stack */
+
 .info-section {
     margin-top: 10px;
     display: grid;
@@ -394,13 +354,14 @@
     color: #000;
 }
 
+
 /* XP + Skills */
+
 .level-xp {
     font-size: 14px;
     background: #cdcdcd;
     border-radius: 8px;
     padding: 8px;
-
     .xp-bar {
         background: #302e29;
         height: 20px;
@@ -409,22 +370,19 @@
         border-radius: 4px;
         border: 1px solid #fff;
         overflow: hidden;
-
         .xp-fill {
             height: 100%;
-            background: #0f96bc;
+            background: var(--rp-skill-fill);
             transition: width 0.3s ease-out;
-            border: solid 1px #42c9ef;
+            border: solid 1px var(--rp-skill-border);
             border-radius: 2px;
         }
     }
-
     .xp-text {
         font-size: 12px;
     }
-
     .points-left {
-        background: #0f96bc;
+        background: var(--rp-skill-fill);
         color: #fff;
         text-align: center;
         padding: 5px;
@@ -465,17 +423,15 @@
     border-radius: 4px;
     overflow: hidden;
     border: 1px solid #fff;
-
     .skill-bar-fill {
-        background: #0f96bc;
+        background: var(--rp-skill-fill);
         height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: width 0.3s ease;
         border-radius: 2px;
-        border: solid 1px #42c9ef;
-
+        border: solid 1px var(--rp-skill-border);
         .skill-bar-text {
             font-size: 16px;
             font-weight: 700;
@@ -494,25 +450,24 @@
     font-weight: 700;
     cursor: pointer;
     transition: background 0.15s ease, transform 0.08s ease;
-
     &:hover {
         filter: brightness(1.05);
         transform: translateY(-1px);
     }
-
     &:active {
         transform: translateY(0);
     }
 }
 
+
 /* Stats breakdown */
+
 .stats-breakdown {
     margin-top: 16px;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     font-size: 13px;
-
     @media (max-width: 860px) {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -525,8 +480,7 @@
     padding: 6px 8px;
     border-radius: 8px;
     background: #cdcdcd;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8),
-        0 1px 0 rgba(0, 0, 0, 0.18);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 0 rgba(0, 0, 0, 0.18);
     min-height: 40px;
 }
 
@@ -552,8 +506,7 @@
     letter-spacing: 0.3px;
     color: #ffffff;
     filter: drop-shadow(0 0 1px black);
-    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
-        1px 1px 0 #000;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
     font-weight: 600;
 }
 
@@ -562,11 +515,12 @@
     font-weight: 800;
     color: #ffffff;
     filter: drop-shadow(0 0 1px black);
-    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
-        1px 1px 0 #000;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
+
 /* icon hooks */
+
 .stat-card--kills .stat-icon {
     background-image: url("../../icons/kills.png");
 }
@@ -590,6 +544,7 @@
 .stat-card--kdr .stat-icon {
     background-image: url("../../icons/kd.png");
 }
+
 
 /* ==============================
 Badges strip (editable)
@@ -622,28 +577,31 @@ Badges strip (editable)
     height: 22px;
     padding: 0 8px;
     border-radius: 6px;
-    border: 1px solid rgba(0, 0, 0, 0.18);
-    background: #ffffff;
+    border: 1px solid var(--rp-primary-border);
+    background: linear-gradient(180deg, var(--rp-primary-light), var(--rp-primary-light) 48%, var(--rp-primary) 100%);
+    color: #fff;
     font-weight: 800;
     font-size: 12px;
     cursor: pointer;
-
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 0 rgba(0, 0, 0, 0.18);
     img {
         width: 14px;
         height: 14px;
         image-rendering: pixelated;
+        filter: brightness(0) invert(1);
     }
-
     &:hover {
         filter: brightness(1.03);
     }
-
     &:active {
         transform: translateY(1px);
     }
 }
 
+
 /* 5-slot strip */
+
 .badge-strip-slots {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -680,6 +638,7 @@ Badges strip (editable)
     border: 1px dashed rgba(0, 0, 0, 0.25);
 }
 
+
 /* ==============================
 Badge editor popup (inside module bounds)
 ============================== */
@@ -698,33 +657,29 @@ Badge editor popup (inside module bounds)
 }
 
 .badges-popup-header {
-    background: #1e7295;
+    background: var(--rp-primary);
     color: #fff;
     padding: 8px 10px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     font-weight: 800;
+    box-shadow: inset 0 -3px rgba(0, 0, 0, .0901960784);
 }
 
 .badges-popup-title {
     filter: drop-shadow(0 0 1px black);
-    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
-        1px 1px 0 #000;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 .badges-popup-close {
     width: 22px;
     height: 22px;
     border: 2px solid #921911;
-    background: repeating-linear-gradient(#f55041,
-            #f55041 50%,
-            #c23027 0,
-            #c23027);
+    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
     border-radius: 4px;
     cursor: pointer;
     position: relative;
-
     &:before,
     &:after {
         content: "";
@@ -737,15 +692,12 @@ Badge editor popup (inside module bounds)
         border-radius: 1px;
         transform-origin: center;
     }
-
     &:before {
         transform: translate(-50%, -50%) rotate(45deg);
     }
-
     &:after {
         transform: translate(-50%, -50%) rotate(-45deg);
     }
-
     &:hover {
         filter: brightness(1.05);
     }
@@ -764,19 +716,15 @@ Badge editor popup (inside module bounds)
     gap: 8px;
     max-height: 280px;
     overflow: auto;
-
     scrollbar-width: thin;
     scrollbar-color: #7a9ccf #d5d9e6;
-
     &::-webkit-scrollbar {
         width: 8px;
     }
-
     &::-webkit-scrollbar-track {
         background: #d5d9e6;
         border-radius: 8px;
     }
-
     &::-webkit-scrollbar-thumb {
         background: #7a9ccf;
         border-radius: 8px;
@@ -788,21 +736,19 @@ Badge editor popup (inside module bounds)
     height: 44px;
     border-radius: 8px;
     border: 1px solid rgba(0, 0, 0, 0.15);
-    background: rgba(255, 255, 255, 0.4);
+    background: #cfcfcf;
     cursor: pointer;
     display: grid;
     place-items: center;
     position: relative;
-
     &:hover {
         filter: brightness(1.05);
+        background: var(--rp-primary-light);
     }
-
     &.selected {
         outline: 2px solid rgba(15, 150, 188, 0.8);
         background: rgba(15, 150, 188, 0.15);
     }
-
     img {
         width: 26px;
         height: 26px;
@@ -817,9 +763,10 @@ Badge editor popup (inside module bounds)
     bottom: 4px;
     font-weight: 900;
     font-size: 14px;
-    color: #0f96bc;
+    color: var(--rp-primary);
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
 }
+
 
 /* ==============================
 ✅ Stickers layering system
@@ -834,25 +781,33 @@ Badge editor popup (inside module bounds)
     pointer-events: none;
 }
 
+
 /* behind UI */
+
 .profile-stickers-canvas.behind {
     z-index: 1;
     pointer-events: none;
 }
 
+
 /* edit/placing: above UI and interactive */
+
 .profile-stickers-canvas.edit {
     z-index: 3;
     pointer-events: auto;
 }
 
+
 /* sticker layer fills canvas */
+
 .profile-stickers-layer {
     position: absolute;
     inset: 0;
 }
 
+
 /* wrapper for each sticker */
+
 .profile-sticker-wrap {
     position: absolute;
     user-select: none;
@@ -873,7 +828,9 @@ Badge editor popup (inside module bounds)
     cursor: grabbing;
 }
 
+
 /* sticker image */
+
 .profile-sticker {
     width: 100%;
     height: 100%;
@@ -883,7 +840,9 @@ Badge editor popup (inside module bounds)
     /* wrapper handles input */
 }
 
+
 /* resize handles */
+
 .sticker-handle {
     position: absolute;
     width: 10px;
@@ -919,6 +878,7 @@ Badge editor popup (inside module bounds)
     cursor: nesw-resize;
 }
 
+
 /* ==============================
 Sticker Z/Size editor
 ============================== */
@@ -928,21 +888,25 @@ Sticker Z/Size editor
     right: 14px;
     top: 60px;
     width: 220px;
-    background: rgba(40, 40, 40, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: #dfdfdf;
+    border: 2px solid #ffffff;
     border-radius: 8px;
     padding: 10px;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
-    z-index: 10;
-    /* above everything */
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+    z-index: 30;
+    overflow: hidden;
 }
 
 .zeditor-title {
-    font-weight: 700;
+    font-weight: 800;
     font-size: 12px;
     margin-bottom: 8px;
     color: #fff;
-    opacity: 0.95;
+    background: var(--rp-primary);
+    border-radius: 6px;
+    padding: 6px 8px;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    box-shadow: inset 0 -3px rgba(0, 0, 0, .0901960784);
 }
 
 .zeditor-row {
@@ -956,33 +920,39 @@ Sticker Z/Size editor
     flex: 1;
     height: 28px;
     border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--rp-primary-border);
+    background: linear-gradient(180deg, var(--rp-primary-light), var(--rp-primary-light) 48%, var(--rp-primary) 100%);
     color: #fff;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
-
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 0 rgba(0, 0, 0, 0.18);
     &:hover {
-        filter: brightness(1.08);
+        filter: brightness(1.05);
     }
-
     &:active {
         transform: translateY(1px);
     }
 }
 
 .zbtn.danger {
-    background: rgba(255, 70, 70, 0.15);
-    border-color: rgba(255, 70, 70, 0.25);
+    border-color: #b63b3b;
+    background: linear-gradient(180deg, #d95757, #d95757 48%, #b93f3f 100%);
 }
 
 .zvalue {
     width: 46px;
-    text-align: center;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-weight: 800;
-    color: #fff;
-    opacity: 0.95;
+    color: #111;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
 }
+
 
 /* ==============================
 Sticker picker popup (inside module bounds)
@@ -1002,33 +972,29 @@ Sticker picker popup (inside module bounds)
 }
 
 .stickers-popup-header {
-    background: #1e7295;
+    background: var(--rp-primary);
     color: #fff;
     padding: 8px 10px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     font-weight: 800;
+    box-shadow: inset 0 -3px rgba(0, 0, 0, .0901960784);
 }
 
 .stickers-popup-title {
     filter: drop-shadow(0 0 1px black);
-    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
-        1px 1px 0 #000;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 .stickers-popup-close {
     width: 22px;
     height: 22px;
     border: 2px solid #921911;
-    background: repeating-linear-gradient(#f55041,
-            #f55041 50%,
-            #c23027 0,
-            #c23027);
+    background: repeating-linear-gradient(#f55041, #f55041 50%, #c23027 0, #c23027);
     border-radius: 4px;
     cursor: pointer;
     position: relative;
-
     &:before,
     &:after {
         content: "";
@@ -1041,11 +1007,9 @@ Sticker picker popup (inside module bounds)
         border-radius: 1px;
         transform-origin: center;
     }
-
     &:before {
         transform: translate(-50%, -50%) rotate(45deg);
     }
-
     &:after {
         transform: translate(-50%, -50%) rotate(-45deg);
     }
@@ -1064,19 +1028,15 @@ Sticker picker popup (inside module bounds)
     gap: 8px;
     max-height: 320px;
     overflow: auto;
-
     scrollbar-width: thin;
     scrollbar-color: #7a9ccf #d5d9e6;
-
     &::-webkit-scrollbar {
         width: 8px;
     }
-
     &::-webkit-scrollbar-track {
         background: #d5d9e6;
         border-radius: 8px;
     }
-
     &::-webkit-scrollbar-thumb {
         background: #7a9ccf;
         border-radius: 8px;
@@ -1088,15 +1048,15 @@ Sticker picker popup (inside module bounds)
     height: 44px;
     border-radius: 8px;
     border: 1px solid rgba(0, 0, 0, 0.15);
-    background: rgba(255, 255, 255, 0.4);
+    background: #cfcfcf;
     cursor: pointer;
     display: grid;
     place-items: center;
-
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 1px 0 rgba(0, 0, 0, 0.14);
     &:hover {
         filter: brightness(1.05);
+        background: var(--rp-primary-light);
     }
-
     &:disabled {
         opacity: 0.5;
         cursor: not-allowed;
@@ -1115,6 +1075,7 @@ Sticker picker popup (inside module bounds)
     font-size: 12px;
 }
 
+
 /* ==============================
 Module resize handle (bottom-right)
 ============================== */
@@ -1127,15 +1088,12 @@ Module resize handle (bottom-right)
     height: 14px;
     border-radius: 3px;
     border: 1px solid rgba(0, 0, 0, 0.35);
-    background: repeating-linear-gradient(45deg,
-            rgba(0, 0, 0, 0.2),
-            rgba(0, 0, 0, 0.2) 2px,
-            rgba(255, 255, 255, 0.2) 2px,
-            rgba(255, 255, 255, 0.2) 4px);
+    background: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2) 2px, rgba(255, 255, 255, 0.2) 2px, rgba(255, 255, 255, 0.2) 4px);
     cursor: nwse-resize;
     z-index: 30;
     touch-action: none;
 }
+
 
 /* ==============================
 Achievements (kept from your existing)
@@ -1147,19 +1105,15 @@ Achievements (kept from your existing)
     color: #000;
     height: 100%;
     overflow-y: auto;
-
     scrollbar-width: thin;
     scrollbar-color: #7a9ccf #d5d9e6;
-
     &::-webkit-scrollbar {
         width: 8px;
     }
-
     &::-webkit-scrollbar-track {
         background: #d5d9e6;
         border-radius: 8px;
     }
-
     &::-webkit-scrollbar-thumb {
         background: #7a9ccf;
         border-radius: 8px;
@@ -1181,11 +1135,9 @@ Achievements (kept from your existing)
     font-weight: 800;
     cursor: pointer;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
-
     &:hover {
         filter: brightness(1.05);
     }
-
     &:active {
         transform: translateY(1px);
     }
@@ -1208,7 +1160,7 @@ Achievements (kept from your existing)
 .ach-group-header {
     width: 100%;
     border: none;
-    background: #1e7295;
+    background: var(--rp-primary);
     border-radius: 6px;
     padding: 6px 8px;
     margin-bottom: 6px;
@@ -1217,7 +1169,6 @@ Achievements (kept from your existing)
     justify-content: space-between;
     cursor: pointer;
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
-
     &:hover {
         filter: brightness(1.03);
     }
@@ -1242,12 +1193,10 @@ Achievements (kept from your existing)
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
     transition: transform 220ms ease;
-
     &.down {
         border-top: 7px solid #fff;
         transform: translateY(1px);
     }
-
     &.up {
         border-bottom: 7px solid #fff;
         transform: translateY(-1px);
@@ -1288,14 +1237,11 @@ Achievements (kept from your existing)
     border: 1px solid #e5e7f0;
     border-radius: 6px;
     padding: 8px 8px;
-    transition: transform 0.15s ease, box-shadow 0.15s ease,
-        background 0.15s ease, filter 0.15s ease;
-
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, filter 0.15s ease;
     &:hover {
         background: #ffffff;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
         transform: translateY(-1px);
-
         .ach-progress .ach-fill {
             filter: brightness(1.1);
         }
@@ -1310,14 +1256,12 @@ Achievements (kept from your existing)
     border-radius: 4px;
     background: #fff;
     overflow: hidden;
-
     .ach-icon {
         width: 42px;
         height: 42px;
         image-rendering: pixelated;
         display: block;
     }
-
     .ach-check {
         position: absolute;
         right: -4px;
@@ -1333,20 +1277,14 @@ Achievements (kept from your existing)
 .ach-row.completed {
     border-color: rgba(34, 197, 94, 0.35);
     background: #effdf4;
-
     .ach-title {
         color: #14532d;
     }
-
     .ach-reward {
         color: #14532d;
     }
-
     .ach-progress .ach-fill {
-        background: repeating-linear-gradient(#22c55e,
-                #22c55e 50%,
-                #16a34a 0,
-                #16a34a);
+        background: repeating-linear-gradient(#22c55e, #22c55e 50%, #16a34a 0, #16a34a);
     }
 }
 
@@ -1355,12 +1293,10 @@ Achievements (kept from your existing)
     align-items: baseline;
     justify-content: space-between;
     gap: 6px;
-
     .ach-title {
         font-weight: 700;
         font-size: 13px;
     }
-
     .ach-reward {
         font-size: 11px;
         color: #666;
@@ -1377,26 +1313,20 @@ Achievements (kept from your existing)
 .ach-progress {
     grid-column: 1 / -1;
     margin-top: 4px;
-
     .ach-bar {
         background: #e9edf3;
         height: 24px;
         border-radius: 4px;
         overflow: hidden;
         width: 100%;
-
         .ach-fill {
             height: 100%;
             width: 0%;
             border-radius: 4px;
-            background: repeating-linear-gradient(#2dabc2,
-                    #2dabc2 50%,
-                    #2b91a7 0,
-                    #2b91a7);
+            background: repeating-linear-gradient(#2dabc2, #2dabc2 50%, #2b91a7 0, #2b91a7);
             transition: width 0.35s ease-out, background 0.25s ease;
         }
     }
-
     .ach-text {
         font-size: 11px;
         color: #555;
@@ -1411,9 +1341,11 @@ Achievements (kept from your existing)
     color: #555;
 }
 
+
 /* ==============================
 Global cursor helpers (added by JS)
 ============================== */
+
 .cursor-grabbing * {
     cursor: grabbing !important;
 }
@@ -1422,23 +1354,22 @@ Global cursor helpers (added by JS)
     cursor: nwse-resize !important;
 }
 
+
 /* ==============================
 Responsive / Mobile
 ============================== */
+
 @media (max-width: 860px) {
     .profile-container {
         width: 92vw !important;
         height: 85vh !important;
     }
-
     .profile-body {
         grid-template-columns: 1fr;
     }
-
     .profile-right {
         margin-left: 0;
     }
-
     .stickers-popup,
     .badges-popup {
         right: 8px;
@@ -1446,12 +1377,13 @@ Responsive / Mobile
     }
 }
 
+
 /* iOS/modern mobile: keep touch interactions smooth */
+
 @media (pointer: coarse) {
     .profile-header {
         cursor: grab;
     }
-
     .profile-sticker-wrap {
         cursor: grab;
     }

@@ -1,129 +1,175 @@
+import { RoomObjectCategory } from "@nitrots/nitro-renderer";
 import { useEffect, useRef, useState } from "react";
+import { GetNitroInstance, GetOwnRoomObject } from "../../api";
+import { ObjectLocationView } from "../room/widgets/object-location/ObjectLocationView";
 import "./GatherProgressView.scss";
+
+interface GatherProgressDetail {
+    durationMs?: number;
+    duration?: number;
+    icon?: string | null;
+    name?: string;
+    userId?: number;
+}
 
 export const GatheringProgressBar = () => {
     const [visible, setVisible] = useState(false);
     const [fadingOut, setFadingOut] = useState(false);
     const [durationMs, setDurationMs] = useState(30000);
-    const [iconUrl, setIconUrl] = useState<string | null>(null);
-    const [label, setLabel] = useState<string>("Gathering...");
+    const [label, setLabel] = useState("Gathering...");
     const [animKey, setAnimKey] = useState(0);
     const [remainingMs, setRemainingMs] = useState(0);
+    const [objectId, setObjectId] = useState<number>(-1);
 
-    const startAtRef = useRef<number>(0);
-    const endAtRef = useRef<number>(0); // NEW: source of truth for end time
+    const endAtRef = useRef(0);
     const rafRef = useRef<number | null>(null);
     const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const stopRAF = () => {
-        if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+        if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
     };
+
     const clearHideTimer = () => {
         if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
         hideTimerRef.current = null;
     };
 
+    const resolveOwnObjectId = (): number => {
+        try {
+            const ownRoomObject = GetOwnRoomObject();
+
+            if (ownRoomObject && ownRoomObject.id >= 0) return ownRoomObject.id;
+        } catch {}
+
+        return -1;
+    };
+
     useEffect(() => {
         const tick = () => {
             const now = performance.now();
-            const remain = Math.max(0, endAtRef.current - now); // <- uses refs, not state
+            const remain = Math.max(0, endAtRef.current - now);
+
+            const nextObjectId = resolveOwnObjectId();
+
+            if (nextObjectId >= 0 && nextObjectId !== objectId) {
+                setObjectId(nextObjectId);
+            }
+
             setRemainingMs(remain);
-            if (remain > 0) rafRef.current = requestAnimationFrame(tick);
+
+            if (remain > 0) {
+                rafRef.current = requestAnimationFrame(tick);
+                return;
+            }
+
+            setFadingOut(true);
+
+            setTimeout(() => {
+                setVisible(false);
+                stopRAF();
+            }, 200);
         };
 
         const handleStart = (e: Event) => {
-            const d: any = (e as CustomEvent).detail || {};
-            const dur = Number(d.durationMs ?? d.duration);
-            const icon = d.icon || null;
-            const name = d.name || "Gathering...";
+            const detail = ((e as CustomEvent).detail ||
+                {}) as GatherProgressDetail;
+            const dur = Number(detail.durationMs ?? detail.duration);
+            const nextObjectId = resolveOwnObjectId();
+
             if (!Number.isFinite(dur) || dur <= 0) return;
+            if (nextObjectId < 0) return;
 
             clearHideTimer();
             stopRAF();
 
-            setDurationMs(dur); // still used for the CSS animation var
-            setIconUrl(icon);
-            setLabel(name);
+            setDurationMs(dur);
+            setLabel(detail.name || "Gathering Item..");
+            setObjectId(nextObjectId);
             setFadingOut(false);
             setVisible(true);
 
             requestAnimationFrame(() => {
                 setAnimKey((k) => (k + 1) & 0xffff);
-
-                const now = performance.now();
-                startAtRef.current = now;
-                endAtRef.current = now + dur; // <- set precise end time for this gather
+                endAtRef.current = performance.now() + dur;
                 setRemainingMs(dur);
-
                 rafRef.current = requestAnimationFrame(tick);
-
-                hideTimerRef.current = setTimeout(() => {
-                    setFadingOut(true);
-                    setTimeout(() => {
-                        setVisible(false);
-                        stopRAF();
-                    }, 350); // match your fade duration
-                }, dur); // <- use the event's dur directly
             });
+
+            hideTimerRef.current = setTimeout(() => {
+                setFadingOut(true);
+
+                setTimeout(() => {
+                    setVisible(false);
+                    stopRAF();
+                }, 200);
+            }, dur);
         };
 
         const handleCancel = () => {
             clearHideTimer();
             stopRAF();
-            setFadingOut(true);
-            setTimeout(() => setVisible(false), 350);
             setRemainingMs(0);
+            setFadingOut(true);
+
+            setTimeout(() => {
+                setVisible(false);
+            }, 200);
         };
 
-        // Register once; handlers rely on refs, not state
+        const syncOwnAvatar = () => {
+            if (!visible) return;
+
+            const nextObjectId = resolveOwnObjectId();
+
+            if (nextObjectId >= 0 && nextObjectId !== objectId) {
+                setObjectId(nextObjectId);
+            }
+        };
+
         window.addEventListener(
             "gather_progress",
-            handleStart as EventListener
+            handleStart as EventListener,
         );
         window.addEventListener("gather_cancel", handleCancel);
+        GetNitroInstance().ticker.add(syncOwnAvatar);
 
         return () => {
             window.removeEventListener(
                 "gather_progress",
-                handleStart as EventListener
+                handleStart as EventListener,
             );
             window.removeEventListener("gather_cancel", handleCancel);
+            GetNitroInstance().ticker.remove(syncOwnAvatar);
             clearHideTimer();
             stopRAF();
         };
-    }, []); // <-- IMPORTANT: no durationMs dependency
+    }, [visible, objectId]);
 
-    if (!visible) return null;
+    if (!visible || objectId < 0) return null;
+
     const seconds = Math.ceil((remainingMs + 100) / 1000);
 
     return (
-        <div
-            className={`gathering-bar-horizontal-wrapper ${
-                fadingOut ? "fade-out" : "fade-in"
-            }`}
+        <ObjectLocationView
             key={animKey}
-            style={{ ["--gather-dur" as any]: `${durationMs}ms` }} // CSS anim stays correct
-            role="status"
-            aria-live="polite"
-            aria-label={`${label}, ${seconds} seconds remaining`}
+            objectId={objectId}
+            category={RoomObjectCategory.UNIT}
         >
-            <div className="gathering-icon" aria-hidden>
-                {iconUrl ? (
-                    <img src={iconUrl} alt="" />
-                ) : (
-                    <span className="placeholder">★</span>
-                )}
-            </div>
+            <div
+                className={`gather-avatar-bar ${fadingOut ? "fade-out" : "fade-in"}`}
+            >
+                <div className="gather-avatar-label">{label}</div>
 
-            <div className="gathering-content">
-                <div className="gathering-label" title={label}>
-                    {label}
+                <div className="gather-avatar-track">
+                    <div
+                        className="gather-avatar-fill"
+                        style={{ animationDuration: `${durationMs}ms` }}
+                    />
                 </div>
-                <div className="gathering-bar-horizontal" />
-            </div>
 
-            <div className="gathering-count">{seconds}s</div>
-        </div>
+                <div className="gather-avatar-time">{seconds}s</div>
+            </div>
+        </ObjectLocationView>
     );
 };

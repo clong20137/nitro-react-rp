@@ -10,68 +10,57 @@
     font-size: 12px;
     color: #000;
     z-index: 9999;
-    transform-origin: top left;
+    transform-origin: center center;
     will-change: transform, opacity, box-shadow;
 }
-
-/* ==== Open / Close animations ======================================= */
 
 @keyframes invEnter {
     0% {
         opacity: 0;
-        transform: translateX(-16px) translateY(-6px) scale(.985);
+        transform: scale(.86);
     }
-
     100% {
         opacity: 1;
-        transform: translateX(0) translateY(0) scale(1);
+        transform: scale(1);
     }
 }
 
 @keyframes invExit {
     0% {
         opacity: 1;
-        transform: translateX(0) translateY(0) scale(1);
+        transform: scale(1);
     }
-
     100% {
         opacity: 0;
-        transform: translateX(-12px) translateY(-4px) scale(.985);
+        transform: scale(.86);
     }
 }
 
 .inventory-module.is-entering {
-    animation: invEnter 220ms cubic-bezier(.2, .8, .25, 1) forwards;
+    animation: invEnter 220ms ease-out forwards;
 }
 
 .inventory-module.is-exiting {
     animation: invExit 180ms ease-in forwards;
+    pointer-events: none;
 }
 
-/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-
     .inventory-module.is-entering,
     .inventory-module.is-exiting {
         animation: none;
     }
 }
 
-/* ==== Header ======================================================== */
-
 .inventory-header {
     position: relative;
     display: flex;
     align-items: center;
-
-    /* ✅ Push title left and reserve space for buttons (prevents overlap) */
     justify-content: flex-start;
     padding-right: 74px;
-    /* room for delete + close */
     padding-left: 14px;
-
     color: #fff;
-    background: #1e7295;
+    background: linear-gradient(180deg, var(--rp-tab-top), var(--rp-tab-top) 48%, var(--rp-tab-bottom) 100%);
     font-weight: bold;
     text-align: left;
     font-size: 20px;
@@ -81,9 +70,8 @@
     width: 100%;
     margin-bottom: 10px;
     text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-    box-shadow: 0 0 #0000001a, 0 0 #0000001a, inset 0 -3px #00000017;
+    box-shadow: 0 0 #0000001a, 0 0 #0000001a, inset 0 -3px #00000017, inset 0 1px 0 rgba(255, 255, 255, .18);
     filter: drop-shadow(0 0 1px black);
-
     user-select: none;
     cursor: grab;
 }
@@ -92,19 +80,16 @@
     cursor: grabbing;
 }
 
-/* Header buttons: keep on same line, right side */
 .inventory-header-buttons {
     position: absolute;
     top: 6px;
     right: 8px;
-
     display: flex;
     align-items: center;
     gap: 6px;
     line-height: 1;
 }
 
-/* Close button is a real button for a11y */
 .inventory-close {
     width: 24px;
     height: 24px;
@@ -114,7 +99,6 @@
     box-shadow: 0 0 0 1.6px #fff, 0 2px 0 rgba(0, 0, 0, .22);
     cursor: pointer;
     padding: 0;
-
     position: relative;
 }
 
@@ -124,22 +108,12 @@
     position: absolute;
     left: 50%;
     top: 50%;
-
-
     width: 12px;
-
-
     height: 2px;
-
-
     background: #fff;
     border-radius: 1px;
     transform-origin: center;
-
-
 }
-
-
 
 .inventory-close::before {
     transform: translate(-50%, -50%) rotate(45deg);
@@ -159,22 +133,17 @@
     transform: translateY(0);
 }
 
-/* Delete button (to the LEFT of close) */
-/* ✅ No border, no background, no outline box */
 .inventory-delete {
     width: 29px;
     height: 26px;
     border: none;
     background: transparent;
     border-radius: 4px;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     cursor: pointer;
     padding: 0;
-
     overflow: hidden;
 }
 
@@ -195,16 +164,12 @@
     transform: translateY(0);
 }
 
-/* ==== Grid ========================================================== */
-
 .inventory-grid {
     display: grid;
     grid-template-columns: repeat(3, 0.2fr);
     gap: 8px;
     padding: 6px 8px 12px 8px;
 }
-
-/* ==== Slots ========================================================= */
 
 .slot-wrapper {
     display: flex;
@@ -222,7 +187,6 @@
     filter: drop-shadow(0 0 1px black);
 }
 
-/* Core slot */
 .inventory-slot {
     width: 48px;
     height: 48px;
@@ -237,9 +201,7 @@
     position: relative;
     overflow: hidden;
     padding: 2px;
-
-    transition: background-color 120ms ease, box-sh adow 150ms ease;
-
+    transition: background-color 120ms ease, box-shadow 150ms ease;
 }
 
 .inventory-slot:active {
@@ -250,14 +212,12 @@
     background-color: #8e8e8e;
 }
 
-/* Equip states (visual only) */
 .inventory-slot.active-weapon,
 .inventory-slot.active-shield,
 .inventory-slot.active-potion {
     background-color: rgba(24, 24, 24, .65);
 }
 
-/* DnD feedback: ONLY shadow/outline, no transform-scale */
 .inventory-slot.slot-over {
     outline: 2px dashed #4caf50;
     box-shadow: 0 0 0 3px rgba(76, 175, 80, .15) inset;
@@ -268,23 +228,19 @@
     box-shadow: 0 0 0 3px rgba(229, 57, 53, .18) inset;
 }
 
-/* Drop pulse — shadow-based, no movement */
 @keyframes slotPulse {
     0% {
         box-shadow: 0 0 0 0 rgba(76, 175, 80, .7) inset;
     }
-
     100% {
         box-shadow: 0 0 0 12px rgba(76, 175, 80, 0) inset;
     }
 }
 
-
 .slot-drop-pulse {
     animation: slotPulse .25s ease-out;
 }
 
-/* Rarities */
 .rarity-common {
     background-color: #bbbbbb;
 }
@@ -297,7 +253,6 @@
     background-color: #6fa8dc;
 }
 
-
 .rarity-epic {
     background-color: #8e7cc3;
 }
@@ -306,10 +261,6 @@
     background-color: #f4b942;
 }
 
-
-
-
-/* Number labels */
 .slot-number.filled-corner {
     position: absolute;
     bottom: 3px;
@@ -333,7 +284,6 @@
     text-shadow: 0 1px 0 rgba(255, 255, 255, .35);
 }
 
-/* Divider (if you ever need one across columns) */
 .inventory-divider {
     width: 100%;
     height: 1px;
@@ -341,8 +291,6 @@
     margin: 6px 0;
     grid-column: span 3;
 }
-
-/* ==== Item wrapper / contents ======================================= */
 
 .inventory-item-wrapper {
     position: relative;
@@ -363,7 +311,6 @@
     transition: none;
 }
 
-/* Draggable feel — removed scale to prevent bounce */
 .inventory-item-wrapper[draggable="true"] {
     cursor: grab;
 }
@@ -372,7 +319,6 @@
     transform: none;
 }
 
-/* Quantity chip */
 .quantity-label {
     position: absolute;
     bottom: 4px;
@@ -385,7 +331,6 @@
     pointer-events: none;
 }
 
-/* Durability bar */
 .durability-bar {
     position: absolute;
     bottom: 2px;
@@ -404,7 +349,6 @@
     transition: width .25s ease;
 }
 
-/* Tooltip */
 .inventory-item-wrapper .item-tooltip {
     position: absolute;
     bottom: 110%;
@@ -428,8 +372,6 @@
 }
 
 .inventory-item-wrapper .item-tooltip::after {
-
-
     content: '';
     position: absolute;
     top: 100%;
@@ -445,19 +387,15 @@
     transform: translateX(-50%) translateY(0);
 }
 
-/* ==== Delete Confirmation (Centered + Habbo style buttons) ========== */
-
 .inventory-delete-confirm {
     width: 100%;
     padding: 10px 12px 12px;
     border-top: 1px solid rgba(0, 0, 0, 0.15);
-
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 10px;
-
     text-align: center;
 }
 
@@ -474,18 +412,15 @@
     align-items: center;
 }
 
-/* Cancel button (white) */
 .inventory-delete-confirm .btn-cancel {
     min-width: 92px;
     height: 30px;
     border-radius: 6px;
-
     background: #ffffff;
     border: 2px solid rgba(0, 0, 0, 0.2);
     color: #111;
     font-weight: 700;
     cursor: pointer;
-
     box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
 }
 
@@ -498,18 +433,15 @@
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.16);
 }
 
-/* Delete button (blue) */
 .inventory-delete-confirm .btn-delete {
     min-width: 92px;
     height: 30px;
     border-radius: 6px;
-
     background: linear-gradient(#4aa3d4, #2f7fb8);
     border: 2px solid #1f5f92;
     color: #fff;
     font-weight: 800;
     cursor: pointer;
-
     box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
 }
 
@@ -522,28 +454,22 @@
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.16);
 }
 
-/* Invalid shake is still available if you want to trigger it */
 @keyframes slotShake {
     0% {
         transform: translateX(0);
     }
-
     20% {
         transform: translateX(-3px);
     }
-
     40% {
         transform: translateX(3px);
     }
-
     60% {
         transform: translateX(-2px);
     }
-
     80% {
         transform: translateX(2px);
     }
-
     100% {
         transform: translateX(0);
     }

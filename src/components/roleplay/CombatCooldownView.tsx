@@ -1,142 +1,191 @@
+import { RoomObjectCategory } from "@nitrots/nitro-renderer";
 import { useEffect, useRef, useState } from "react";
+import { GetNitroInstance, GetOwnRoomObject } from "../../api";
+import { ObjectLocationView } from "../room/widgets/object-location/ObjectLocationView";
 import "./CombatCooldownView.scss";
 
-type CombatCooldownDetail = {
-    weaponType: number;
-    totalMs: number;
-    remainingMs: number;
-};
-
-const COOLDOWN_ICON = "/icons/punch_cooldown.png";
+interface CombatCooldownDetail {
+    weaponType?: number;
+    totalMs?: number;
+    remainingMs?: number;
+}
 
 export const CombatCooldownView = () => {
-    const [durationMs, setDurationMs] = useState(0);
-    const [remainingMs, setRemainingMs] = useState(0);
+    const [visible, setVisible] = useState(false);
+    const [fadingOut, setFadingOut] = useState(false);
+    const [durationMs, setDurationMs] = useState(3000);
+    const [objectId, setObjectId] = useState<number>(-1);
 
-    const endAtRef = useRef(0);
     const rafRef = useRef<number | null>(null);
-
-    // prevents spam-resetting while already cooling down
-    const coolingRef = useRef(false);
+    const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const endAtRef = useRef(0);
+    const objectIdRef = useRef(-1);
+    const visibleRef = useRef(false);
+    const cooldownTokenRef = useRef(0);
 
     const stopRAF = () => {
-        if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
+        if(rafRef.current !== null) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+        }
     };
+
+    const clearHideTimer = () => {
+        if(hideTimerRef.current) {
+            clearTimeout(hideTimerRef.current);
+            hideTimerRef.current = null;
+        }
+    };
+
+    const resolveOwnObjectId = (): number => {
+        try {
+            const ownRoomObject = GetOwnRoomObject();
+
+            if(ownRoomObject && ownRoomObject.id >= 0) return ownRoomObject.id;
+        } catch {}
+
+        return -1;
+    };
+
+    const hardHide = () => {
+        clearHideTimer();
+        stopRAF();
+        endAtRef.current = 0;
+        visibleRef.current = false;
+        setFadingOut(false);
+        setVisible(false);
+    };
+
+    const softHide = (token: number) => {
+        if(token !== cooldownTokenRef.current) return;
+
+        clearHideTimer();
+        stopRAF();
+        visibleRef.current = false;
+        setFadingOut(true);
+
+        hideTimerRef.current = setTimeout(() => {
+            if(token !== cooldownTokenRef.current) return;
+
+            setVisible(false);
+            setFadingOut(false);
+            hideTimerRef.current = null;
+        }, 150);
+    };
+
+    useEffect(() => {
+        objectIdRef.current = objectId;
+    }, [objectId]);
+
+    useEffect(() => {
+        visibleRef.current = visible;
+    }, [visible]);
 
     useEffect(() => {
         const tick = () => {
             const now = performance.now();
             const remain = Math.max(0, endAtRef.current - now);
+            const nextObjectId = resolveOwnObjectId();
 
-            setRemainingMs(remain);
-
-            if (remain > 0) {
-                rafRef.current = requestAnimationFrame(tick);
-            } else {
-                coolingRef.current = false;
-                stopRAF();
+            if(nextObjectId >= 0 && nextObjectId !== objectIdRef.current) {
+                objectIdRef.current = nextObjectId;
+                setObjectId(nextObjectId);
             }
-        };
 
-        const handleCooldown = (event: Event) => {
-            const data = (event as CustomEvent).detail as CombatCooldownDetail;
-            if (!data) return;
+            if(remain <= 0) {
+                softHide(cooldownTokenRef.current);
+                return;
+            }
 
-            // ignore packets while already cooling
-            if (coolingRef.current) return;
-
-            const remain = Math.max(0, Number(data.remainingMs ?? 0));
-            if (!Number.isFinite(remain) || remain <= 0) return;
-
-            coolingRef.current = true;
-
-            const now = performance.now();
-            setDurationMs(remain);
-            setRemainingMs(remain);
-            endAtRef.current = now + remain;
-
-            stopRAF();
             rafRef.current = requestAnimationFrame(tick);
         };
 
-        window.addEventListener(
-            "combat_cooldown",
-            handleCooldown as EventListener
-        );
+        const handleStart = (e: Event) => {
+            const detail = ((e as CustomEvent).detail || {}) as CombatCooldownDetail;
+
+            const total = Number(detail.totalMs ?? 0);
+            const remaining = Number(detail.remainingMs ?? total);
+            const nextObjectId = resolveOwnObjectId();
+
+            if(!Number.isFinite(total) || total <= 0) {
+                hardHide();
+                return;
+            }
+
+            if(!Number.isFinite(remaining) || remaining <= 0) {
+                hardHide();
+                return;
+            }
+
+            if(nextObjectId < 0) return;
+
+            cooldownTokenRef.current += 1;
+            const token = cooldownTokenRef.current;
+
+            clearHideTimer();
+            stopRAF();
+
+            objectIdRef.current = nextObjectId;
+            setObjectId(nextObjectId);
+            setDurationMs(total);
+            setFadingOut(false);
+            setVisible(true);
+            visibleRef.current = true;
+
+            requestAnimationFrame(() => {
+                if(token !== cooldownTokenRef.current) return;
+
+                endAtRef.current = performance.now() + remaining;
+                rafRef.current = requestAnimationFrame(tick);
+            });
+        };
+
+        const handleCancel = () => {
+            cooldownTokenRef.current += 1;
+            hardHide();
+        };
+
+        const syncOwnAvatar = () => {
+            if(!visibleRef.current) return;
+
+            const nextObjectId = resolveOwnObjectId();
+
+            if(nextObjectId >= 0 && nextObjectId !== objectIdRef.current) {
+                objectIdRef.current = nextObjectId;
+                setObjectId(nextObjectId);
+            }
+        };
+
+        window.addEventListener("combat_cooldown", handleStart as EventListener);
+        window.addEventListener("combat_cooldown_cancel", handleCancel);
+        GetNitroInstance().ticker.add(syncOwnAvatar);
 
         return () => {
-            window.removeEventListener(
-                "combat_cooldown",
-                handleCooldown as EventListener
-            );
-            stopRAF();
+            window.removeEventListener("combat_cooldown", handleStart as EventListener);
+            window.removeEventListener("combat_cooldown_cancel", handleCancel);
+            GetNitroInstance().ticker.remove(syncOwnAvatar);
+            hardHide();
         };
     }, []);
 
-    const isReady = remainingMs <= 0;
-
-    // Radial math (no hooks)
-    const radius = 22;
-    const stroke = 5;
-    const size = 60;
-    const center = size / 2;
-    const circumference = 2 * Math.PI * radius;
-
-    // fill as time drains
-    const progress =
-        durationMs > 0
-            ? Math.min(1, Math.max(0, 1 - remainingMs / durationMs))
-            : 1;
-
-    const dashOffset = circumference * (1 - progress);
-
-    const seconds = Math.max(0, Math.ceil((remainingMs + 100) / 1000));
+    if(!visible || objectId < 0) return null;
 
     return (
-        <div className={`combat-cd-radial ${isReady ? "ready" : "cooling"}`}>
-            <div className="combat-cd-wheel" aria-hidden>
-                <svg
-                    className="combat-cd-svg"
-                    width={size}
-                    height={size}
-                    viewBox={`0 0 ${size} ${size}`}
-                >
-                    <circle
-                        className="combat-cd-track"
-                        cx={center}
-                        cy={center}
-                        r={radius}
-                        fill="none"
-                        strokeWidth={stroke}
-                    />
-                    <circle
-                        className="combat-cd-progress"
-                        cx={center}
-                        cy={center}
-                        r={radius}
-                        fill="none"
-                        strokeWidth={stroke}
-                        strokeLinecap="round"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={dashOffset}
-                    />
-                </svg>
-
-                <div className="combat-cd-icon">
-                    <img
-                        src={COOLDOWN_ICON}
-                        alt=""
-                        draggable={false}
-                        onError={(e) => {
-                            // this will NOT crash your app; it just swaps fallback
-                            const img = e.currentTarget;
-                            img.onerror = null;
-                            img.src = "/icons/placeholder.png";
+        <ObjectLocationView
+            objectId={objectId}
+            category={RoomObjectCategory.UNIT}
+        >
+            <div className={`combat-cooldown-bar ${fadingOut ? "fade-out" : "fade-in"}`}>
+                <div className="combat-cooldown-track">
+                    <div
+                        key={durationMs}
+                        className="combat-cooldown-fill"
+                        style={{
+                            animationDuration: `${durationMs}ms`
                         }}
                     />
                 </div>
             </div>
-        </div>
+        </ObjectLocationView>
     );
 };

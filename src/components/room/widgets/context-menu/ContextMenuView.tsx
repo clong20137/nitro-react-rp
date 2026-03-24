@@ -25,17 +25,6 @@ import { Base, BaseProps } from "../../../../common";
 import { ContextMenuCaretView } from "./ContextMenuCaretView";
 import { InspectUserStatsComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/InspectUserStatsComposer";
 
-/**
- * TODO: Replace these with your real composers (or create them server-side):
- *
- * - InspectBotStatsComposer(botId)
- * - BotActionComposer(botId, action)
- *
- * The pattern is correct; only the message class names may differ.
- */
-// import { InspectBotStatsComposer } from "...";
-// import { BotActionComposer } from "...";
-
 interface ContextMenuViewProps extends BaseProps<HTMLDivElement> {
     objectId: number;
     category: number;
@@ -45,26 +34,26 @@ interface ContextMenuViewProps extends BaseProps<HTMLDivElement> {
     collapsable?: boolean;
 }
 
-/* ---------------- constants ---------------- */
-
 const LOCATION_STACK_SIZE = 25;
 const BUBBLE_DROP_SPEED = 3;
 const FADE_DELAY = 5000;
 const FADE_LENGTH = 75;
 const SPACE_AROUND_EDGES = 10;
+const CLOSE_ANIMATION_MS = 220;
 
 let COLLAPSED = false;
 let FIXED_STACK: FixedSizeStack = null as unknown as FixedSizeStack;
 let MAX_STACK = -1000000;
 let FADE_TIME = 1;
 
-/* ---------------- utils ---------------- */
-
 const readBool = (k: string, fallback = false) => {
     try {
         const raw = localStorage.getItem(k);
+
         if (raw === null) return fallback;
+
         const v = JSON.parse(raw);
+
         return typeof v === "boolean" ? v : !!v;
     } catch {
         return fallback;
@@ -86,36 +75,61 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         ...rest
     } = props;
 
-    /* ------------- respect “Disable Context Menu” & Click-Through ------------- */
-
     const [contextMenuDisabled, setContextMenuDisabled] = useState<boolean>(
-        () => readBool("contextMenuDisabled", false)
+        () => readBool("contextMenuDisabled", false),
     );
-
     const [ctEnabled, setCtEnabled] = useState<boolean>(
-        () => !!(window as any).__ctEnabled
+        () => !!(window as any).__ctEnabled,
     );
+    const [closing, setClosing] = useState(false);
+    const [opacity, setOpacity] = useState(1);
+    const [isFading, setIsFading] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(COLLAPSED);
+    const [pos, setPos] = useState<{ x: number | null; y: number | null }>({
+        x: null,
+        y: null,
+    });
+
+    const elementRef = useRef<HTMLDivElement>(null);
+
+    const handleClose = useCallback(() => {
+        if (closing) return;
+
+        setClosing(true);
+
+        window.setTimeout(() => {
+            onClose?.();
+        }, CLOSE_ANIMATION_MS);
+    }, [closing, onClose]);
 
     useEffect(() => {
         const onToggle = (e: Event) => {
             const det = (e as CustomEvent)?.detail;
+
             if (!det) return;
+
             const disabled = !!det.disabled;
+
             setContextMenuDisabled(disabled);
-            if (disabled && onClose) onClose();
+
+            if (disabled) handleClose();
         };
 
         const onCT = (e: Event) => {
             const enabled = !!(e as CustomEvent)?.detail?.enabled;
+
             setCtEnabled(enabled);
-            if (enabled && onClose) onClose();
+
+            if (enabled) handleClose();
         };
 
         const onStorage = (ev: StorageEvent) => {
             if (ev.key === "contextMenuDisabled") {
                 const disabled = readBool("contextMenuDisabled", false);
+
                 setContextMenuDisabled(disabled);
-                if (disabled && onClose) onClose();
+
+                if (disabled) handleClose();
             }
         };
 
@@ -125,32 +139,45 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
 
         const syncFromGlobal = () => {
             const now = !!(window as any).__ctEnabled;
+
             setCtEnabled(now);
-            if (now && onClose) onClose();
+
+            if (now) handleClose();
         };
+
         setTimeout(syncFromGlobal, 0);
 
         return () => {
             window.removeEventListener(
                 "toggleContextMenu",
-                onToggle as EventListener
+                onToggle as EventListener,
             );
             window.removeEventListener(
                 "click_through_state",
-                onCT as EventListener
+                onCT as EventListener,
             );
             window.removeEventListener("storage", onStorage);
         };
-    }, [onClose]);
+    }, [handleClose]);
 
-    if (contextMenuDisabled || ctEnabled) return null;
+    useEffect(() => {
+        if (contextMenuDisabled || ctEnabled || closing) return;
 
-    /* ---------------- state ---------------- */
+        const handlePointerDown = (event: MouseEvent) => {
+            const target = event.target as Node;
 
-    const [pos, setPos] = useState<{ x: number | null; y: number | null }>({
-        x: null,
-        y: null,
-    });
+            if (!elementRef.current) return;
+            if (elementRef.current.contains(target)) return;
+
+            handleClose();
+        };
+
+        document.addEventListener("mousedown", handlePointerDown);
+
+        return () => {
+            document.removeEventListener("mousedown", handlePointerDown);
+        };
+    }, [contextMenuDisabled, ctEnabled, closing, handleClose]);
 
     const userData =
         GetRoomSession().userDataManager.getUserDataByIndex(objectId);
@@ -161,24 +188,12 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
 
     const isUser = userType === RoomObjectType.USER;
 
-    /**
-     * ⚠️ VERY IMPORTANT:
-     * For USERS you correctly use userData.webID as the real userId.
-     * For BOTS you need the bot's id. Depending on your Nitro fork,
-     * the bot id may be in one of these:
-     *
-     * - userData.webID
-     * - userData.id
-     * - userData.roomIndex / index
-     *
-     * We’ll pick the most likely: webID first, fall back to objectId.
-     */
     const botId = useMemo(() => {
         if (!userData) return objectId;
+
         return userData.webID && userData.webID > 0 ? userData.webID : objectId;
     }, [userData, objectId]);
 
-    // Only trigger stats explicitly (on click)
     const toggleStats = useCallback(() => {
         if (objectId <= 0 || !userData) return;
 
@@ -187,77 +202,66 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
         window.dispatchEvent(
             new CustomEvent("user_inspect_stats", {
                 detail: { userId: userData.webID },
-            })
+            }),
         );
 
-        onClose?.();
-    }, [objectId, userData, onClose]);
+        handleClose();
+    }, [objectId, userData, handleClose]);
 
-    /**
-     * BOT: Inspect
-     * Replace with your real composer + event name.
-     */
     const inspectBot = useCallback(() => {
         if (!userData) return;
-
-        // Example pattern:
-        // SendMessageComposer(new InspectBotStatsComposer(botId));
 
         window.dispatchEvent(
             new CustomEvent("bot_inspect_stats", {
                 detail: { botId },
-            })
+            }),
         );
 
-        onClose?.();
-    }, [userData, botId, onClose]);
+        handleClose();
+    }, [userData, botId, handleClose]);
 
-    /**
-     * BOT: Action sender (attack, heal, cuff, etc.)
-     * Replace with your real composer.
-     */
     const botAction = useCallback(
         (action: string) => {
             if (!userData) return;
 
-            // Example pattern:
-            // SendMessageComposer(new BotActionComposer(botId, action));
-
             window.dispatchEvent(
                 new CustomEvent("bot_action", {
                     detail: { botId, action },
-                })
+                }),
             );
 
-            onClose?.();
+            handleClose();
         },
-        [userData, botId, onClose]
+        [userData, botId, handleClose],
     );
-
-    const [opacity, setOpacity] = useState(1);
-    const [isFading, setIsFading] = useState(false);
-    const [isCollapsed, setIsCollapsed] = useState(COLLAPSED);
-    const elementRef = useRef<HTMLDivElement>(null);
-
-    /* ---------------- position / fade calcs ---------------- */
 
     const updateFade = useCallback(
         (time: number) => {
-            if (!isFading) return;
+            if (!isFading || closing) return;
+
             FADE_TIME += time;
+
             const newOpacity = 1 - FADE_TIME / FADE_LENGTH;
+
             if (newOpacity <= 0) {
-                onClose?.();
+                handleClose();
                 return;
             }
+
             setOpacity(newOpacity);
         },
-        [isFading, onClose]
+        [isFading, closing, handleClose],
     );
 
     const updatePosition = useCallback(
         (bounds: NitroRectangle, location: NitroPoint) => {
-            if (!bounds || !location || !FIXED_STACK || !elementRef.current)
+            if (
+                !bounds ||
+                !location ||
+                !FIXED_STACK ||
+                !elementRef.current ||
+                closing
+            )
                 return;
 
             let offset = -elementRef.current.offsetHeight;
@@ -274,9 +278,13 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
             }
 
             FIXED_STACK.addValue(location.y - bounds.top);
+
             let maxStack = FIXED_STACK.getMax();
-            if (maxStack < MAX_STACK - BUBBLE_DROP_SPEED)
+
+            if (maxStack < MAX_STACK - BUBBLE_DROP_SPEED) {
                 maxStack = MAX_STACK - BUBBLE_DROP_SPEED;
+            }
+
             MAX_STACK = maxStack;
 
             const deltaY = location.y - maxStack;
@@ -298,16 +306,21 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
 
             setPos({ x, y });
         },
-        [userType]
+        [userType, closing],
     );
 
     const getClassNames = useMemo(() => {
         const newClassNames: string[] = ["nitro-context-menu"];
+
         if (isCollapsed) newClassNames.push("menu-hidden");
+        if (closing) newClassNames.push("closing");
+
         newClassNames.push(pos.x !== null ? "visible" : "invisible");
+
         if (classNames.length) newClassNames.push(...classNames);
+
         return newClassNames;
-    }, [pos, classNames, isCollapsed]);
+    }, [pos, classNames, isCollapsed, closing]);
 
     const getStyle = useMemo(() => {
         const newStyle: CSSProperties = {
@@ -315,56 +328,55 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
             top: pos.y || 0,
             opacity,
         };
+
         return { ...newStyle, ...style };
     }, [pos, opacity, style]);
-
-    /* ---------------- effects ---------------- */
 
     useEffect(() => {
         const ticker = GetTicker();
 
         const update = (time: number) => {
             try {
-                if (!elementRef.current) return;
+                if (!elementRef.current || closing) return;
 
                 updateFade(time);
 
                 const session = GetRoomSession();
+
                 if (!session) return;
 
                 const bounds = GetRoomObjectBounds(
                     session.roomId,
                     objectId,
-                    category
+                    category,
                 );
 
                 const location = GetRoomObjectScreenLocation(
                     session.roomId,
                     objectId,
-                    category
+                    category,
                 );
 
                 if (bounds && location) {
                     updatePosition(bounds, location);
                 }
-            } catch {
-                // swallow frame errors
-            }
+            } catch {}
         };
 
         ticker.add(update);
 
-        // ✅ CLEANUP — THIS IS THE IMPORTANT PART
         return () => {
             ticker.remove(update);
         };
-    }, [objectId, category, updateFade, updatePosition]);
+    }, [objectId, category, updateFade, updatePosition, closing]);
 
     useEffect(() => {
-        if (!fades) return;
+        if (!fades || closing) return;
+
         const timeout = setTimeout(() => setIsFading(true), FADE_DELAY);
+
         return () => clearTimeout(timeout);
-    }, [fades]);
+    }, [fades, closing]);
 
     useEffect(() => {
         COLLAPSED = isCollapsed;
@@ -378,10 +390,13 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
 
     useEffect(() => {
         setIsCollapsed(false);
+        setClosing(false);
+        setOpacity(1);
+        setIsFading(false);
         COLLAPSED = false;
     }, [objectId, category]);
 
-    /* ---------------- render ---------------- */
+    if (contextMenuDisabled || ctEnabled) return null;
 
     return (
         <Base
@@ -391,28 +406,23 @@ export const ContextMenuView: FC<ContextMenuViewProps> = (props) => {
             style={getStyle}
             {...rest}
         >
-            {!(collapsable && COLLAPSED) && (
-                <>
-                    {children}
+            <div
+                className={`context-menu-content ${isCollapsed ? "collapsed" : "expanded"}`}
+            >
+                {children}
 
-                    {/* ✅ USER MENU */}
-                    {isUser && <div className="context-menu-options"></div>}
+                {isUser && <div className="context-menu-options"></div>}
 
-                    {/* ✅ BOT MENU */}
-                    {isBot && (
-                        <div className="context-menu-options">
-                            <div className="context-menu-divider" />
-                        </div>
-                    )}
-
-                    {/* collapse after click if desired */}
-                    {/* If you want collapse-on-any-action, just setIsCollapsed(true) inside actions */}
-                </>
-            )}
+                {isBot && (
+                    <div className="context-menu-options">
+                        <div className="context-menu-divider" />
+                    </div>
+                )}
+            </div>
 
             {collapsable && (
                 <ContextMenuCaretView
-                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    onClick={() => setIsCollapsed((prev) => !prev)}
                     collapsed={isCollapsed}
                 />
             )}

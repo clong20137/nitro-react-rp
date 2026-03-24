@@ -40,8 +40,8 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
 
     // position (draggable)
     const [position, setPosition] = useState<{ x: number; y: number }>({
-        x: 120,
-        y: 120,
+        x: 8,
+        y: 96,
     });
     const dragging = useRef(false);
     const dragOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -76,8 +76,8 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
                 const x = Number(parsed?.x);
                 const y = Number(parsed?.y);
                 setPosition({
-                    x: Number.isFinite(x) ? x : 120,
-                    y: Number.isFinite(y) ? y : 120,
+                    x: Number.isFinite(x) ? x : 8,
+                    y: Number.isFinite(y) ? y : 96,
                 });
             }
             const s = localStorage.getItem(SIZE_KEY);
@@ -451,7 +451,7 @@ export const WantedListView: FC<WantedListViewProps> = ({ onClose }) => {
                 <span>Wanted List</span>
                 <button
                     onClick={handleClose}
-                    className="close-button"
+                    className="c-button close-button"
                     aria-label="Close"
                 />
             </div>

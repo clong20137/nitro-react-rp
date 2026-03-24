@@ -1,0 +1,41 @@
+.rp-damage-number {
+    position: fixed;
+    z-index: 100000;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    will-change: transform, opacity;
+    animation: rp-damage-float 1.05s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+.rp-damage-number__text {
+    display: inline-block;
+    min-width: 30px;
+    text-align: center;
+    font-family: Ubuntu, Arial, sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: #b70d0d;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.95), 0 1px 0 rgba(0, 0, 0, 0.95), 0 2px 0 rgba(0, 0, 0, 0.85), 0 0 8px lab(48.06% 71.07 54.5 / 0.75), 0 0 16px rgba(229, 21, 21, 0.45);
+    filter: drop-shadow(0 0 7px rgba(255, 193, 7, 0.5));
+}
+
+@keyframes rp-damage-float {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.45) rotate(0deg);
+    }
+    12% {
+        opacity: 1;
+        transform: translate(calc(-50% + var(--damage-drift-x, 0px) * 0.15), calc(-50% - 6px)) scale(1.18) rotate(var(--damage-rotate, 0deg));
+    }
+    35% {
+        opacity: 1;
+        transform: translate(calc(-50% + var(--damage-drift-x, 0px) * 0.45), calc(-50% - 22px)) scale(1) rotate(var(--damage-rotate, 0deg));
+    }
+    100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--damage-drift-x, 0px)), calc(-50% - 58px)) scale(0.92) rotate(var(--damage-rotate, 0deg));
+    }
+}

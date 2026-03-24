@@ -205,6 +205,62 @@ declare global {
     }
 }
 
+const normalizeGangMembersPayload = (payload: any): GangMemberRaw[] => {
+    const extractArray = (value: any): any[] => {
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+
+        if (typeof value === "object") {
+            const directKeys = [
+                "gangMembers",
+                "members",
+                "list",
+                "data",
+                "items",
+                "results",
+                "rows",
+            ];
+
+            for (const key of directKeys) {
+                const nested = (value as any)[key];
+                if (Array.isArray(nested)) return nested;
+                if (nested && typeof nested === "object") {
+                    const nestedValues = Object.values(nested);
+                    if (nestedValues.every((entry) => entry && typeof entry === "object")) return nestedValues;
+                }
+            }
+
+            const values = Object.values(value);
+            if (values.length && values.every((entry) => entry && typeof entry === "object" && !Array.isArray(entry))) return values;
+        }
+
+        return [];
+    };
+
+    const rawMembers = extractArray(payload);
+
+    return rawMembers
+        .map((member: any): GangMemberRaw | null => {
+            if (!member || typeof member !== "object") return null;
+
+            const userId = Number(member.userId ?? member.id ?? member.user_id ?? member.habboId ?? 0);
+            const username = String(member.username ?? member.name ?? member.habboName ?? "").trim();
+
+            if (!userId && !username) return null;
+
+            return {
+                userId,
+                username,
+                figure: String(member.figure ?? member.look ?? member.figureString ?? ""),
+                rankName: String(member.rankName ?? member.roleName ?? member.rank ?? member.role ?? ""),
+                rankId: member.rankId ?? member.roleId ?? member.rank_id ?? member.role_id ?? null,
+                rankOrder: member.rankOrder ?? member.position ?? member.rank_pos ?? member.order ?? -1,
+            };
+        })
+        .filter((member): member is GangMemberRaw => !!member);
+};
+
+
 /* ===== 6×5 Paginated swatches ===== */
 const PaginatedSwatchGrid: FC<{
     swatches: string[];
@@ -224,51 +280,54 @@ const PaginatedSwatchGrid: FC<{
         if (page >= totalPages) setPage(Math.max(0, totalPages - 1));
     }, [swatches.length, page, totalPages]);
 
+    
     return (
         <div className="gang-swatch-pager">
-            <button
-                className="pager-btn left"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                aria-label="Previous colors"
-            >
-                ◀
-            </button>
+            <div className="page-indicator">
+                {page + 1} / {totalPages}
+            </div>
 
             <div key={page} className="page-fade">
                 <div className="swatch-page swatch-6x5">
                     {current.map((hex) => (
                         <button
                             key={`${hex}-${start}`}
-                            className={
-                                "swatch" + (hex === value ? " selected" : "")
-                            }
+                            className={"swatch" + (hex === value ? " selected" : "")}
                             style={{ backgroundColor: hex }}
                             onClick={() => onChange(hex)}
                             title={hex}
                         />
                     ))}
+
                     {!swatches.length && (
                         <div className="swatch-loading">Loading colors…</div>
                     )}
                 </div>
             </div>
 
-            <button
-                className="pager-btn right"
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-                aria-label="Next colors"
-            >
-                ▶
-            </button>
+            <div className="pagination-controls">
+                <button
+                    className="gang-btn gang-btn--default is-small"
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                    aria-label="Previous colors"
+                >
+                    ◀
+                </button>
 
-            <div className="page-indicator">
-                {page + 1} / {totalPages}
+                <button
+                    className="gang-btn gang-btn--default is-small"
+                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={page >= totalPages - 1}
+                    aria-label="Next colors"
+                >
+                    ▶
+                </button>
             </div>
         </div>
     );
 };
+
 
 /* ========================================================= */
 
@@ -552,28 +611,10 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             applyStatus((ev as CustomEvent).detail);
 
         const handleMembers = (ev: Event) => {
-            let detail: any = (ev as CustomEvent).detail;
+            const detail: any = (ev as CustomEvent).detail;
+            const mapped = normalizeGangMembersPayload(detail);
 
-            if (detail?.gangMembers) detail = detail.gangMembers;
-            if (detail?.members) detail = detail.members;
-            if (detail?.list) detail = detail.list;
-            if (detail?.data) detail = detail.data;
-
-            if (!Array.isArray(detail)) {
-                console.warn("Gang members payload malformed:", detail);
-                return;
-            }
-
-            const mapped: GangMemberRaw[] = detail.map((m: any) => ({
-                userId: Number(m.userId ?? m.id ?? m.user_id),
-                username: String(m.username ?? m.name ?? ""),
-                figure: String(m.figure ?? m.look ?? ""),
-                rankName: String(m.rankName ?? m.roleName ?? ""),
-                rankId: m.rankId ?? m.roleId ?? null,
-                rankOrder: m.rankOrder ?? m.position ?? m.rank_pos ?? -1,
-            }));
-
-            setMembersRaw(mapped);
+            setMembersRaw(mapped || []);
             setMembersLoading(false);
             setMembersError(null);
         };
@@ -740,22 +781,22 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
         request();
 
         const retry = window.setTimeout(() => {
-            const noMembers = membersRaw.length === 0;
-            const noRanks = gangRanks.length === 0;
+            request();
+        }, 500);
 
-            if (noMembers || noRanks) request();
+        const failTimer = window.setTimeout(() => {
+            setMembersLoading(false);
+            setRanksLoading(false);
 
-            window.setTimeout(() => {
-                if (activeTab !== "members") return;
-                if (membersRaw.length === 0 && gangRanks.length === 0) {
-                    setMembersError("Couldn’t load gang data. Try Refresh.");
-                    setMembersLoading(false);
-                    setRanksLoading(false);
-                }
-            }, 650);
-        }, 650);
+            if (membersRaw.length === 0 && gangRanks.length === 0) {
+                setMembersError("Couldn’t load gang data. Try Refresh.");
+            }
+        }, 1500);
 
-        return () => window.clearTimeout(retry);
+        return () => {
+            window.clearTimeout(retry);
+            window.clearTimeout(failTimer);
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
 
@@ -771,7 +812,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
     const groupedMembers = useMemo(() => {
         const map: Record<number, GangMemberNorm[]> = {};
         for (const m of membersNorm) {
-            const k = Number.isFinite(m.rankOrder) ? m.rankOrder : -1;
+            const k = typeof m.rankOrder === "number" && m.rankOrder >= 0 ? m.rankOrder : -1;
             if (!map[k]) map[k] = [];
             map[k].push(m);
         }
@@ -1270,30 +1311,30 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
             </div>
 
             {/* Tabs */}
-            <div className="gangs-tabs">
+            <div className="rp-tabs gangs-tabs">
                 <button
                     onClick={() => setActiveTab("general")}
-                    className={activeTab === "general" ? "active" : ""}
+                    className={`rp-tab ${activeTab === "general" ? "active" : ""}`}
                 >
-                    General
+                    <span className="rp-tab__label">General</span>
                 </button>
                 <button
                     onClick={() => setActiveTab("members")}
-                    className={activeTab === "members" ? "active" : ""}
+                    className={`rp-tab ${activeTab === "members" ? "active" : ""}`}
                 >
-                    Members
+                    <span className="rp-tab__label">Members</span>
                 </button>
                 <button
                     onClick={() => setActiveTab("settings")}
-                    className={activeTab === "settings" ? "active" : ""}
+                    className={`rp-tab ${activeTab === "settings" ? "active" : ""}`}
                 >
-                    Settings
+                    <span className="rp-tab__label">Settings</span>
                 </button>
             </div>
 
             {/* Content */}
             <div className="gangs-content">
-                <div className="tab-panel" key={activeTab}>
+                <div className="tab-panel rp-tab-panel rp-tab-panel--animated" key={activeTab}>
                     {/* ===== GENERAL TAB ===== */}
                     {activeTab === "general" && (
                         <div className="info-tab">
@@ -1408,28 +1449,32 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                 <h3>Gang Stats</h3>
                                 <div className="stat-tiles">
                                     <div className="gang-stat">
-                                        Total Members:
-                                        <span>{membersNorm.length}</span>
+                                        <div className="gang-stat__label">Total Members</div>
+                                        <div className="gang-stat__value">{membersNorm.length}</div>
                                     </div>
                                     <div className="gang-stat">
-                                        Total Kills:<span>{gangKills}</span>
+                                        <div className="gang-stat__label">Total Kills</div>
+                                        <div className="gang-stat__value">{gangKills}</div>
                                     </div>
                                     <div className="gang-stat">
-                                        Total Deaths:<span>{gangDeaths}</span>
+                                        <div className="gang-stat__label">Total Deaths</div>
+                                        <div className="gang-stat__value">{gangDeaths}</div>
                                     </div>
                                     <div className="gang-stat">
-                                        Robberies:<span>{gangRobberies}</span>
+                                        <div className="gang-stat__label">Robberies</div>
+                                        <div className="gang-stat__value">{gangRobberies}</div>
                                     </div>
                                     <div className="gang-stat">
-                                        Pick Pockets:
-                                        <span>{gangPickpockets}</span>
+                                        <div className="gang-stat__label">Pick Pockets</div>
+                                        <div className="gang-stat__value">{gangPickpockets}</div>
                                     </div>
                                     <div className="gang-stat">
-                                        Total Damage:<span>{gangDamage}</span>
+                                        <div className="gang-stat__label">Total Damage</div>
+                                        <div className="gang-stat__value">{gangDamage}</div>
                                     </div>
                                     <div className="gang-stat">
-                                        Turfs Controlled:
-                                        <span>{gangTurfCount}</span>
+                                        <div className="gang-stat__label">Turfs Controlled</div>
+                                        <div className="gang-stat__value">{gangTurfCount}</div>
                                     </div>
                                 </div>
                             </div>
@@ -1934,8 +1979,8 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                     {/* ===== SETTINGS TAB ===== */}
                     {activeTab === "settings" && (
                         <div className="settings-tab">
-                            <div className="settings-row two-col">
-                                <div className="settings-col">
+                            <div className="settings-row settings-top-row">
+                                <div className="settings-col settings-palette-card">
                                     <h3>Primary Color</h3>
                                     <PaginatedSwatchGrid
                                         swatches={ccSwatches}
@@ -1943,7 +1988,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                         onChange={setPrimaryColor}
                                     />
                                 </div>
-                                <div className="settings-col">
+                                <div className="settings-col settings-palette-card">
                                     <h3>Secondary Color</h3>
                                     <PaginatedSwatchGrid
                                         swatches={ccSwatches}
@@ -1953,8 +1998,8 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                 </div>
                             </div>
 
-                            <div className="settings-row two-col">
-                                <div className="settings-col">
+                            <div className="settings-row settings-bottom-row">
+                                <div className="settings-col settings-icon-card">
                                     <h3>Gang Icon</h3>
                                     <div className="icon-selector">
                                         {visibleIcons.map((icon) => {
@@ -2047,9 +2092,9 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                                     </div>
                                 </div>
 
-                                <div className="settings-col">
+                                <div className="settings-col settings-preview-card">
                                     <h3>Preview</h3>
-                                    <div className="gang-preview settings">
+                                    <div className="gang-preview settings edit-preview">
                                         <div
                                             className="preview-colors"
                                             style={{

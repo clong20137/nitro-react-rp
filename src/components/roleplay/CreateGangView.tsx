@@ -1,4 +1,4 @@
-import { FC, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { FC, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import "./CreateGangView.scss";
 import { SendMessageComposer } from "../../api";
 import { CreateGangComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CreateGangComposer";
@@ -40,7 +40,7 @@ const ICON_OPTIONS: IconOpt[] = [
     { name: "Golden Crown", src: "/icons/badges/FRH44.gif" },
     { name: "Cowboy Hat", src: "/icons/badges/US515.gif" },
     { name: "Dog", src: "/icons/badges/US484.gif" },
-    { name: "Pink Heart", src: "/icons/badges/DE21H.gif" },
+    { name: "Pink Heart", src: "/icons/badges/DE21H.gif" }
 ];
 
 interface CreateGangViewProps {
@@ -51,27 +51,18 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
     const [name, setName] = useState("");
     const [primaryColor, setPrimaryColor] = useState("#FF0000");
     const [secondaryColor, setSecondaryColor] = useState("#000000");
-    const [selectedIcon, setSelectedIcon] = useState<IconOpt["name"]>(
-        ICON_OPTIONS[0]?.name ?? ""
-    );
+    const [selectedIcon, setSelectedIcon] = useState<IconOpt["name"]>(ICON_OPTIONS[0]?.name ?? "");
     const [error, setError] = useState("");
     const [submitting, setSubmitting] = useState(false);
-
     const [ccSwatches, setCcSwatches] = useState<string[]>([]);
-
-    /* paging config */
-    const SWATCHES_PER_PAGE = 30; // 3 rows * 10 cols
-    const ICONS_PER_PAGE = 9; // 3x3
-
     const [primPage, setPrimPage] = useState(0);
     const [secPage, setSecPage] = useState(0);
     const [iconPage, setIconPage] = useState(0);
+    const [position, setPosition] = useState<{ x: number; y: number }>({ x: 120, y: 120 });
 
-    /* -------------------- drag positioning (kept) -------------------- */
-    const [position, setPosition] = useState<{ x: number; y: number }>({
-        x: 120,
-        y: 120,
-    });
+    const SWATCHES_PER_PAGE = 18;
+    const ICONS_PER_PAGE = 12;
+
     const posRef = useRef(position);
     const draggingRef = useRef(false);
     const deltaRef = useRef({ dx: 0, dy: 0 });
@@ -79,34 +70,38 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
 
     const clampToClient = (x: number, y: number) => {
         const margin = 8;
-        const w = rootRef.current?.offsetWidth ?? 400;
-        const h = rootRef.current?.offsetHeight ?? 300;
-        const maxX = Math.max(margin, window.innerWidth - w - margin);
-        const maxY = Math.max(margin, window.innerHeight - h - margin);
+        const width = rootRef.current?.offsetWidth ?? 760;
+        const height = rootRef.current?.offsetHeight ?? 520;
+        const maxX = Math.max(margin, window.innerWidth - width - margin);
+        const maxY = Math.max(margin, window.innerHeight - height - margin);
+
         return {
             x: Math.min(Math.max(margin, x), maxX),
-            y: Math.min(Math.max(margin, y), maxY),
+            y: Math.min(Math.max(margin, y), maxY)
         };
     };
 
     const centerInClient = () => {
-        const w = rootRef.current?.offsetWidth ?? 400;
-        const h = rootRef.current?.offsetHeight ?? 300;
-        const x = Math.round((window.innerWidth - w) / 2);
-        const y = Math.round((window.innerHeight - h) / 2);
-        return clampToClient(x, y);
+        const width = rootRef.current?.offsetWidth ?? 760;
+        const height = rootRef.current?.offsetHeight ?? 520;
+        return clampToClient(Math.round((window.innerWidth - width) / 2), Math.round((window.innerHeight - height) / 2));
     };
 
     useLayoutEffect(() => {
         let next = centerInClient();
         const saved = localStorage.getItem("createGangPosition");
-        if (saved) {
-            try {
-                const p = JSON.parse(saved);
-                if (typeof p?.x === "number" && typeof p?.y === "number")
-                    next = clampToClient(p.x, p.y);
-            } catch {}
+
+        if(saved)
+        {
+            try
+            {
+                const parsed = JSON.parse(saved);
+
+                if(typeof parsed?.x === "number" && typeof parsed?.y === "number") next = clampToClient(parsed.x, parsed.y);
+            }
+            catch {}
         }
+
         setPosition(next);
         posRef.current = next;
     }, []);
@@ -121,426 +116,245 @@ export const CreateGangView: FC<CreateGangViewProps> = ({ onClose }) => {
             setPosition(clamped);
             posRef.current = clamped;
         };
+
         window.addEventListener("resize", onResize);
         return () => window.removeEventListener("resize", onResize);
     }, []);
 
     const startDrag = (x: number, y: number) => {
         draggingRef.current = true;
-        deltaRef.current = {
-            dx: x - posRef.current.x,
-            dy: y - posRef.current.y,
-        };
+        deltaRef.current = { dx: x - posRef.current.x, dy: y - posRef.current.y };
         document.body.classList.add("is-dragging");
     };
+
     const moveDrag = (x: number, y: number) => {
-        if (!draggingRef.current) return;
-        setPosition(
-            clampToClient(x - deltaRef.current.dx, y - deltaRef.current.dy)
-        );
+        if(!draggingRef.current) return;
+        setPosition(clampToClient(x - deltaRef.current.dx, y - deltaRef.current.dy));
     };
+
     const stopDrag = () => {
-        if (!draggingRef.current) return;
+        if(!draggingRef.current) return;
         draggingRef.current = false;
-        localStorage.setItem(
-            "createGangPosition",
-            JSON.stringify(posRef.current)
-        );
+        localStorage.setItem("createGangPosition", JSON.stringify(posRef.current));
         document.body.classList.remove("is-dragging");
     };
 
-    const onHeaderMouseDown = (e: React.MouseEvent) => {
-        e.preventDefault();
-        startDrag(e.clientX, e.clientY);
-        const onMove = (ev: MouseEvent) => moveDrag(ev.clientX, ev.clientY);
+    const onHeaderMouseDown = (event: React.MouseEvent) => {
+        event.preventDefault();
+        startDrag(event.clientX, event.clientY);
+
+        const onMove = (moveEvent: MouseEvent) => moveDrag(moveEvent.clientX, moveEvent.clientY);
         const onUp = () => {
             stopDrag();
             window.removeEventListener("mousemove", onMove);
             window.removeEventListener("mouseup", onUp);
         };
+
         window.addEventListener("mousemove", onMove);
         window.addEventListener("mouseup", onUp);
     };
-    const onHeaderTouchStart = (e: React.TouchEvent) => {
-        const t = e.touches[0];
-        startDrag(t.clientX, t.clientY);
-        const onMove = (ev: TouchEvent) =>
-            moveDrag(ev.touches[0].clientX, ev.touches[0].clientY);
+
+    const onHeaderTouchStart = (event: React.TouchEvent) => {
+        const touch = event.touches[0];
+        startDrag(touch.clientX, touch.clientY);
+
+        const onMove = (moveEvent: TouchEvent) => moveDrag(moveEvent.touches[0].clientX, moveEvent.touches[0].clientY);
         const onEnd = () => {
             stopDrag();
             window.removeEventListener("touchmove", onMove);
             window.removeEventListener("touchend", onEnd);
             window.removeEventListener("touchcancel", onEnd);
         };
+
         window.addEventListener("touchmove", onMove, { passive: false });
         window.addEventListener("touchend", onEnd);
         window.addEventListener("touchcancel", onEnd);
     };
-    useEffect(
-        () => () => {
-            document.body.classList.remove("is-dragging");
-            draggingRef.current = false;
-        },
-        []
-    );
 
-    /* ----------------------- fetch palette hexes (kept) ----------------------- */
+    useEffect(() => () => {
+        document.body.classList.remove("is-dragging");
+        draggingRef.current = false;
+    }, []);
+
     useEffect(() => {
         SendMessageComposer(new GetPartPaletteHexesComposer("cc"));
-        const onHexes = (ev: Event) => {
-            const { part, hexes } = (ev as CustomEvent).detail as {
-                part: string;
-                paletteId: number;
-                hexes: string[];
-            };
-            if (part !== "cc") return;
-            const withHash = hexes.map((h) => `#${h.toUpperCase()}`);
-            setCcSwatches(withHash);
-            if (withHash.length) {
-                if (!withHash.includes(primaryColor))
-                    setPrimaryColor(withHash[0]);
-                if (!withHash.includes(secondaryColor))
-                    setSecondaryColor(withHash[0]);
-            }
-        };
-        window.addEventListener("palette_hexes_result", onHexes);
-        return () =>
-            window.removeEventListener("palette_hexes_result", onHexes);
-    }, []); // once
 
-    /* ----------------------- helpers ----------------------- */
+        const onHexes = (event: Event) => {
+            const { part, hexes } = (event as CustomEvent).detail as { part: string; paletteId: number; hexes: string[] };
+
+            if(part !== "cc") return;
+
+            const nextSwatches = hexes.map(hex => `#${ hex.toUpperCase() }`);
+            setCcSwatches(nextSwatches);
+
+            if(!nextSwatches.length) return;
+            if(!nextSwatches.includes(primaryColor)) setPrimaryColor(nextSwatches[0]);
+            if(!nextSwatches.includes(secondaryColor)) setSecondaryColor(nextSwatches[Math.min(1, nextSwatches.length - 1)] ?? nextSwatches[0]);
+        };
+
+        window.addEventListener("palette_hexes_result", onHexes);
+        return () => window.removeEventListener("palette_hexes_result", onHexes);
+    }, []);
+
     const iconKeyFromSrc = (src: string) => {
-        const m = src.match(/\/([^\/]+)\.(gif|png|jpg)$/i);
-        return m ? m[1].toUpperCase() : "";
+        const match = src.match(/\/([^\/]+)\.(gif|png|jpg)$/i);
+        return match ? match[1].toUpperCase() : "";
     };
-    const selectedIconSrc =
-        ICON_OPTIONS.find((i) => i.name === selectedIcon)?.src ?? "";
+
+    const selectedIconData = useMemo(() => ICON_OPTIONS.find(icon => icon.name === selectedIcon) ?? ICON_OPTIONS[0], [selectedIcon]);
+    const selectedIconSrc = selectedIconData?.src ?? "";
     const selectedIconKey = iconKeyFromSrc(selectedIconSrc);
 
     const handleCreate = () => {
-        if (submitting) return; // guard (feels instantaneous)
-        if (name.trim().length < 3)
-            return setError("Gang name must be at least 3 characters.");
-        if (name.trim().length > 20)
-            return setError("Gang name cannot exceed 20 characters.");
-        if (!selectedIconKey) return setError("Please select a gang icon.");
+        if(submitting) return;
+        if(name.trim().length < 3) return setError("Gang name must be at least 3 characters.");
+        if(name.trim().length > 20) return setError("Gang name cannot exceed 20 characters.");
+        if(!selectedIconKey) return setError("Please select a gang icon.");
 
         setSubmitting(true);
-        SendMessageComposer(
-            new CreateGangComposer(
-                name.trim(),
-                primaryColor,
-                secondaryColor,
-                selectedIconKey
-            )
-        );
-        onClose(); // optimistic close
+        SendMessageComposer(new CreateGangComposer(name.trim(), primaryColor, secondaryColor, selectedIconKey));
+        onClose();
     };
 
-    /* ----------------------- paging slices ----------------------- */
-    const primTotal = Math.max(
-        1,
-        Math.ceil(ccSwatches.length / SWATCHES_PER_PAGE)
-    );
-    const secTotal = Math.max(
-        1,
-        Math.ceil(ccSwatches.length / SWATCHES_PER_PAGE)
-    );
+    const primTotal = Math.max(1, Math.ceil(ccSwatches.length / SWATCHES_PER_PAGE));
+    const secTotal = Math.max(1, Math.ceil(ccSwatches.length / SWATCHES_PER_PAGE));
+    const primVisible = ccSwatches.slice(primPage * SWATCHES_PER_PAGE, primPage * SWATCHES_PER_PAGE + SWATCHES_PER_PAGE);
+    const secVisible = ccSwatches.slice(secPage * SWATCHES_PER_PAGE, secPage * SWATCHES_PER_PAGE + SWATCHES_PER_PAGE);
+    const iconTotal = Math.max(1, Math.ceil(ICON_OPTIONS.length / ICONS_PER_PAGE));
+    const visibleIcons = ICON_OPTIONS.slice(iconPage * ICONS_PER_PAGE, iconPage * ICONS_PER_PAGE + ICONS_PER_PAGE);
 
-    const primStart = primPage * SWATCHES_PER_PAGE;
-    const secStart = secPage * SWATCHES_PER_PAGE;
-
-    const primVisible = ccSwatches.slice(
-        primStart,
-        primStart + SWATCHES_PER_PAGE
-    );
-    const secVisible = ccSwatches.slice(secStart, secStart + SWATCHES_PER_PAGE);
-
-    const iconTotal = Math.ceil(ICON_OPTIONS.length / ICONS_PER_PAGE);
-    const iconStart = iconPage * ICONS_PER_PAGE;
-    const visibleIcons = ICON_OPTIONS.slice(
-        iconStart,
-        iconStart + ICONS_PER_PAGE
-    );
-
-    /* ----------------------- render ----------------------- */
     return (
         <div
-            ref={rootRef}
+            ref={ rootRef }
             className="create-gang-view show"
-            style={{
-                position: "fixed",
-                left: position.x,
-                top: position.y,
-                zIndex: 2500,
-            }}
-        >
-            <div
-                className="create-gang-header"
-                onMouseDown={onHeaderMouseDown}
-                onTouchStart={onHeaderTouchStart}
-            >
+            style={ { position: "fixed", left: position.x, top: position.y, zIndex: 2500 } }>
+            <div className="create-gang-header" onMouseDown={ onHeaderMouseDown } onTouchStart={ onHeaderTouchStart }>
                 <div className="header-left">
-                    {/* live mini badge uses current colors + icon, shrunk to fit */}
-                    <div
-                        className="top-badge"
-                        style={{
-                            background: `linear-gradient(90deg, ${primaryColor} 50%, ${secondaryColor} 50%)`,
-                        }}
-                    >
-                        {selectedIconSrc && (
-                            <img
-                                className="top-badge-icon"
-                                src={selectedIconSrc}
-                                alt=""
-                            />
-                        )}
+                    <div className="top-badge" style={ { background: `linear-gradient(135deg, ${ primaryColor } 0%, ${ primaryColor } 50%, ${ secondaryColor } 50%, ${ secondaryColor } 100%)` } }>
+                        { selectedIconSrc && <img className="top-badge-icon" src={ selectedIconSrc } alt="" /> }
                     </div>
-                    Create Gang
+                    <span>Create Gang</span>
                 </div>
-                <button
-                    className="c-button close-button"
-                    onClick={onClose}
-                ></button>
+                <button className="c-button close-button" onClick={ onClose } />
             </div>
 
-            <div className="create-gang-body-horizontal">
-                {/* LEFT: Name + Icon */}
-                <div className="gang-column gang-name-icon">
-                    <label>Gang Name</label>
-                    <input
-                        type="text"
-                        value={name}
-                        maxLength={20}
-                        onChange={(e) => setName(e.target.value)}
-                    />
-
-                    <label>Gang Icon</label>
-                    <div key={`icon-page-${iconPage}`} className="icon-page">
-                        {visibleIcons.map((icon) => (
-                            <div
-                                key={icon.name}
-                                className={`icon-option ${
-                                    selectedIcon === icon.name ? "selected" : ""
-                                }`}
-                                onClick={() => setSelectedIcon(icon.name)}
-                                title={icon.name}
-                            >
-                                <img src={icon.src} alt={icon.name} />
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="pagination-controls">
-                        <button
-                            className="habbo-action-button"
-                            onClick={() =>
-                                setIconPage((p) => Math.max(p - 1, 0))
-                            }
-                            disabled={iconPage === 0}
-                        >
-                            ◀
-                        </button>
-                        <span>
-                            {Math.min(iconPage + 1, iconTotal)} /{" "}
-                            {Math.max(iconTotal, 1)}
-                        </span>
-                        <button
-                            className="habbo-action-button"
-                            onClick={() =>
-                                setIconPage((p) =>
-                                    Math.min(p + 1, iconTotal - 1)
-                                )
-                            }
-                            disabled={iconPage >= iconTotal - 1}
-                        >
-                            ▶
-                        </button>
-                    </div>
-                </div>
-
-                <div className="gang-divider" />
-
-                {/* MIDDLE: Palettes (centered; secondary below primary) */}
-                <div className="gang-column gang-color-chooser">
-                    <div className="palette-stack">
-                        {/* Primary */}
-                        <div className="palette-block">
-                            {/* side arrows */}
-                            <button
-                                className="pager-btn left"
-                                onClick={() =>
-                                    setPrimPage((p) => Math.max(p - 1, 0))
-                                }
-                                disabled={primPage === 0}
-                                aria-label="Previous primary colors"
-                            >
-                                ◀
-                            </button>
-                            <button
-                                className="pager-btn right"
-                                onClick={() =>
-                                    setPrimPage((p) =>
-                                        Math.min(p + 1, primTotal - 1)
-                                    )
-                                }
-                                disabled={primPage >= primTotal - 1}
-                                aria-label="Next primary colors"
-                            >
-                                ▶
-                            </button>
-
-                            <div className="palette-header">
-                                <div>Primary Color</div>
-                                <div className="page-indicator">
-                                    {Math.min(primPage + 1, primTotal)} /{" "}
-                                    {Math.max(primTotal, 1)}
-                                </div>
-                            </div>
-
-                            {!ccSwatches.length && (
-                                <div className="swatch-loading">
-                                    Loading colors…
-                                </div>
-                            )}
-                            {!!ccSwatches.length && (
-                                <div
-                                    key={`prim-${primPage}`}
-                                    className="swatch-page"
-                                >
-                                    {primVisible.map((hex) => (
-                                        <button
-                                            key={hex}
-                                            className={
-                                                "swatch" +
-                                                (hex === primaryColor
-                                                    ? " selected"
-                                                    : "")
-                                            }
-                                            style={{ backgroundColor: hex }}
-                                            onClick={() => setPrimaryColor(hex)}
-                                            title={hex}
-                                        />
-                                    ))}
-                                </div>
-                            )}
+            <div className="create-gang-content">
+                <div className="create-gang-main">
+                    <div className="create-gang-form-card">
+                        <div className="field-group">
+                            <label htmlFor="create-gang-name">Gang Name</label>
+                            <input
+                                id="create-gang-name"
+                                type="text"
+                                value={ name }
+                                maxLength={ 20 }
+                                placeholder="Enter gang name"
+                                onChange={ event => {
+                                    setName(event.target.value);
+                                    if(error) setError("");
+                                } } />
                         </div>
 
-                        {/* Secondary */}
-                        <div className="palette-block">
-                            <button
-                                className="pager-btn left"
-                                onClick={() =>
-                                    setSecPage((p) => Math.max(p - 1, 0))
-                                }
-                                disabled={secPage === 0}
-                                aria-label="Previous secondary colors"
-                            >
-                                ◀
-                            </button>
-                            <button
-                                className="pager-btn right"
-                                onClick={() =>
-                                    setSecPage((p) =>
-                                        Math.min(p + 1, secTotal - 1)
-                                    )
-                                }
-                                disabled={secPage >= secTotal - 1}
-                                aria-label="Next secondary colors"
-                            >
-                                ▶
-                            </button>
-
-                            <div className="palette-header">
-                                <div>Secondary Color</div>
-                                <div className="page-indicator">
-                                    {Math.min(secPage + 1, secTotal)} /{" "}
-                                    {Math.max(secTotal, 1)}
-                                </div>
+                        <div className="field-group">
+                            <div className="section-title-row">
+                                <label>Gang Icon</label>
+                                <div className="page-indicator">{ Math.min(iconPage + 1, iconTotal) } / { iconTotal }</div>
                             </div>
 
-                            {!ccSwatches.length && (
-                                <div className="swatch-loading">
-                                    Loading colors…
-                                </div>
-                            )}
-                            {!!ccSwatches.length && (
-                                <div
-                                    key={`sec-${secPage}`}
-                                    className="swatch-page"
-                                >
-                                    {secVisible.map((hex) => (
-                                        <button
-                                            key={hex}
-                                            className={
-                                                "swatch" +
-                                                (hex === secondaryColor
-                                                    ? " selected"
-                                                    : "")
-                                            }
-                                            style={{ backgroundColor: hex }}
-                                            onClick={() =>
-                                                setSecondaryColor(hex)
-                                            }
-                                            title={hex}
-                                        />
-                                    ))}
-                                </div>
-                            )}
+                            <div key={ `icon-page-${ iconPage }` } className="icon-grid">
+                                { visibleIcons.map(icon => (
+                                    <button
+                                        key={ icon.name }
+                                        type="button"
+                                        className={ `icon-option ${ selectedIcon === icon.name ? "selected" : "" }` }
+                                        onClick={ () => setSelectedIcon(icon.name) }
+                                        title={ icon.name }>
+                                        <img src={ icon.src } alt={ icon.name } />
+                                    </button>
+                                )) }
+                            </div>
+
+                            <div className="pagination-controls compact">
+                                <button type="button" className="rp-global-button" onClick={ () => setIconPage(page => Math.max(page - 1, 0)) } disabled={ iconPage === 0 }>◀</button>
+                                <button type="button" className="rp-global-button" onClick={ () => setIconPage(page => Math.min(page + 1, iconTotal - 1)) } disabled={ iconPage >= iconTotal - 1 }>▶</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="create-gang-preview-card">
+                        <div className="preview-stage">
+                            <div className="preview-badge" style={ { background: `linear-gradient(135deg, ${ primaryColor } 0%, ${ primaryColor } 50%, ${ secondaryColor } 50%, ${ secondaryColor } 100%)` } }>
+                                { selectedIconSrc && <img className="preview-icon" src={ selectedIconSrc } alt="" /> }
+                            </div>
+                            <div className="preview-copy">
+                                <div className="preview-label">Preview</div>
+                                <div className="preview-name">{ name.trim() || "Your Gang Name" }</div>
+                                <div className="preview-subtitle">Primary and secondary colors update live.</div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="gang-divider" />
-
-                {/* RIGHT: Preview (no shield; same footprint) */}
-                <div className="gang-column gang-preview">
-                    <div className="preview-box">
-                        <div
-                            className="shield-wrap"
-                            style={{
-                                background: `linear-gradient(90deg, ${primaryColor} 50%, ${secondaryColor} 50%)`,
-                            }}
-                        >
-                            {selectedIconSrc && (
-                                <img
-                                    className="shield-icon"
-                                    src={selectedIconSrc}
-                                    alt=""
-                                />
-                            )}
+                <div className="color-selection-row">
+                    <div className="palette-card">
+                        <div className="section-title-row">
+                            <label>Primary Color</label>
+                            <div className="page-indicator">{ Math.min(primPage + 1, primTotal) } / { primTotal }</div>
                         </div>
-                        <div className="gang-preview-name">
-                            {name || "Your Gang Name"}
+                        { !ccSwatches.length && <div className="swatch-loading">Loading colors…</div> }
+                        {!!ccSwatches.length && (
+                            <div key={ `prim-${ primPage }` } className="swatch-grid">
+                                { primVisible.map(hex => (
+                                    <button
+                                        key={ hex }
+                                        type="button"
+                                        className={ `swatch ${ hex === primaryColor ? "selected" : "" }` }
+                                        style={ { backgroundColor: hex } }
+                                        onClick={ () => setPrimaryColor(hex) }
+                                        title={ hex } />
+                                )) }
+                            </div>
+                        ) }
+                        <div className="pagination-controls swatch-controls">
+                            <button type="button" className="rp-global-button" onClick={ () => setPrimPage(page => Math.max(page - 1, 0)) } disabled={ primPage === 0 }>◀</button>
+                            <button type="button" className="rp-global-button" onClick={ () => setPrimPage(page => Math.min(page + 1, primTotal - 1)) } disabled={ primPage >= primTotal - 1 }>▶</button>
+                        </div>
+                    </div>
+
+                    <div className="palette-card">
+                        <div className="section-title-row">
+                            <label>Secondary Color</label>
+                            <div className="page-indicator">{ Math.min(secPage + 1, secTotal) } / { secTotal }</div>
+                        </div>
+                        { !ccSwatches.length && <div className="swatch-loading">Loading colors…</div> }
+                        {!!ccSwatches.length && (
+                            <div key={ `sec-${ secPage }` } className="swatch-grid">
+                                { secVisible.map(hex => (
+                                    <button
+                                        key={ hex }
+                                        type="button"
+                                        className={ `swatch ${ hex === secondaryColor ? "selected" : "" }` }
+                                        style={ { backgroundColor: hex } }
+                                        onClick={ () => setSecondaryColor(hex) }
+                                        title={ hex } />
+                                )) }
+                            </div>
+                        ) }
+                        <div className="pagination-controls swatch-controls">
+                            <button type="button" className="rp-global-button" onClick={ () => setSecPage(page => Math.max(page - 1, 0)) } disabled={ secPage === 0 }>◀</button>
+                            <button type="button" className="rp-global-button" onClick={ () => setSecPage(page => Math.min(page + 1, secTotal - 1)) } disabled={ secPage >= secTotal - 1 }>▶</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {error && (
-                <div
-                    style={{
-                        color: "#b00020",
-                        padding: "0 12px 6px",
-                        fontWeight: 700,
-                    }}
-                >
-                    {error}
-                </div>
-            )}
+            { error && <div className="create-gang-error">{ error }</div> }
 
             <div className="create-gang-footer">
-                <button
-                    className="habbo-action-button green"
-                    onClick={handleCreate}
-                    disabled={submitting}
-                >
-                    Create Gang for 500 💵
+                <button className="rp-global-button is-primary" onClick={ handleCreate } disabled={ submitting }>
+                    Create Gang
                 </button>
             </div>
-
-            {/* optional resize handle kept if you hook it up later */}
-            <div className="resize-handle" />
         </div>
     );
 };

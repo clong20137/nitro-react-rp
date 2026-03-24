@@ -6,8 +6,8 @@
     gap: 4px;
     padding: 6px;
     border-radius: 16px;
-    background: #0d6091;
-    border: 3px solid #2077ab;
+    background: var(--rp-primary);
+    border: 3px solid var(--rp-primary-border);
     box-shadow: 0 2px #000000b3, 0 0 0 1px #000000b3;
     z-index: 1000;
 }
@@ -16,9 +16,9 @@
     width: 56px;
     height: 56px;
     border-radius: 8px;
-    background: #0d4366;
+    background: var(--rp-panel);
     box-shadow: 0 0 4px rgba(0, 0, 0, .4);
-    border: 3px solid #2077ab;
+    border: 3px solid var(--rp-primary-border);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -39,8 +39,8 @@
         filter: brightness(1.12);
         transform: translateY(-1px);
         box-shadow: 0 0 6px rgba(0, 0, 0, .6);
-        border-color: #45a4e0;
-        background: #0f5b8c;
+        border-color: var(--rp-primary-light);
+        background: var(--rp-primary-dark);
     }
 
     &:active {
@@ -103,7 +103,7 @@
 
 /* PHONE tile */
 .phone-tile {
-    background: #0d4366;
+    background: var(--rp-panel);
 }
 
 /* actual phone image – shrink so it fits nicely */
@@ -293,7 +293,7 @@ MOBILE RULES
         filter: none;
         box-shadow: 0 0 4px rgba(0, 0, 0, .4);
         border-color: #2077ab;
-        background: #0d4366;
+        background: var(--rp-panel);
     }
 
     .dock-tile:active {

@@ -1,4 +1,5 @@
 import { FC, useMemo, useRef, useState, useEffect, useCallback } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { SendMessageComposer, GetSessionDataManager } from "../../api";
 
 import { RequestTokenStoreComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/RequestTokenStoreComposer";
@@ -900,50 +901,42 @@ export const DiamondsStoreView: FC<{ onClose: () => void }> = ({ onClose }) => {
     return (
         <Shell title="Diamond Store" onClose={onClose}>
             {/* Tabs */}
-            <div
-                className="ds-tabs"
-                role="tablist"
-                aria-label="Store categories"
-            >
+            <div className="rp-tabs ds-tabs" role="tablist" aria-label="Store categories">
                 <button
-                    className={`ds-tab ${
-                        activeTab === "featured" ? "active" : ""
-                    }`}
+                    className={`rp-tab ${activeTab === "featured" ? "active" : ""}`}
                     role="tab"
                     aria-selected={activeTab === "featured"}
                     onClick={() => setActiveTab("featured")}
                 >
-                    Featured
+                    <FontAwesomeIcon className="rp-tab__icon" icon="star" />
+                    <span className="rp-tab__label">Featured</span>
                 </button>
                 <button
-                    className={`ds-tab ${
-                        activeTab === "bubbles" ? "active" : ""
-                    }`}
+                    className={`rp-tab ${activeTab === "bubbles" ? "active" : ""}`}
                     role="tab"
                     aria-selected={activeTab === "bubbles"}
                     onClick={() => setActiveTab("bubbles")}
                 >
-                    Chat Bubbles
+                    <FontAwesomeIcon className="rp-tab__icon" icon="comment-dots" />
+                    <span className="rp-tab__label">Chat Bubbles</span>
                 </button>
                 <button
-                    className={`ds-tab ${
-                        activeTab === "icons" ? "active" : ""
-                    }`}
+                    className={`rp-tab ${activeTab === "icons" ? "active" : ""}`}
                     role="tab"
                     aria-selected={activeTab === "icons"}
                     onClick={() => setActiveTab("icons")}
                 >
-                    Name Icons
+                    <FontAwesomeIcon className="rp-tab__icon" icon="id-badge" />
+                    <span className="rp-tab__label">Name Icons</span>
                 </button>
                 <button
-                    className={`ds-tab ${
-                        activeTab === "tokens" ? "active" : ""
-                    }`}
+                    className={`rp-tab ${activeTab === "tokens" ? "active" : ""}`}
                     role="tab"
                     aria-selected={activeTab === "tokens"}
                     onClick={() => setActiveTab("tokens")}
                 >
-                    Tokens
+                    <FontAwesomeIcon className="rp-tab__icon" icon="gem" />
+                    <span className="rp-tab__label">Tokens</span>
                 </button>
             </div>
 
@@ -968,7 +961,8 @@ export const DiamondsStoreView: FC<{ onClose: () => void }> = ({ onClose }) => {
                         <span className="pill">Perks & Boosts</span>
                     )}
                 </div>
-                <div style={{ marginTop: 6, opacity: 0.9 }}>
+                <div className="rp-tab-panel rp-tab-panel--animated" key={activeTab}>
+            <div style={{ marginTop: 6, opacity: 0.9 }}>
                     {activeTab === "featured" && (
                         <>Discover bundles and seasonal offers.</>
                     )}
@@ -991,7 +985,6 @@ export const DiamondsStoreView: FC<{ onClose: () => void }> = ({ onClose }) => {
                         </>
                     )}
                 </div>
-            </div>
 
             {/* CONTENT BY TAB */}
             {activeTab === "featured" && (
@@ -1232,6 +1225,8 @@ export const DiamondsStoreView: FC<{ onClose: () => void }> = ({ onClose }) => {
             )}
 
             {/* Confirm */}
+            </div>
+            </div>
             {confirm && (
                 <div
                     className="overlay"

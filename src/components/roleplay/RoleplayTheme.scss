@@ -1,0 +1,37 @@
+:root {
+    --rp-primary: #0d6091;
+    --rp-primary-border: #2077ab;
+    --rp-primary-dark: #0b4d75;
+    --rp-primary-light: #2a7daf;
+    --rp-panel: #0a3e5f;
+    --rp-tab-top: var(--rp-primary);
+    --rp-tab-bottom: var(--rp-primary-dark);
+    --rp-tab-active: var(--rp-primary-light);
+    --rp-tab-active-top: var(--rp-primary-light);
+    --rp-tab-active-bottom: var(--rp-primary);
+    --rp-skill-fill: var(--rp-primary);
+    --rp-skill-border: var(--rp-primary-border);
+    --rp-aggression-bg: #4a84a8;
+}
+
+.rp-themed-header {
+    background: var(--rp-primary);
+    box-shadow: 0 0 rgba(0, 0, 0, .1019607843), 0 0 rgba(0, 0, 0, .1019607843), inset 0 -3px rgba(0, 0, 0, .0901960784);
+}
+
+.rp-themed-shell {
+    border-color: var(--rp-primary-border);
+    background: var(--rp-panel);
+}
+
+.rp-themed-tab-strip {
+    background: var(--rp-primary-dark);
+}
+
+.rp-themed-tab {
+    background: linear-gradient(180deg, var(--rp-tab-top), var(--rp-tab-top) 50%, var(--rp-tab-bottom) 0, var(--rp-tab-bottom));
+}
+
+.rp-themed-tab-active {
+    background: #dfdfdf;
+}

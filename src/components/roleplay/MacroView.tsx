@@ -473,10 +473,7 @@ export const MacroView: FC<MacroViewProps> = ({
     const rootRef = useRef<HTMLDivElement | null>(null);
     const [dragging, setDragging] = useState(false);
     const [pos, setPos] = useState<{ x: number; y: number }>(() => {
-        const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
-        const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-        const width = 420;
-        return { x: Math.max(8, vw - width - 16), y: Math.max(8, vh - 220) };
+        return { x: 8, y: 108 };
     });
     const dragOff = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
 
@@ -486,7 +483,7 @@ export const MacroView: FC<MacroViewProps> = ({
         const rect = el.getBoundingClientRect();
         setPos((p) => ({
             x: p.x,
-            y: Math.max(8, window.innerHeight - rect.height - 16),
+            y: p.y,
         }));
     }, []);
 
@@ -544,7 +541,7 @@ export const MacroView: FC<MacroViewProps> = ({
         <>
             <div
                 ref={rootRef}
-                className={`macros-view enter-br ${dragging ? "dragging" : ""}`}
+                className={`macros-view enter-left ${dragging ? "dragging" : ""}`}
                 role="dialog"
                 aria-modal="true"
                 style={{
@@ -562,7 +559,7 @@ export const MacroView: FC<MacroViewProps> = ({
                 >
                     <span>Macros</span>
                     <button
-                        className="close-button"
+                        className="c-button close-button"
                         onClick={onClose}
                         aria-label="Close"
                         type="button"

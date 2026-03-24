@@ -10,6 +10,22 @@ import { MacroView } from "./MacroView";
 
 import { CorporationData } from "@nitrots/nitro-renderer/src/nitro/communication/messages/parser/CorporationsListParser";
 import { CheckGangStatusComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CheckGangStatusComposer";
+
+let GetGangMembersComposer: any;
+let GetGangRanksComposer: any;
+let GetGangStatusComposer: any;
+try {
+    GetGangStatusComposer =
+        require("@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetGangStatusComposer").GetGangStatusComposer;
+} catch {}
+try {
+    GetGangMembersComposer =
+        require("@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetGangMembersComposer").GetGangMembersComposer;
+} catch {}
+try {
+    GetGangRanksComposer =
+        require("@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetGangRanksComposer").GetGangRanksComposer;
+} catch {}
 import { ToggleGangChatComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/ToggleGangChatComposer";
 import { GetWantedListComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetWantedListComposer";
 import { GetCorporationsComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/GetCorporationsComposer";
@@ -93,7 +109,28 @@ export const LeftSidebarView: FC = () => {
             } catch {
                 // ignore
             }
+
+            try {
+                if (GetGangStatusComposer) SendMessageComposer(new GetGangStatusComposer());
+            } catch {
+                // ignore
+            }
+
+            try {
+                if (GetGangMembersComposer) SendMessageComposer(new GetGangMembersComposer());
+            } catch {
+                // ignore
+            }
+
+            try {
+                if (GetGangRanksComposer) SendMessageComposer(new GetGangRanksComposer());
+            } catch {
+                // ignore
+            }
+
             window.dispatchEvent(new CustomEvent("request_gang_status"));
+            window.dispatchEvent(new CustomEvent("request_gang_members"));
+            window.dispatchEvent(new CustomEvent("request_gang_ranks"));
         };
 
         window.addEventListener(
@@ -153,7 +190,28 @@ export const LeftSidebarView: FC = () => {
         } catch {
             // ignore
         }
+
+        try {
+            if (GetGangStatusComposer) SendMessageComposer(new GetGangStatusComposer());
+        } catch {
+            // ignore
+        }
+
+        try {
+            if (GetGangMembersComposer) SendMessageComposer(new GetGangMembersComposer());
+        } catch {
+            // ignore
+        }
+
+        try {
+            if (GetGangRanksComposer) SendMessageComposer(new GetGangRanksComposer());
+        } catch {
+            // ignore
+        }
+
         window.dispatchEvent(new CustomEvent("request_gang_status"));
+        window.dispatchEvent(new CustomEvent("request_gang_members"));
+        window.dispatchEvent(new CustomEvent("request_gang_ranks"));
     };
 
     const onClickGangs = () => {

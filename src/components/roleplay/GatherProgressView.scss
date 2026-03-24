@@ -1,120 +1,59 @@
-.gathering-bar-horizontal-wrapper {
-    --gather-dur: 30000ms; // default, replaced inline by React
-    position: absolute;
-    left: 50%;
-    bottom: 90px;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    min-width: 280px;
-    max-width: 420px;
-    background: #0d6091;
-    border: 3px solid #2077ab;
-    border-radius: 8px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
-    z-index: 9999;
-    user-select: none;
-
-    /* ✨ fade in/out defaults */
+.gather-avatar-bar {
+    transform: translateX(-50%) translateY(-70px);
+    pointer-events: none;
     opacity: 0;
-    transform-origin: center bottom;
-    transition: opacity 0.35s ease, transform 0.35s ease;
+    transition: opacity .1s ease, transform .1s ease;
 }
 
-/* shown state (React adds .fade-in) */
-.gathering-bar-horizontal-wrapper.fade-in {
+.gather-avatar-bar.fade-in {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) translateY(-80px);
 }
 
-/* hidden state (React adds .fade-out) */
-.gathering-bar-horizontal-wrapper.fade-out {
+.gather-avatar-bar.fade-out {
     opacity: 0;
-    transform: translateX(-50%) translateY(15px);
+    transform: translateX(-50%) translateY(-65px);
 }
 
-/* === Icon === */
-.gathering-icon {
-    width: 34px;
-    height: 34px;
-    background: #000;
-    border: 2px solid #ffffff;
-    border-radius: 6px;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-}
-
-.gathering-icon img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-}
-
-/* === Content === */
-.gathering-content {
-    flex: 1;
-    min-width: 0;
-}
-
-.gathering-label {
+.gather-avatar-label {
+    font-size: 10px;
     font-weight: 700;
-    font-size: 13px;
-    color: #eaf3ff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 6px;
+    text-align: center;
+    color: #ffffff;
+    margin-bottom: 3px;
+    text-shadow: 0 1px 0 #000;
 }
 
-/* === Bar === */
-.gathering-bar-horizontal {
-    position: relative;
-    height: 24px;
-    border: 2px solid #ffffff;
-    border-radius: 6px;
-    background: rgba(24, 24, 24, .88);
+.gather-avatar-track {
+    width: 70px;
+    height: 6px;
+    background: rgba(0, 0, 0, .75);
+    border: 1px solid #3a2d12;
+    border-radius: 999px;
     overflow: hidden;
 }
 
-.gathering-bar-horizontal::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
+.gather-avatar-fill {
+    height: 100%;
     width: 0%;
-    background: linear-gradient(180deg, #0067b3, #0067b3 50%, #005da3 0, #005da3);
-    animation: gather-fill var(--gather-dur) linear forwards;
+    background: var(--rp-primary);
+    animation: gather-fill linear forwards;
+}
+
+.gather-avatar-time {
+    font-size: 9px;
+    font-weight: 700;
+    text-align: center;
+    color: #fff;
+    margin-top: 2px;
+    text-shadow: 0 1px 0 #000;
 }
 
 @keyframes gather-fill {
     from {
         width: 0%;
     }
-
     to {
-        width: 100%;
-    }
-}
-
-/* === Countdown text === */
-.gathering-count {
-    margin-left: 8px;
-    font-weight: 700;
-    font-size: 20px;
-    min-width: 44px;
-    text-align: right;
-    color: #eaf3ff;
-}
-
-/* === Accessibility === */
-@media (prefers-reduced-motion: reduce) {
-    .gathering-bar-horizontal::before {
-        animation: none;
         width: 100%;
     }
 }

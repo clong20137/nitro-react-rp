@@ -1,4 +1,4 @@
-import { FC, useEffect, useRef, useState } from "react";
+import { FC, ReactNode, useEffect, useRef, useState } from "react";
 import "./LiveFeed.scss";
 
 import { SendMessageComposer } from "../../api";
@@ -6,242 +6,334 @@ import { EmsCallDecisionComposer } from "@nitrots/nitro-renderer/src/nitro/commu
 
 type FeedMessage = {
     id: number;
-
-    // What we DISPLAY in the feed:
     text: string;
-
-    // Full original message for Police view:
     fullText?: string;
-
     username: string;
     figure: string;
     type?: string;
     persistent?: boolean;
-
     isPoliceCall?: boolean;
     isEMSCall?: boolean;
-
     victimId?: number;
     location?: string;
-
-    // Virtual room metadata (provided by PoliceCallEvent bridge):
     virtualRoomId?: number;
     virtualRoomName?: string;
-
     closing?: boolean;
 };
 
 let messageId = 0;
 const ANIM_MS = 250;
 
-export const LiveFeed: FC = () => {
+const stripLeadingEmoji = (value: string) =>
+{
+    if (!value) return "";
+
+    return value
+        .replace(/^[\p{Extended_Pictographic}\p{Emoji_Presentation}\uFE0F\u200D\s]+/u, "")
+        .trim();
+};
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const inferSecondaryName = (message: string, primaryName: string) =>
+{
+    const cleaned = stripLeadingEmoji(message);
+    const withoutPrimary = cleaned.replace(new RegExp(`^${ escapeRegExp(primaryName) }\s+`, "i"), "");
+
+    const directPatterns = [
+        /\bpardoned\s+([A-Za-z0-9_]+)/i,
+        /\barrested\s+([A-Za-z0-9_]+)/i,
+        /\bkilled\s+([A-Za-z0-9_]+)/i,
+        /\bhit\s+([A-Za-z0-9_]+)/i,
+        /\brobbed\s+([A-Za-z0-9_]+)/i,
+        /\bfined\s+([A-Za-z0-9_]+)/i,
+        /\brevived\s+([A-Za-z0-9_]+)/i,
+        /\bhealed\s+([A-Za-z0-9_]+)/i,
+        /\bsearched\s+([A-Za-z0-9_]+)/i,
+        /\bescorted\s+([A-Za-z0-9_]+)/i,
+        /\bjailed\s+([A-Za-z0-9_]+)/i,
+        /\breleased\s+([A-Za-z0-9_]+)/i,
+        /\bhelped\s+([A-Za-z0-9_]+)/i,
+        /\bcharged\s+([A-Za-z0-9_]+)/i
+    ];
+
+    for (const pattern of directPatterns)
+    {
+        const match = withoutPrimary.match(pattern);
+
+        if (match?.[1]) return match[1];
+    }
+
+    const words = withoutPrimary.split(/\s+/).filter(Boolean);
+
+    if (words.length >= 2)
+    {
+        const candidate = words[1];
+
+        if (/^[A-Za-z0-9_]+$/.test(candidate)) return candidate;
+    }
+
+    return "";
+};
+
+const renderMessageText = (msg: FeedMessage): ReactNode =>
+{
+    const cleaned = stripLeadingEmoji(msg.text);
+
+    if (msg.isPoliceCall)
+    {
+        return (
+            <>
+                <span className="name-primary">{ msg.username }</span>
+                <span className="feed-separator"> placed a police call</span>
+                { (msg.virtualRoomId || msg.virtualRoomName) ? (
+                    <span
+                        className="vr-room-pill"
+                        title={ `vRoom ${ msg.virtualRoomId ?? "?" }` }>
+                        { msg.virtualRoomName ?? `VR ${ msg.virtualRoomId }` }
+                    </span>
+                ) : null }
+            </>
+        );
+    }
+
+    if (msg.isEMSCall)
+    {
+        return (
+            <>
+                <span className="name-primary">{ msg.username }</span>
+                <span className="feed-separator"> requested medical assistance</span>
+            </>
+        );
+    }
+
+    const primaryName = msg.username || cleaned.split(/\s+/)[0] || "";
+    const secondaryName = inferSecondaryName(cleaned, primaryName);
+
+    let display = cleaned;
+
+    if (primaryName)
+    {
+        const primaryPattern = new RegExp(`^${ escapeRegExp(primaryName) }\b\s*`, "i");
+        display = display.replace(primaryPattern, "");
+    }
+
+    if (secondaryName)
+    {
+        const secondaryPattern = new RegExp(`\b${ escapeRegExp(secondaryName) }\b`, "i");
+
+        if (secondaryPattern.test(display))
+        {
+            const parts = display.split(secondaryPattern);
+            const match = display.match(secondaryPattern)?.[0] ?? secondaryName;
+
+            return (
+                <>
+                    { primaryName ? <span className="name-primary">{ primaryName }</span> : null }
+                    { primaryName ? <span className="feed-separator"> </span> : null }
+                    <span>{ parts[0] }</span>
+                    <span className="name-secondary">{ match }</span>
+                    <span>{ parts.slice(1).join(match) }</span>
+                </>
+            );
+        }
+    }
+
+    return (
+        <>
+            { primaryName ? <span className="name-primary">{ primaryName }</span> : null }
+            { primaryName ? <span className="feed-separator"> </span> : null }
+            <span>{ display }</span>
+        </>
+    );
+};
+
+export const LiveFeed: FC = () =>
+{
     const [messages, setMessages] = useState<FeedMessage[]>([]);
     const [isVisible, setIsVisible] = useState(true);
     const audioMapRef = useRef<Map<number, HTMLAudioElement>>(new Map());
 
-    const playLoop = (id: number, src: string, volume = 0.6) => {
-        try {
+    const playLoop = (id: number, src: string, volume = 0.6) =>
+    {
+        try
+        {
             const audio = new Audio(src);
             audio.loop = false;
             audio.volume = volume;
             audioMapRef.current.set(id, audio);
             audio.play().catch(() => {});
             window.setTimeout(() => stopLoop(id), 60_000);
-        } catch {}
-    };
-
-    const stopLoop = (id: number) => {
-        const audio = audioMapRef.current.get(id);
-        if (audio) {
-            try {
-                audio.pause();
-                audio.currentTime = 0;
-            } catch {}
-            audioMapRef.current.delete(id);
         }
+        catch {}
     };
 
-    const animateOutThenRemove = (id: number) => {
-        setMessages((prev) =>
-            prev.map((m) => (m.id === id ? { ...m, closing: true } : m))
-        );
-        window.setTimeout(() => {
-            setMessages((prev) => prev.filter((m) => m.id !== id));
+    const stopLoop = (id: number) =>
+    {
+        const audio = audioMapRef.current.get(id);
+
+        if (!audio) return;
+
+        try
+        {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+        catch {}
+
+        audioMapRef.current.delete(id);
+    };
+
+    const animateOutThenRemove = (id: number) =>
+    {
+        setMessages(prev => prev.map(message => (message.id === id ? { ...message, closing: true } : message)));
+
+        window.setTimeout(() =>
+        {
+            setMessages(prev => prev.filter(message => message.id !== id));
         }, ANIM_MS);
     };
 
-    // Handle both: generic live feed AND dedicated police call bridge
-    useEffect(() => {
-        const handleEvent = (event: any) => {
-            const d = event?.detail;
-            if (!d?.message) return;
+    useEffect(() =>
+    {
+        const handleEvent = (event: any) =>
+        {
+            const detail = event?.detail;
 
-            const isPoliceCall =
-                d.type === "[911]" || String(d.message).startsWith("[911]");
-            const isEMSCall = d.type === "ems_call";
+            if (!detail?.message) return;
 
-            const newMsg: FeedMessage = {
+            const isPoliceCall = detail.type === "[911]" || String(detail.message).startsWith("[911]");
+            const isEMSCall = detail.type === "ems_call";
+
+            const newMessage: FeedMessage = {
                 id: messageId++,
-
-                // show label for police calls
-                text: isPoliceCall ? "Police Call" : d.message,
-
-                // ✅ keep raw message for the modal
-                fullText: d.message,
-
-                username: d.username,
-                figure: d.figure,
-                type: d.type,
+                text: isPoliceCall ? "Police Call" : detail.message,
+                fullText: detail.message,
+                username: detail.username,
+                figure: detail.figure,
+                type: detail.type,
                 isPoliceCall,
                 isEMSCall,
-                persistent: d.persistent ?? (isPoliceCall || isEMSCall),
-
-                victimId: d.victimId,
-                location: d.location,
-
-                virtualRoomId: d.virtualRoomId,
-                virtualRoomName: d.virtualRoomName,
+                persistent: detail.persistent ?? (isPoliceCall || isEMSCall),
+                victimId: detail.victimId,
+                location: detail.location,
+                virtualRoomId: detail.virtualRoomId,
+                virtualRoomName: detail.virtualRoomName
             };
 
-            setMessages((prev) => [...prev, newMsg]);
+            setMessages(prev => [...prev, newMessage]);
 
-            if (newMsg.isPoliceCall)
-                playLoop(newMsg.id, "/sounds/police.mp3", 0.6);
-            else if (newMsg.isEMSCall)
-                playLoop(newMsg.id, "/sounds/ambulance.mp3", 0.6);
-            else if (!newMsg.persistent) {
-                window.setTimeout(() => {
-                    stopLoop(newMsg.id);
-                    animateOutThenRemove(newMsg.id);
+            if (newMessage.isPoliceCall) playLoop(newMessage.id, "/sounds/police.mp3", 0.6);
+            else if (newMessage.isEMSCall) playLoop(newMessage.id, "/sounds/ambulance.mp3", 0.6);
+            else if (!newMessage.persistent)
+            {
+                window.setTimeout(() =>
+                {
+                    stopLoop(newMessage.id);
+                    animateOutThenRemove(newMessage.id);
                 }, 5000);
             }
         };
 
-        // ✅ only one event source
         window.addEventListener("live_feed_event", handleEvent);
 
-        return () => {
-            window.removeEventListener("live_feed_event", handleEvent);
-        };
+        return () => window.removeEventListener("live_feed_event", handleEvent);
     }, []);
 
-    useEffect(() => {
+    useEffect(() =>
+    {
         const stored = localStorage.getItem("liveFeedEnabled");
         setIsVisible(stored === null || JSON.parse(stored) === true);
 
-        const handleToggle = (e: any) => setIsVisible(!!e.detail?.enabled);
+        const handleToggle = (event: any) => setIsVisible(!!event.detail?.enabled);
+
         window.addEventListener("toggleLiveFeed", handleToggle);
+
         return () => window.removeEventListener("toggleLiveFeed", handleToggle);
     }, []);
 
-    useEffect(() => {
-        return () => {
+    useEffect(() =>
+    {
+        return () =>
+        {
             for (const id of audioMapRef.current.keys()) stopLoop(id);
         };
     }, []);
 
     if (!isVisible) return null;
 
-    const dismiss = (id: number) => {
+    const dismiss = (id: number) =>
+    {
         stopLoop(id);
         animateOutThenRemove(id);
     };
 
-    const acceptEMS = (msg: FeedMessage) => {
-        SendMessageComposer(new EmsCallDecisionComposer(msg.username, true));
-        dismiss(msg.id);
+    const acceptEMS = (message: FeedMessage) =>
+    {
+        SendMessageComposer(new EmsCallDecisionComposer(message.username, true));
+        dismiss(message.id);
     };
 
-    const declineEMS = (msg: FeedMessage) => {
-        SendMessageComposer(new EmsCallDecisionComposer(msg.username, false));
-        dismiss(msg.id);
+    const declineEMS = (message: FeedMessage) =>
+    {
+        SendMessageComposer(new EmsCallDecisionComposer(message.username, false));
+        dismiss(message.id);
     };
 
     return (
         <div className="live-feed-container">
-            {messages.map((msg) => (
+            { messages.map(message => (
                 <div
-                    key={msg.id}
+                    key={ message.id }
                     className={[
                         "live-feed-message",
-                        msg.isPoliceCall ? "police-call" : "",
-                        msg.isEMSCall ? "ems-call" : "",
-                        msg.closing ? "closing" : "enter",
-                    ]
-                        .join(" ")
-                        .trim()}
-                >
-                    <img
-                        className="avatar-head"
-                        src={`https://imager.olympusrp.pw/?figure=${msg.figure}&direction=2&headonly=1&size=m`}
-                        alt={`${msg.username}'s avatar`}
-                    />
+                        message.isPoliceCall ? "police-call" : "",
+                        message.isEMSCall ? "ems-call" : "",
+                        message.closing ? "closing" : "enter"
+                    ].join(" ").trim()}>
+                    <div className="message-text">
+                        { renderMessageText(message) }
+                    </div>
 
-                    <span className="message-text">
-                        {msg.text}
-                        {msg.isPoliceCall &&
-                        (msg.virtualRoomId || msg.virtualRoomName) ? (
-                            <span
-                                className="vr-room-pill"
-                                title={`vRoom ${msg.virtualRoomId ?? "?"}`}
-                            >
-                                {msg.virtualRoomName ??
-                                    `VR ${msg.virtualRoomId}`}
-                            </span>
-                        ) : null}
-                    </span>
-
-                    {msg.isPoliceCall && (
+                    { message.isPoliceCall && (
                         <div className="call-buttons">
                             <button
                                 className="habbo-action-button green"
-                                onClick={() => {
+                                onClick={ () =>
+                                {
                                     window.dispatchEvent(
                                         new CustomEvent("open_police_call", {
                                             detail: {
-                                                username: msg.username,
-                                                figure: msg.figure,
-                                                message:
-                                                    msg.fullText ?? msg.text,
-                                                virtualRoomId:
-                                                    msg.virtualRoomId ?? 0,
-                                                virtualRoomName:
-                                                    msg.virtualRoomName ?? "",
-                                            },
+                                                username: message.username,
+                                                figure: message.figure,
+                                                message: message.fullText ?? message.text,
+                                                virtualRoomId: message.virtualRoomId ?? 0,
+                                                virtualRoomName: message.virtualRoomName ?? ""
+                                            }
                                         })
                                     );
-                                    dismiss(msg.id);
-                                }}
-                            >
+                                    dismiss(message.id);
+                                } }>
                                 Open Call
                             </button>
-                            <button
-                                className="habbo-action-button red"
-                                onClick={() => dismiss(msg.id)}
-                            >
-                                Decline
+                            <button className="habbo-action-button red" onClick={ () => dismiss(message.id) }>
+                                Dismiss
                             </button>
                         </div>
-                    )}
+                    ) }
 
-                    {msg.isEMSCall && (
+                    { message.isEMSCall && (
                         <div className="call-buttons">
-                            <button
-                                className="habbo-action-button green"
-                                onClick={() => acceptEMS(msg)}
-                            >
+                            <button className="habbo-action-button green" onClick={ () => acceptEMS(message) }>
                                 Accept
                             </button>
-                            <button
-                                className="habbo-action-button red"
-                                onClick={() => declineEMS(msg)}
-                            >
+                            <button className="habbo-action-button red" onClick={ () => declineEMS(message) }>
                                 Decline
                             </button>
                         </div>
-                    )}
+                    ) }
                 </div>
-            ))}
+            )) }
         </div>
     );
 };

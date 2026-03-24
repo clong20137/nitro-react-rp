@@ -1,17 +1,7 @@
 /*===========================StatsBar.scss (full, updated)===========================*/
 
+
 /* Root container for your HUD (self) */
-.stats-bar-container::before {
-    content: "";
-    position: absolute;
-    top: 6px;
-    bottom: 6px;
-    left: 88px;
-    /* tune to match width of stats-left */
-    width: 1px;
-    background: rgba(0, 0, 0, .55);
-    pointer-events: none;
-}
 
 .stats-bar-container {
     display: flex;
@@ -21,23 +11,23 @@
     position: absolute;
     top: 5px;
     left: 5px;
-    animation: fadeIn 0.8s;
+    animation: statsBarSlideInLeft 1.25s cubic-bezier(0.22, 1, 0.36, 1);
     z-index: 100;
-
     /* 🔵 dark shell behind both blue panel + bars */
-    box-shadow:
-        0 6px 16px rgba(0, 0, 0, .35),
-        0 2px 0 rgba(0, 0, 0, .4),
-        inset 0 -2px rgba(255, 255, 255, .04);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .35), 0 2px 0 rgba(0, 0, 0, .4), inset 0 -2px rgba(255, 255, 255, .04);
 }
 
+
 /* host that holds your bar + opponent bar side-by-side */
+
 .stats-bar-host {
     position: relative;
     width: fit-content;
 }
 
+
 /* opponent HUD anchor – keep it perfectly level with yours */
+
 .opponent-anchor {
     position: absolute;
     left: calc(100% + 8px);
@@ -47,11 +37,14 @@
     z-index: 2000;
 }
 
+
 /* make sure both containers render above world */
+
 .stats-bar-container,
 .opponent-anchor {
     z-index: 2000;
 }
+
 
 /* ===== Quick actions (police / passive / etc) ===== */
 
@@ -77,16 +70,13 @@
     justify-content: center;
     transition: transform .08s ease, box-shadow .12s ease;
     outline: none;
-
     &:hover {
         box-shadow: 0 0 0 2px rgba(0, 0, 0, .08) inset;
         transform: translateY(-1px);
     }
-
     &:active {
         transform: translateY(0);
     }
-
     &:disabled {
         opacity: .6;
         cursor: default;
@@ -99,12 +89,16 @@
     stroke: #000;
 }
 
+
 /* clock in/out state accent ring */
+
 .qa-btn.clock.on {
     box-shadow: 0 0 0 2px rgba(0, 128, 0, .25) inset;
 }
 
+
 /* mode icon swap */
+
 .qa-btn.mode .icon-aggressive {
     display: block;
 }
@@ -121,7 +115,9 @@
     display: block;
 }
 
+
 /* call button with cooldown ring */
+
 .qa-call-wrap {
     position: relative;
 }
@@ -134,24 +130,20 @@
         place-items: center;
         pointer-events: none;
     }
-
     .cooldown-svg {
         width: 36px;
         height: 36px;
     }
-
     .circle-bg {
         stroke: rgba(0, 0, 0, .1);
         fill: none;
         stroke-width: 2;
     }
-
     .circle-progress {
         stroke: #bd2a2a;
         fill: none;
         stroke-width: 2;
     }
-
     .cooldown-text {
         position: absolute;
         font-size: 11px;
@@ -159,7 +151,9 @@
     }
 }
 
+
 /* mini popover (used by call police), positioned left of buttons */
+
 .qa-pop {
     position: absolute;
     right: 44px;
@@ -171,7 +165,6 @@
     padding: 8px;
     box-shadow: 0 6px 18px rgba(0, 0, 0, .15);
     z-index: 20;
-
     textarea {
         width: 100%;
         height: 68px;
@@ -183,7 +176,6 @@
         background: #fff;
         margin-bottom: 6px;
     }
-
     .arrow-up {
         position: absolute;
         right: -6px;
@@ -200,6 +192,7 @@
     position: relative;
     display: inline-block;
 }
+
 
 /* ===== Work toggle ===== */
 
@@ -222,12 +215,10 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
     cursor: pointer;
     transition: background-color .2s;
-
     &.stop {
         background-color: #aa1c1c;
         border-color: #5a0000;
     }
-
     &:disabled {
         background-color: #444;
         cursor: not-allowed;
@@ -235,19 +226,22 @@
     }
 }
 
-/* =======================
-Opponent styling block
-======================= */
 
 /* =======================
 Opponent styling block
 ======================= */
+
+
+/* =======================
+Opponent styling block
+======================= */
+
 
 /* Opponent container variant */
+
 .stats-bar-container.opponent {
     /* ✅ KEEP normal order so bars are LEFT and avatar is RIGHT */
     flex-direction: row;
-
     top: 0;
     left: auto;
     animation: none;
@@ -255,37 +249,41 @@ Opponent styling block
     /* was center */
 }
 
+
 /* divider sits between bars and avatar */
-.stats-bar-container.opponent::before {
-    left: 88px;
-    /* same as self divider */
-    right: auto;
-}
+
 
 /* Opponent left panel should be on the RIGHT side (avatar block) */
+
 .stats-bar-container.opponent .stats-left {
     /* avatar block is still the LEFT column markup, but appears on the RIGHT */
     border-radius: 0 8px 8px 0;
-    border-right: 3px solid #2077ab;
+    border-right: 3px solid var(--rp-primary-border);
     border-left: none;
 }
 
+
 /* Opponent bars block should be on the LEFT side */
+
 .stats-bar-container.opponent .stats-right {
     border-radius: 8px 0 0 8px;
     padding: 0px 8px 0px 2px;
     /* mirror spacing so icons don't cram */
-    border-left: 3px solid #2077ab;
+    border-left: 3px solid var(--rp-primary-border);
     border-right: none;
 }
 
+
 /* Opponent: move level badge to bottom-left */
+
 .opponent .greek-circle .level-badge {
     left: -4px;
     right: auto;
 }
 
+
 /* Fade helpers for opponent mount/unmount */
+
 .fade-in {
     animation: fadeIn .18s ease-out both;
 }
@@ -301,7 +299,9 @@ Opponent styling block
     }
 }
 
+
 /* High-contrast name/level for opponent */
+
 .opponent .avatar-name,
 .opponent .avatar-level,
 .opponent-name {
@@ -309,7 +309,9 @@ Opponent styling block
     text-shadow: 0 2px 2px rgba(0, 0, 0, .85);
 }
 
+
 /* Gang color square next to opponent name */
+
 .gang-square {
     display: inline-block;
     width: 16px;
@@ -321,21 +323,24 @@ Opponent styling block
     vertical-align: -2px;
 }
 
+
 /* Hide any legacy gif-based controls for opponent */
+
 .opponent .close-button_right,
 .opponent .target-btn {
     display: none !important;
 }
 
+
 /* =========================
 XP tooltip (shared)
 ========================= */
+
 .xp-tooltip {
     position: absolute;
     bottom: -28px;
     left: 50%;
     transform: translateX(-50%);
-
     background-color: #2b2b2b;
     color: #fff;
     font-size: 11px;
@@ -344,7 +349,6 @@ XP tooltip (shared)
     white-space: nowrap;
     box-shadow: 0 2px 6px rgba(0, 0, 0, .4);
     z-index: 9999;
-
     &::after {
         content: "";
         position: absolute;
@@ -359,6 +363,7 @@ XP tooltip (shared)
     }
 }
 
+
 /* ===== Left column: avatar + XP ring ===== */
 
 .stats-left {
@@ -366,16 +371,13 @@ XP tooltip (shared)
     flex-direction: column;
     align-items: center;
     justify-content: center;
-
     /* 🔵 keep your blue */
-    background: #0d6091;
-    border: 3px solid #2077ab;
+    background: var(--rp-primary);
+    border: 3px solid var(--rp-primary-border);
     border-right: none;
-
     /* 🔵 round only the left side on self */
     border-radius: 8px 0 0 8px;
-
-    padding: 6px 8px;
+    padding: 4px 8px;
 }
 
 .avatar-name {
@@ -392,7 +394,9 @@ XP tooltip (shared)
     text-shadow: 0 0 2px black;
 }
 
+
 /* Filled segments inside bars */
+
 .fill {
     position: absolute;
     top: 0;
@@ -403,24 +407,23 @@ XP tooltip (shared)
     border-radius: 3px;
     transition: width .3s ease;
     z-index: 1;
-
     &.health {
         background: #ab204b;
         border: 1px solid #e9708c;
     }
-
     &.energy {
         background: #e6ac09;
         border: 1px solid #fde257;
     }
-
     &.hunger {
         background: #156091;
         border: 1px solid #2d81b4;
     }
 }
 
+
 /* Centered numeric value over each bar */
+
 .bar-value {
     position: absolute;
     top: 50%;
@@ -431,9 +434,7 @@ XP tooltip (shared)
     font-size: 12px;
     font-weight: 700;
     color: #fff;
-    text-shadow:
-        0 1px 0 rgba(0, 0, 0, .85),
-        0 0 2px rgba(0, 0, 0, .9);
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .85), 0 0 2px rgba(0, 0, 0, .9);
     pointer-events: none;
 }
 
@@ -444,7 +445,9 @@ XP tooltip (shared)
     margin-bottom: 8px;
 }
 
+
 /* clean dark disc + SVG XP ring */
+
 .stats-left .greek-circle {
     position: relative;
     width: 64px;
@@ -479,14 +482,14 @@ XP tooltip (shared)
 
 .xp-ring-background {
     fill: none;
-    stroke: #0d4366;
+    stroke: var(--rp-primary-light);
     border: 1px solid #4c5056;
     stroke-width: 3;
 }
 
 .xp-ring-progress {
     fill: none;
-    stroke: #03a15d;
+    stroke: var(--rp-primary-light);
     stroke-width: 3;
     stroke-linecap: round;
     transition: stroke-dasharray .8s ease;
@@ -503,13 +506,15 @@ XP tooltip (shared)
     cursor: pointer;
 }
 
+
 /* Default (self) level badge bottom-right */
+
 .stats-left .greek-circle .level-badge {
     position: absolute;
     bottom: -4px;
     right: -4px;
     background-color: #ffcc00;
-    color: #2077ab;
+    color: var(--rp-primary-border);
     border: 2px solid #fff;
     border-radius: 50%;
     font-size: 10px;
@@ -523,13 +528,17 @@ XP tooltip (shared)
     z-index: 3;
 }
 
+
 /* Opponent: move level badge to bottom-left */
+
 .opponent .greek-circle .level-badge {
     left: -4px;
     right: auto;
 }
 
+
 /* Inventory-style close for opponent (smaller, top-right of circle) */
+
 .greek-circle {
     position: relative;
 }
@@ -547,7 +556,6 @@ XP tooltip (shared)
     cursor: pointer;
     padding: 0;
     z-index: 4;
-
     &:before,
     &:after {
         content: "";
@@ -560,17 +568,17 @@ XP tooltip (shared)
         border-radius: 1px;
         transform-origin: center;
     }
-
     &:before {
         transform: translate(-50%, -50%) rotate(45deg);
     }
-
     &:after {
         transform: translate(-50%, -50%) rotate(-45deg);
     }
 }
 
+
 /* Lock/Unlock badge on bottom-right of circle */
+
 .circle-lock {
     position: absolute;
     bottom: -6px;
@@ -592,23 +600,29 @@ XP tooltip (shared)
     -webkit-tap-highlight-color: transparent;
 }
 
+
 /* 🔐 LOCKED state */
+
 .circle-lock.is-locked {
     background-image: url("../../icons/lock.png");
 }
 
 
 /* ❌ remove crosshair glyph entirely */
+
 .circle-lock::before,
 .circle-lock::after {
     content: none !important;
 }
 
+
 /* ensure avatar image stays below action buttons */
+
 .greek-circle .avatar-head {
     position: relative;
     z-index: 2;
 }
+
 
 /* ===== Right column: bars + aggression ===== */
 
@@ -616,29 +630,33 @@ XP tooltip (shared)
     display: flex;
     flex-direction: column;
     justify-content: center;
-    border: 3px solid #2077ab;
+    border: 3px solid var(--rp-primary-border);
     margin-left: 0;
     margin-top: 0;
-
-    background: #0d6091;
-
+    background: var(--rp-primary);
     /* small padding so bars sit right against the blue block */
     padding: 0px 2px 0px 8px;
     border-radius: 0 8px 8px 0;
 }
 
+
 /* ✅ Opponent aggression should NOT use the shared CSS variable */
+
 .opponent .aggression-fill {
     width: auto !important;
     /* allow inline width to win */
 }
 
+
 /* Optional: make a dedicated class so it never conflicts */
+
 .opponent .aggression-fill.opponent-aggression {
     width: auto !important;
 }
 
+
 /* the columns themselves */
+
 .avatar-column {
     display: flex;
     flex-direction: column;
@@ -654,46 +672,46 @@ XP tooltip (shared)
     flex: 1;
 }
 
+
 /* bars now align flush with the stats-right padding */
+
 .bar {
     position: relative;
     width: 190px;
     height: 18px;
-    background: #0d4366;
-    border: 1px solid #2077ab;
+    background: var(--rp-primary);
+    border: 1px solid var(--rp-primary-border);
     border-radius: 4px;
     padding: 2px;
     margin-left: 0;
     overflow: hidden;
-
     &.health-bar {
-        background: #78092d;
-        border: solid 1px #9f4c61;
+        background: var(--rp-primary-dark);
+        border: var(--rp-primary-border);
     }
-
     &.energy-bar {
-        background: #dd8d0b;
-        border: solid 1px #fdc453;
+        background: var(--rp-primary-dark);
+        border: var(--rp-primary-border);
     }
-
     &.hunger-bar {
-        background: #156091;
-        border: solid 1px #2d81b4;
+        background: var(--rp-primary-dark);
+        border: var(--rp-primary-border);
     }
 }
 
+
 /* same idea for aggression bar */
+
 .aggression-bar-wrapper {
     width: 190px;
     height: 12px;
     margin-top: 12px;
     margin-left: 0;
-    background: #0d4366;
-    border: 1px solid #2077ab;
+    background: var(--rp-primary-dark);
+    border: 1px solid var(--rp-primary-border);
     border-radius: 2px;
     overflow: hidden;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05),
-        0 2px 4px rgba(0, 0, 0, .25);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 2px 4px rgba(0, 0, 0, .25);
     transition: all .3s ease;
     position: relative;
 }
@@ -703,15 +721,19 @@ XP tooltip (shared)
     top: 0;
     left: 0;
     height: 100%;
-    border-radius: 8px;
+    border-radius: 2px;
     width: var(--aggression-width, 0%);
-    background: #df8e11;
+    background: #ec7b03;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 1px 2px rgba(0, 0, 0, .35);
     transition: width .15s ease;
 }
 
+
 /* ===== Alignment guards (opponent) ===== */
+
+
 /* Kill stray margins so both bars sit on same baseline */
+
 .stats-bar-container.opponent .stats-left,
 .stats-bar-container.opponent .stats-right {
     margin: 0;
@@ -722,6 +744,7 @@ XP tooltip (shared)
 .stats-bar-container.opponent {
     align-items: stretch;
 }
+
 
 /* ===== Misc ===== */
 
@@ -737,34 +760,45 @@ XP tooltip (shared)
     transition: stroke-dasharray 1s linear;
 }
 
+@keyframes statsBarSlideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-120px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
         transform: translateY(-10px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
+
 /* =========================================================
 StatsBar — Mobile Friendly + iPhone Safe Areas
 Drop-in patch: add/replace these MOBILE blocks at bottom
 ========================================================= */
 
+
 /* ---------------------------------------------------------
 1) iOS safe-area + prevent collisions with notch/toolbars
 --------------------------------------------------------- */
-@media (max-width: 768px) {
 
+@media (max-width: 768px) {
     /* keep your opponent anchor aligned on mobile */
     .stats-bar-container,
     .opponent-anchor {
         z-index: 3500;
     }
-
     /* pin to safe area + center if needed */
     .stats-bar-container {
         position: fixed;
@@ -775,25 +809,23 @@ Drop-in patch: add/replace these MOBILE blocks at bottom
         transform-origin: top left;
         will-change: transform;
     }
-
     /* if you used the 768 rule that centers it, override that */
     .stats-bar-container {
         transform: none !important;
         width: auto !important;
         max-width: none !important;
     }
-
     /* opponent stays to the right of self bar */
     .opponent-anchor {
         top: 0;
         left: calc(100% + 8px);
     }
-
     /* disable the vertical divider on mobile (it misaligns in compact layouts) */
     .stats-bar-container::before {
         display: none;
     }
 }
+
 
 /* ---------------------------------------------------------
 2) Scaling strategy (good on iPhone 16 Pro Max + smaller)
@@ -801,49 +833,40 @@ Drop-in patch: add/replace these MOBILE blocks at bottom
 - bars shrink slightly
 - buttons remain tappable
 --------------------------------------------------------- */
+
 @media (max-width: 600px) {
-    :root {
+     :root {
         --stats-scale: 0.82;
     }
-
     .stats-bar-container {
         transform: scale(var(--stats-scale)) !important;
         transform-origin: top left;
-        box-shadow:
-            0 6px 16px rgba(0, 0, 0, .22),
-            0 2px 0 rgba(0, 0, 0, .25),
-            inset 0 -3px rgba(0, 0, 0, .10);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -3px rgba(0, 0, 0, .10);
     }
-
     /* keep layout as a single horizontal bar */
     .stats-bar-container {
         flex-direction: row !important;
         align-items: stretch !important;
     }
-
     /* bars: slightly narrower */
     .bar,
     .aggression-bar-wrapper {
         width: 155px;
     }
-
     /* avatar circle shrinks a bit */
     .stats-left .greek-circle {
         width: 58px;
         height: 58px;
     }
-
     .stats-left .greek-circle .greek-xp-ring,
     .stats-left .greek-circle .xp-ring-svg {
         width: 50px;
         height: 50px;
     }
-
     .stats-left .greek-circle .avatar-head {
         width: 40px;
         height: 40px;
     }
-
     /* keep quick actions tappable */
     .qa-btn {
         width: 34px;
@@ -851,12 +874,10 @@ Drop-in patch: add/replace these MOBILE blocks at bottom
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
     }
-
     .qa-svg {
         width: 20px;
         height: 20px;
     }
-
     /* popover should not spill off-screen */
     .qa-pop {
         right: auto;
@@ -866,71 +887,67 @@ Drop-in patch: add/replace these MOBILE blocks at bottom
     }
 }
 
+
 /* ---------------------------------------------------------
 3) Ultra-compact phones (<= 480px)
 --------------------------------------------------------- */
+
 @media (max-width: 480px) {
-    :root {
+     :root {
         --stats-scale: 0.72;
     }
-
     .stats-bar-container {
         transform: scale(var(--stats-scale)) !important;
     }
-
     .bar,
     .aggression-bar-wrapper {
         width: 140px;
     }
-
     .avatar-name {
         font-size: 12px;
     }
-
     .avatar-level {
         font-size: 10px;
     }
-
     .qa-btn {
         width: 32px;
         height: 32px;
     }
-
     .qa-svg {
         width: 18px;
         height: 18px;
     }
 }
 
+
 /* ---------------------------------------------------------
 4) SUPER small (<= 380px) — final clamp
 --------------------------------------------------------- */
+
 @media (max-width: 380px) {
-    :root {
+     :root {
         --stats-scale: 0.64;
     }
-
     .stats-bar-container {
         transform: scale(var(--stats-scale)) !important;
     }
-
     .bar,
     .aggression-bar-wrapper {
         width: 128px;
     }
 }
 
+
 /* ---------------------------------------------------------
 5) Touch behavior polish (recommended)
 - prevents iOS from selecting text when tapping HUD
 --------------------------------------------------------- */
-@media (max-width: 768px) {
 
+@media (max-width: 768px) {
     .stats-bar-container,
     .stats-bar-container * {
         user-select: none;
     }
-
     /* allow textarea selection inside popover */
     .qa-pop textarea {
         user-select: text;

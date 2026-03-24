@@ -660,7 +660,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                 >
                     <div className="title">Corporations</div>
                     <button
-                        className="close-button"
+                        className="c-button close-button"
                         onClick={handleClose}
                         aria-label="Close"
                     >

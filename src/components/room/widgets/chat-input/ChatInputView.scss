@@ -36,9 +36,10 @@ CHATBAR (your existing styles, with iOS-safe bottom)
     height: var(--chatbar-h);
 
     padding: 0 2px 2px 0px;
-    background: #0d6091;
-    border: 3px solid #2077ab;
+    background: var(--rp-primary);
+    border: 3px solid var(--rp-primary-border);
     border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
 
     /* raise above room + below popovers */
     z-index: 3000;
@@ -238,8 +239,8 @@ This ONLY improves mobile behavior/placement.
         border-radius: 14px;
 
         /* mobile-friendly translucent theme */
-        background: rgba(13, 96, 145, 0.92);
-        border: 2px solid rgba(32, 119, 171, 0.95);
+        background: var(--rp-primary);
+        border: 2px solid var(--rp-primary-border);
 
         /* one-line dock, scroll if needed */
         overflow-x: auto;

@@ -260,8 +260,6 @@ Render
                 <HotelAlertView />
                 <CasinoJackpotWidget></CasinoJackpotWidget>
                 <DiscordVerificationView></DiscordVerificationView>
-
-                {/* <BigWheelView /> */}
                 <PoliceCallView />
 
                 {/* Disconnect overlay */}

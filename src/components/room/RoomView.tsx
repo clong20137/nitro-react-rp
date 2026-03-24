@@ -28,6 +28,7 @@ import { getRPStats } from "../roleplay/rpStatsCache";
 import { ATMView } from "../roleplay/ATMView";
 import { PhoneView } from "../roleplay/PhoneView";
 import { CommandsListView } from "../roleplay/CommandsListView";
+import { applyStoredRoleplayTheme } from "../roleplay/roleplayTheme";
 
 // ✅ Correct walk composer (your version)
 import { RoomUnitWalkComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/room/unit/RoomUnitWalkComposer";
@@ -44,7 +45,8 @@ import { HeistTimerWidget } from "../roleplay/HeistTimerWidget";
 import { TradeView } from "../roleplay/TradeView";
 import { MythicalBlueprintView } from "../roleplay/MythicalBlueprintView";
 import { HaircutOfferView } from "../roleplay/HaircutOfferView";
-
+import TargetOutlineOverlay from "../roleplay/TargetOutlineOverlay";
+import PassiveIndicatorOverlay from "../roleplay/PassiveIndicatorOverlay";
 /* -----------------------------------------------------------
 Click-through helpers
 ----------------------------------------------------------- */
@@ -68,6 +70,10 @@ export const RoomView: FC = () => {
 
     // Cache last tile hovered (so we can click-through onto it)
     const lastTileRef = useRef<{ x: number; y: number } | null>(null);
+
+    useEffect(() => {
+        applyStoredRoleplayTheme();
+    }, []);
 
     // Mount Nitro canvas
     useEffect(() => {
@@ -126,7 +132,7 @@ Handle UNIT click and TILE mouse move
                         const tile = lastTileRef.current;
                         if (tile)
                             SendMessageComposer(
-                                new RoomUnitWalkComposer(tile.x, tile.y)
+                                new RoomUnitWalkComposer(tile.x, tile.y),
                             );
 
                         // stop any default unit-click (inspect/profile)
@@ -142,7 +148,7 @@ Handle UNIT click and TILE mouse move
                 isCTEnabled()
             ) {
                 SendMessageComposer(
-                    new RoomUnitWalkComposer(ev.tileXAsInt, ev.tileYAsInt)
+                    new RoomUnitWalkComposer(ev.tileXAsInt, ev.tileYAsInt),
                 );
                 return;
             }
@@ -165,11 +171,11 @@ Handle UNIT click and TILE mouse move
 
         engine.events.addEventListener(
             RoomObjectMouseEvent.MOUSE_MOVE,
-            onAnyMouse as any
+            onAnyMouse as any,
         );
         engine.events.addEventListener(
             RoomObjectMouseEvent.CLICK,
-            onAnyMouse as any
+            onAnyMouse as any,
         );
 
         const onKey = (e: KeyboardEvent) => {
@@ -180,11 +186,11 @@ Handle UNIT click and TILE mouse move
         return () => {
             engine.events.removeEventListener(
                 RoomObjectMouseEvent.MOUSE_MOVE,
-                onAnyMouse as any
+                onAnyMouse as any,
             );
             engine.events.removeEventListener(
                 RoomObjectMouseEvent.CLICK,
-                onAnyMouse as any
+                onAnyMouse as any,
             );
             window.removeEventListener("keydown", onKey);
             setGlowForUnit(-1);
@@ -203,6 +209,9 @@ Render
         >
             {roomSession && (
                 <>
+                    <TargetOutlineOverlay />
+                    <PassiveIndicatorOverlay />
+
                     {glowForUnit > -1 && (
                         <AvatarGlowOverlay
                             objectId={glowForUnit}

@@ -1,0 +1,37 @@
+.rp-passive-indicator {
+    position: fixed;
+    width: 80px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    pointer-events: none;
+    user-select: none;
+    z-index: 10004;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    background: linear-gradient(180deg, rgba(84, 207, 255, 0.95) 0%, rgba(23, 135, 205, 0.96) 100%);
+    box-shadow:
+        0 0 0 1px rgba(8, 39, 75, 0.75) inset,
+        0 4px 14px rgba(26, 122, 194, 0.45),
+        0 0 18px rgba(122, 223, 255, 0.5);
+    transform: translateZ(0);
+}
+
+.rp-passive-indicator__icon {
+    font-size: 11px;
+    line-height: 1;
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.35));
+}
+
+.rp-passive-indicator__label {
+    font-size: 9px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.75px;
+    color: #ffffff;
+    text-shadow:
+        0 1px 0 rgba(0, 0, 0, 0.5),
+        0 0 6px rgba(255, 255, 255, 0.35);
+}

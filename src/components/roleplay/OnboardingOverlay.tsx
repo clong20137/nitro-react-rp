@@ -208,7 +208,7 @@ const CoachCard: FC<{
     return (
         <div
             ref={cardRef}
-            className={`ob-coach-card ${placeClass} ${
+            className={`ob-coach-card ob-float-card ${placeClass} ${
                 mounted ? "ob-card-enter" : ""
             }`}
             style={style}
@@ -235,7 +235,7 @@ const CoachCard: FC<{
                             Skip
                         </button>
                     )}
-                    <button className="ob-btn ob-next" onClick={onNext}>
+                    <button className="ob-btn ob-next ob-next-pulse" onClick={onNext}>
                         Next
                     </button>
                 </div>
@@ -249,7 +249,7 @@ const WelcomeCard: FC<{ onStart: () => void; onSkipForever: () => void }> = ({
     onSkipForever,
 }) => (
     <div
-        className="ob-welcome-card ob-card-enter"
+        className="ob-welcome-card ob-card-enter ob-float-card"
         role="dialog"
         aria-modal="true"
     >
@@ -264,7 +264,7 @@ const WelcomeCard: FC<{ onStart: () => void; onSkipForever: () => void }> = ({
             <button className="ob-btn ob-skip" onClick={onSkipForever}>
                 Skip
             </button>
-            <button className="ob-btn ob-next" onClick={onStart}>
+            <button className="ob-btn ob-next ob-next-pulse" onClick={onStart}>
                 Start Tour
             </button>
         </div>
@@ -313,7 +313,7 @@ export const OnboardingOverlay: FC = () => {
                 title: "Stats",
                 body: "Track your health, energy and hunger bars, your XP ring and level. Click your avatar to open your profile and spend points.",
                 padding: 10,
-                placement: "left",
+                placement: "right",
                 arrow: "right",
                 image: "/onboarding/stats.png", // TODO: adjust paths
             },
@@ -328,8 +328,8 @@ export const OnboardingOverlay: FC = () => {
                 title: "Inventory",
                 body: "Open your backpack to use weapons, defensive gear like Kevlar, consumables, and items you’ve gathered in-game. Click this icon or the X inside the module to open or close it.",
                 padding: 8,
-                placement: "left",
-                arrow: "left",
+                placement: "right",
+                arrow: "right",
                 image: "/onboarding/inventory.png",
             },
 
@@ -343,8 +343,8 @@ export const OnboardingOverlay: FC = () => {
                 title: "Wanted List",
                 body: "See who’s flagged in the city and why. Use it to avoid trouble — or to hunt bounties.",
                 padding: 8,
-                placement: "left",
-                arrow: "left",
+                placement: "right",
+                arrow: "right",
                 image: "/onboarding/wanted.png",
             },
 
@@ -358,8 +358,8 @@ export const OnboardingOverlay: FC = () => {
                 title: "Gangs",
                 body: "Create or manage your gang, view membership and identity, and coordinate territory or activities.",
                 padding: 8,
-                placement: "left",
-                arrow: "left",
+                placement: "right",
+                arrow: "right",
                 image: "/onboarding/gangs.png",
             },
 
@@ -373,8 +373,8 @@ export const OnboardingOverlay: FC = () => {
                 title: "Corporations",
                 body: "Browse corporations, their ranks and perks. Join up, climb the ladder and unlock role-specific duties.",
                 padding: 8,
-                placement: "left",
-                arrow: "left",
+                placement: "right",
+                arrow: "right",
                 image: "/onboarding/corporations.png",
             },
 
@@ -388,8 +388,8 @@ export const OnboardingOverlay: FC = () => {
                 title: "Gang Chat",
                 body: "Toggle private gang chat on or off. When enabled, your messages go only to your gang.",
                 padding: 8,
-                placement: "left",
-                arrow: "left",
+                placement: "right",
+                arrow: "right",
                 image: "/onboarding/gangchat.png",
             },
 
@@ -403,8 +403,8 @@ export const OnboardingOverlay: FC = () => {
                 title: "Macros",
                 body: "Save your most-used commands as quick actions. Trigger them instantly to speed up roleplay.",
                 padding: 8,
-                placement: "left",
-                arrow: "left",
+                placement: "right",
+                arrow: "right",
                 image: "/onboarding/macros.png",
             },
 

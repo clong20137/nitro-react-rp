@@ -1,4 +1,5 @@
 import React, { FC, useEffect, useRef, useState, useMemo } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "./MyProfileView.scss";
 import { GetCommunication } from "../../api/nitro/GetCommunication";
 import { UpgradeStatComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/UpgradeStatComposer";
@@ -1516,29 +1517,40 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                     }}
                     aria-label="Edit Stickers"
                     title={isOwnProfile ? "Edit Stickers" : "View Profile"}
+                    onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }}
                 >
                     <img src={PENCIL_ICON_SRC} alt="" draggable={false} />
                 </button>
 
                 <button
-                    className="close-button"
-                    onClick={closeWithFade}
+                    className="c-button close-button"
+                    type="button"
+                    onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        closeWithFade();
+                    }}
                     aria-label="Close"
                 />
             </div>
 
-            <div className="profile-tabs">
+            <div className="rp-tabs profile-tabs">
                 <button
-                    className={`tab-btn ${tab === "general" ? "active" : ""}`}
+                    className={`rp-tab ${tab === "general" ? "active" : ""}`}
                     onClick={() => setTab("general")}
                 >
-                    General
+                    <span className="rp-tab__label">General</span>
                 </button>
 
                 <button
-                    className={`tab-btn ${
-                        tab === "achievements" ? "active" : ""
-                    }`}
+                    className={`rp-tab ${tab === "achievements" ? "active" : ""}`}
                     onClick={() => {
                         setTab("achievements");
                         setAchRows([]);
@@ -1558,7 +1570,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                         }
                     }}
                 >
-                    Achievements
+                    <span className="rp-tab__label">Achievements</span>
                 </button>
             </div>
 
@@ -1645,6 +1657,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                 </div>
             )}
 
+            <div className="rp-tab-panel rp-tab-panel--animated" key={tab}>
             {tab === "general" ? (
                 <div className="profile-body-wrap">
                     {/* ✅ STICKERS BEHIND UI */}
@@ -2310,6 +2323,7 @@ export const MyProfileView: FC<MyProfileViewProps> = ({
                     />
                 </div>
             )}
+            </div>
         </div>
     );
 };

@@ -49,8 +49,8 @@ body.ob-block-scroll {
     height: calc(var(--hole-h, 0px) + 8px);
     border-radius: calc(var(--hole-radius, 10px) + 4px);
     box-shadow:
-        0 0 0 2px #ffd766,
-        0 0 12px 2px rgba(255, 215, 102, .55),
+        0 0 0 2px var(--rp-tab-top, #ffd766),
+        0 0 12px 2px rgba(179, 72, 149, .45),
         inset 0 0 0 9999px rgba(0, 0, 0, 0);
     /* transparent center */
     animation: obPulse 1.4s ease-in-out infinite;
@@ -60,15 +60,15 @@ body.ob-block-scroll {
 
 @keyframes obPulse {
     0% {
-        box-shadow: 0 0 0 2px #ffd766, 0 0 12px 2px rgba(255, 215, 102, .55), inset 0 0 0 9999px rgba(0, 0, 0, 0);
+        box-shadow: 0 0 0 2px var(--rp-tab-top, #ffd766), 0 0 12px 2px rgba(179, 72, 149, .45), inset 0 0 0 9999px rgba(0, 0, 0, 0);
     }
 
     50% {
-        box-shadow: 0 0 0 2px #ffe38d, 0 0 20px 4px rgba(255, 227, 141, .75), inset 0 0 0 9999px rgba(0, 0, 0, 0);
+        box-shadow: 0 0 0 2px var(--rp-tab-active, #ffe38d), 0 0 20px 4px rgba(179, 72, 149, .62), inset 0 0 0 9999px rgba(0, 0, 0, 0);
     }
 
     100% {
-        box-shadow: 0 0 0 2px #ffd766, 0 0 12px 2px rgba(255, 215, 102, .55), inset 0 0 0 9999px rgba(0, 0, 0, 0);
+        box-shadow: 0 0 0 2px var(--rp-tab-top, #ffd766), 0 0 12px 2px rgba(179, 72, 149, .45), inset 0 0 0 9999px rgba(0, 0, 0, 0);
     }
 }
 
@@ -79,20 +79,24 @@ body.ob-block-scroll {
     animation: obTargetPulse 1.2s ease-in-out infinite;
 }
 
+
 @keyframes obTargetPulse {
     0% {
         filter: drop-shadow(0 0 0 rgba(255, 215, 102, 0));
-        transform: translateZ(0);
+        transform: translateZ(0) scale(1);
     }
 
     50% {
-        filter: drop-shadow(0 0 6px rgba(255, 215, 102, .7));
+        filter: drop-shadow(0 0 10px rgba(255, 215, 102, .85));
+        transform: translateZ(0) scale(1.03);
     }
 
     100% {
         filter: drop-shadow(0 0 0 rgba(255, 215, 102, 0));
+        transform: translateZ(0) scale(1);
     }
 }
+
 
 /* ---------- Cards -------------------------------------------------------- */
 
@@ -125,6 +129,24 @@ body.ob-block-scroll {
 .ob-card-enter {
     opacity: 1;
     transform: translateY(0) scale(1);
+}
+
+.ob-float-card {
+    animation: obCardFloat 3.2s ease-in-out infinite;
+}
+
+@keyframes obCardFloat {
+    0% {
+        transform: translateY(0) scale(1);
+    }
+
+    50% {
+        transform: translateY(-6px) scale(1);
+    }
+
+    100% {
+        transform: translateY(0) scale(1);
+    }
 }
 
 /* layout when a step image is present */
@@ -163,32 +185,74 @@ body.ob-block-scroll {
     justify-content: flex-end;
 }
 
+
 .ob-btn {
-    min-width: 66px;
-    padding: 6px 10px;
-    border-radius: 4px;
-    border: solid 1px #277baf;
-    font-weight: 700;
+    min-width: 84px;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, .14);
+    font-weight: 800;
     cursor: pointer;
-    background: #0a6091;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .08) 0%, rgba(255, 255, 255, .03) 100%);
     color: #ffffff;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .12),
+        0 6px 18px rgba(0, 0, 0, .2);
+    transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
 
     &.ob-next {
-        background: #04a157;
-        border: solid 1px #adf26c;
+        background: linear-gradient(180deg, var(--rp-tab-top, #b34895) 0%, var(--rp-tab-bottom, #9b3030) 100%);
+        border-color: var(--rp-primary-border, rgba(255,255,255,.2));
         color: #fff;
     }
 
     &.ob-skip {
-        background: #ae1d52;
-        border: solid 1px #d76e8b;
+        background: linear-gradient(180deg, #ef6a5f 0%, #d9473f 100%);
+        border-color: rgba(255, 255, 255, .18);
         color: #fff;
     }
 
     &:hover {
-        filter: brightness(1.06);
+        transform: translateY(-1px);
+        filter: brightness(1.05);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .16),
+            0 10px 22px rgba(0, 0, 0, .24);
+    }
+
+    &:active {
+        transform: translateY(0);
     }
 }
+
+.ob-next-pulse {
+    animation: obNextPulse 1.45s ease-in-out infinite;
+}
+
+@keyframes obNextPulse {
+    0% {
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .12),
+            0 6px 18px rgba(0, 0, 0, .2),
+            0 0 0 0 rgba(179, 72, 149, .45);
+    }
+
+    70% {
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .16),
+            0 10px 22px rgba(0, 0, 0, .24),
+            0 0 0 10px rgba(179, 72, 149, 0);
+    }
+
+    100% {
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .12),
+            0 6px 18px rgba(0, 0, 0, .2),
+            0 0 0 0 rgba(179, 72, 149, 0);
+    }
+}
+
 
 /* ---------- Pointer / Arrow (based on placement class) ------------------ */
 .ob-coach-card.place-right::after,

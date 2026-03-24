@@ -3,8 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 interface PreloadContextType {
     user: any;
     corporations: any[];
-    inventory: any[];
-    refresh: () => void;
+    refresh: () => Promise<void>;
 }
 
 const PreloadContext = createContext<PreloadContextType | undefined>(undefined);
@@ -14,49 +13,68 @@ export const PreloadProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
     const [user, setUser] = useState<any>(null);
     const [corporations, setCorporations] = useState<any[]>([]);
-    const [inventory, setInventory] = useState<any[]>([]);
+
     const safeJson = async (res: Response) => {
+        const text = await res.text();
+
+        if (!text) return {};
+
         try {
-            return await res.json();
+            return JSON.parse(text);
         } catch {
-            console.error("JSON parse failed, got", await res.text());
+            console.error("JSON parse failed, got", text);
             return {};
         }
     };
-    const refresh = async () => {
+
+    const refresh = async (): Promise<void> => {
         try {
-            const userRes = await fetch("/api/user").then((res) => res.json());
-            const username = userRes?.user?.username;
+            const userResponse = await fetch("/api/user");
+
+            if (!userResponse.ok) {
+                throw new Error(
+                    `/api/user failed with status ${userResponse.status}`
+                );
+            }
+
+            const userRes = await safeJson(userResponse);
+            const userData = userRes?.user ?? null;
+            const username = userData?.username;
 
             if (!username) {
                 console.warn("No username found in userRes", userRes);
+                setUser(null);
+                setCorporations([]);
                 return;
             }
 
-            setUser(userRes.user);
+            setUser(userData);
 
-            const [corpRes, invRes] = await Promise.all([
-                fetch("/api/corporations").then((res) => res.json()),
-                fetch(`/api/inventory/${username}`).then((res) => res.json()),
-            ]);
+            const corpResponse = await fetch("/api/corporations");
 
-            setCorporations(corpRes?.corporations || []);
-            setInventory(invRes?.data || []); // ✅ correctly accessing inventory data
+            if (!corpResponse.ok) {
+                throw new Error(
+                    `/api/corporations failed with status ${corpResponse.status}`
+                );
+            }
 
-            console.log("Inventory preloaded", invRes?.data);
+            const corpRes = await safeJson(corpResponse);
+            setCorporations(
+                Array.isArray(corpRes?.corporations) ? corpRes.corporations : []
+            );
         } catch (err) {
             console.error("Error loading preload data", err);
+            setUser(null);
+            setCorporations([]);
         }
     };
 
     useEffect(() => {
-        refresh();
+        void refresh();
     }, []);
 
     return (
-        <PreloadContext.Provider
-            value={{ user, corporations, inventory, refresh }}
-        >
+        <PreloadContext.Provider value={{ user, corporations, refresh }}>
             {children}
         </PreloadContext.Provider>
     );
@@ -64,7 +82,10 @@ export const PreloadProvider: React.FC<{ children: React.ReactNode }> = ({
 
 export const usePreload = () => {
     const ctx = useContext(PreloadContext);
-    if (!ctx)
+
+    if (!ctx) {
         throw new Error("usePreload must be used within a PreloadProvider");
+    }
+
     return ctx;
 };

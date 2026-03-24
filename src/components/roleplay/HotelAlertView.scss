@@ -1,4 +1,3 @@
-/*===========================OlympusRP — Hotel Alert Toasts (Wanted-style header + proper close)===========================*/
 .hotel-toast-region {
     position: fixed;
     top: 16px;
@@ -12,9 +11,6 @@
     pointer-events: none;
 }
 
-/* ===== Tokens (match Wanted) ===== */
-$header-blue: #1e7295;
-$border: #fff;
 $shadow: 0 0 rgba(0, 0, 0, .4),
     0 0 rgba(0, 0, 0, .3),
     inset 0 -4px rgba(0, 0, 0, .2);
@@ -23,17 +19,14 @@ $shadow: 0 0 rgba(0, 0, 0, .4),
     pointer-events: auto;
     display: flex;
     flex-direction: column;
-
     max-width: 420px;
     width: calc(100vw - 40px);
-
     background: #dfdfdf;
-    border: 2px solid $border;
+    border: 2px solid #fff;
     border-radius: 10px;
     box-shadow: $shadow;
     overflow: hidden;
     position: relative;
-
     opacity: 0;
     transform: translateY(-18px);
     animation: toastIn 180ms ease-out forwards;
@@ -48,46 +41,38 @@ $shadow: 0 0 rgba(0, 0, 0, .4),
     animation: toastOut 180ms ease-in forwards;
 }
 
-/* ✅ REMOVE the left accent bar completely */
 .hotel-toast::before {
     content: none !important;
 }
 
-/* ===== Header (same style as Wanted) ===== */
 .hotel-toast__header {
-    background: $header-blue;
+    background: var(--rp-primary);
     color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-
     padding: 8px 12px;
     font-weight: 700;
     font-size: 18px;
-
     border-radius: 8px 8px 0 0;
     cursor: default;
     position: relative;
-
     text-shadow:
         -1px -1px 0 #000,
         1px -1px 0 #000,
         -1px 1px 0 #000,
         1px 1px 0 #000;
-
     filter: drop-shadow(0 0 1px black);
     box-shadow: 0 0 #0000001a,
         0 0 #0000001a,
         inset 0 -3px #00000017;
 }
 
-/* Header title */
 .hotel-toast__title {
     pointer-events: none;
     user-select: none;
 }
 
-/* Optional icon (kept) */
 .hotel-toast__icon {
     position: absolute;
     left: 10px;
@@ -105,10 +90,6 @@ $shadow: 0 0 rgba(0, 0, 0, .4),
     }
 }
 
-/* ✅ FORCE Wanted-style close button to apply to either class name:
-- <button class="close-button">
-- <button class="hotel-toast__close">
-*/
 .hotel-toast .close-button,
 .hotel-toast .hotel-toast__close {
     position: absolute;
@@ -116,8 +97,6 @@ $shadow: 0 0 rgba(0, 0, 0, .4),
     right: 8px;
     width: 24px;
     height: 24px;
-
-    /* kill native button look + the "x" text */
     appearance: none;
     -webkit-appearance: none;
     border: 2px solid #921911;
@@ -127,7 +106,6 @@ $shadow: 0 0 rgba(0, 0, 0, .4),
     cursor: pointer;
     padding: 0;
     font-size: 0;
-    /* ✅ hides the literal "x" */
     line-height: 0;
     color: transparent;
     z-index: 5;
@@ -143,7 +121,6 @@ $shadow: 0 0 rgba(0, 0, 0, .4),
     transform: translateY(1px);
 }
 
-/* Draw the white X (Wanted-style) */
 .hotel-toast .close-button::before,
 .hotel-toast .close-button::after,
 .hotel-toast .hotel-toast__close::before,
@@ -171,7 +148,6 @@ $shadow: 0 0 rgba(0, 0, 0, .4),
     transform: rotate(-45deg);
 }
 
-/* ===== Body ===== */
 .hotel-toast__message {
     background: rgba(255, 255, 255, .85);
     margin: 10px;
@@ -184,7 +160,6 @@ $shadow: 0 0 rgba(0, 0, 0, .4),
     word-break: break-word;
 }
 
-/* ===== Progress Bar ===== */
 .hotel-toast__progress {
     position: absolute;
     left: 0;
@@ -196,7 +171,6 @@ $shadow: 0 0 rgba(0, 0, 0, .4),
     animation: toastProgress linear;
 }
 
-/* ===== Animations ===== */
 @keyframes toastIn {
     from {
         opacity: 0;
@@ -231,7 +205,6 @@ $shadow: 0 0 rgba(0, 0, 0, .4),
     }
 }
 
-/* ===== Mobile ===== */
 @media (max-width: 420px) {
     .hotel-toast {
         max-width: 360px;

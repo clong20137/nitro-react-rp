@@ -1,78 +1,108 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./PhoneView.scss";
 
-import { MessengerFriend } from "../../api";
+import { MessengerFriend, GetSessionDataManager, SendMessageComposer } from "../../api";
 import { FriendsListGroupView } from "../friends/views/friends-list/friends-list-group/FriendsListGroupView";
 import { FriendsMessengerThreadView } from "../friends/views/messenger/messenger-thread/FriendsMessengerThreadView";
+import { useFriends, useMessenger } from "../../hooks";
+import { LayoutAvatarImageView } from "../../common";
 
-import { useMessenger, useFriends } from "../../hooks";
-import { GetSessionDataManager } from "../../api";
-
-// ---- DoorDash types / composers ----
-import { SendMessageComposer } from "../../api";
 import { DoorDashOrderComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/DoorDashComposer";
 import { AcceptDoorDashOrderComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/AcceptDoorDashOrderComposer";
-import { DoorDashOrdersRequestComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/DoorDashOrdersRequestComposer";
 import { DoorDashOrderData } from "@nitrots/nitro-renderer/src/nitro/communication/messages/parser/DoorDashOrdersParser";
 
-export type PhoneApp =
-    | "home"
-    | "friends"
-    | "messages"
-    | "settings"
-    | "doordash";
+export type PhoneApp = "home" | "friends" | "messages" | "settings" | "doordash" | "youtube";
+
+type WallpaperOption = "classic" | "night" | "sunset";
 
 interface PhoneViewProps {
     onClose: () => void;
 }
 
-// (kept in case you want them elsewhere)
-export interface FriendEntry {
-    id: number;
-    username: string;
-    figure?: string;
-    online: boolean;
-}
+const fmt12h = (hhmm: string) => {
+    const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
 
-export interface ConversationEntry {
-    id: number;
-    friendId: number;
-    friendName: string;
-    lastMessage: string;
-    unread: boolean;
-}
+    if (Number.isNaN(h) || Number.isNaN(m)) return "--:--";
+
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = h % 12 || 12;
+    const mm = String(m).padStart(2, "0");
+
+    return `${h12}:${mm} ${ampm}`;
+};
+
+const getDeviceTime = () => {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const h12 = hours % 12 || 12;
+    const ampm = hours >= 12 ? "PM" : "AM";
+
+    return `${h12}:${minutes} ${ampm}`;
+};
+
+
+const getAvatarFigure = (value: any): string => {
+    if (!value) return "";
+
+    return (
+        value.figureString ||
+        value.figure ||
+        value.avatarFigure ||
+        value.look ||
+        ""
+    );
+};
 
 export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
-    const [activeApp, setActiveApp] = useState<PhoneApp>("home");
+    const phoneRef = useRef<HTMLDivElement | null>(null);
+    const dragRef = useRef<{ dx: number; dy: number } | null>(null);
+    const splashTimeoutRef = useRef<number | null>(null);
 
-    const [appAnimKey, setAppAnimKey] = useState(0);
+    const { friends = [] } = useFriends();
+    const { getMessageThread = null, setActiveThreadId = null } = useMessenger();
+
+    const [activeApp, setActiveApp] = useState<PhoneApp>("home");
+    const [splashApp, setSplashApp] = useState<string | null>(null);
+    const [position, setPosition] = useState({ x: 50, y: 80 });
+    const [dragging, setDragging] = useState(false);
+    const [shake, setShake] = useState(false);
+    const [doorDashBadge, setDoorDashBadge] = useState(0);
+
+
+    const [darkMode, setDarkMode] = useState(() => localStorage.getItem("phoneDarkMode") === "1");
+    const [displayTime, setDisplayTime] = useState(getDeviceTime());
+    const [worldTime, setWorldTime] = useState<string | null>(null);
+
 
     useEffect(() => {
-        setAppAnimKey((k) => k + 1);
-    }, [activeApp]);
+        localStorage.setItem("phoneDarkMode", darkMode ? "1" : "0");
+    }, [darkMode]);
 
-    // REAL FRIEND DATA FROM STORE
-    const { friends = [] } = useFriends(); // MessengerFriend[]
+    useEffect(() => {
+        const interval = window.setInterval(() => setDisplayTime(getDeviceTime()), 1000);
 
-    // --- DRAG STATE (using left/top to avoid teleporting) ---
-    const phoneRef = useRef<HTMLDivElement | null>(null);
-    const [dragging, setDragging] = useState(false);
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-    const [position, setPosition] = useState({ x: 50, y: 80 }); // starting pos (px)
+        const handleTimeOfDay = (e: any) => {
+            const detail = e?.detail as { hhmm?: string } | undefined;
+            if (detail?.hhmm) setWorldTime(fmt12h(detail.hhmm));
+        };
 
-    // 🔔 phone shake state
-    const [shake, setShake] = useState(false);
+        window.addEventListener("time_of_day_update", handleTimeOfDay);
 
-    // 🔔 DoorDash badge (notification) state
-    const [doorDashBadge, setDoorDashBadge] = useState(0);
+        return () => {
+            window.clearInterval(interval);
+            window.removeEventListener("time_of_day_update", handleTimeOfDay);
+        };
+    }, []);
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
-            if (!dragging) return;
-            setPosition(() => ({
-                x: e.clientX - dragOffset.x,
-                y: e.clientY - dragOffset.y,
-            }));
+            if (!dragging || !dragRef.current) return;
+
+            setPosition({
+                x: e.clientX - dragRef.current.dx,
+                y: e.clientY - dragRef.current.dy,
+            });
         };
 
         const handleMouseUp = () => setDragging(false);
@@ -84,163 +114,144 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
             window.removeEventListener("mousemove", handleMouseMove);
             window.removeEventListener("mouseup", handleMouseUp);
         };
-    }, [dragging, dragOffset]);
+    }, [dragging]);
 
-    const onMouseDownHeader = (e: React.MouseEvent) => {
-        if (!phoneRef.current) return;
-        const rect = phoneRef.current.getBoundingClientRect();
-        setDragging(true);
-        setDragOffset({
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
-        });
-    };
-
-    // 🔔 listen for shake requests from DoorDashApp
     useEffect(() => {
         const handler = () => {
             setShake(true);
 
-            // try to vibrate (if supported)
             try {
-                if (
-                    typeof navigator !== "undefined" &&
-                    "vibrate" in navigator
-                ) {
+                if (typeof navigator !== "undefined" && "vibrate" in navigator) {
                     (navigator as any).vibrate([120, 80, 120]);
                 }
-            } catch {
-                // ignore
-            }
+            } catch {}
 
-            setTimeout(() => setShake(false), 500);
+            window.setTimeout(() => setShake(false), 500);
         };
 
         window.addEventListener("phone_shake", handler);
+
         return () => window.removeEventListener("phone_shake", handler);
     }, []);
 
-    // Called by FriendsApp when user taps a friend
+    useEffect(() => {
+        return () => {
+            if (splashTimeoutRef.current) window.clearTimeout(splashTimeoutRef.current);
+        };
+    }, []);
+
+    const onMouseDownHeader = (e: React.MouseEvent) => {
+        if (!phoneRef.current) return;
+
+        const rect = phoneRef.current.getBoundingClientRect();
+
+        dragRef.current = {
+            dx: e.clientX - rect.left,
+            dy: e.clientY - rect.top,
+        };
+
+        setDragging(true);
+    };
+
+    const openApp = (app: PhoneApp, label: string) => {
+        if (splashTimeoutRef.current) window.clearTimeout(splashTimeoutRef.current);
+
+        setSplashApp(label);
+        window.setTimeout(() => setActiveApp(app), 160);
+
+        splashTimeoutRef.current = window.setTimeout(() => {
+            setSplashApp(null);
+        }, 520);
+    };
+
     const handleMessageFriendFromFriendsApp = (friendId: number) => {
-        setActiveApp("messages");
+        const thread = getMessageThread?.(friendId);
+
+        if (thread && setActiveThreadId) setActiveThreadId(thread.threadId);
+
+        openApp("messages", "Messages");
     };
 
-    // 🔔 Called by DoorDashApp whenever the full orders list is updated
-    const handleDoorDashOrdersUpdated = (orders: DoorDashOrderData[]) => {
-        // show count of active orders as badge
-        setDoorDashBadge(orders.length);
-    };
-
-    // 🔔 Called when driver accepts / picks up an order
-    const handleDoorDashOrderAccepted = (orders: DoorDashOrderData[]) => {
-        // If you want to fully clear, use 0; if you want remaining-count, use orders.length
-        setDoorDashBadge(orders.length);
-    };
+    const handleDoorDashOrdersUpdated = (orders: DoorDashOrderData[]) => setDoorDashBadge(orders.length);
+    const handleDoorDashOrderAccepted = (orders: DoorDashOrderData[]) => setDoorDashBadge(orders.length);
 
     return (
         <div className="phone-root">
             <div
                 ref={phoneRef}
-                className={`phone-frame phone-enter${
-                    shake ? " phone-shake" : ""
-                }`}
-                style={{
-                    left: position.x,
-                    top: position.y,
-                    position: "fixed",
-                }}
+                className={`phone-frame ${shake ? "phone-shake" : ""} ${darkMode ? "is-dark" : ""}`}
+                style={{ left: position.x, top: position.y, position: "fixed" }}
             >
                 <div className="phone-header" onMouseDown={onMouseDownHeader}>
-                    <span className="phone-time">17:39</span>
-
-                    {/* center notch */}
+                    <span className="phone-time">{worldTime || displayTime}</span>
                     <span className="phone-notch" />
-
-                    {/* close button to the right of the notch */}
-                    <button className="phone-close" onClick={onClose}>
-                        ✕
-                    </button>
+                    <div className="phone-header-right">
+                        <button
+                            className="phone-close"
+                            type="button"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onClose();
+                            }}
+                        >
+                            ✕
+                        </button>
+                        <span className="phone-battery" />
+                    </div>
                 </div>
+
+                {splashApp && (
+                    <div className="phone-splash-screen">
+                        <div className="phone-splash-card">
+                            <div className="phone-splash-icon">
+                                <span className="phone-splash-bubble one" />
+                                <span className="phone-splash-bubble two" />
+                            </div>
+                            <div className="phone-splash-title">{splashApp}</div>
+                        </div>
+                    </div>
+                )}
 
                 {activeApp === "home" && (
                     <div className="phone-home">
                         <div className="phone-app-grid">
-                            <PhoneAppIcon
-                                label="Settings"
-                                iconSrc={require("../../icons/settings_icon.png")}
-                                onClick={() => setActiveApp("settings")}
-                            />
-                            <PhoneAppIcon
-                                label="Contacts"
-                                iconSrc={require("../../icons/contacts.png")}
-                                onClick={() => setActiveApp("friends")}
-                                badge={friends.length}
-                            />
-                            <PhoneAppIcon
-                                label="Messages"
-                                iconSrc={require("../../icons/messages.png")}
-                                onClick={() => setActiveApp("messages")}
-                            />
-                            <PhoneAppIcon
-                                label="Achievements"
-                                iconSrc={require("../../icons/trophy.png")}
-                                onClick={() => {}}
-                            />
-                            <PhoneAppIcon
-                                label="YouTube"
-                                iconSrc={require("../../icons/messages.png")}
-                                onClick={() => {}}
-                            />
-                            <PhoneAppIcon
-                                label="DoorDash"
-                                iconSrc={require("../../icons/doordash.png")}
-                                badge={doorDashBadge}
-                                onClick={() => setActiveApp("doordash")}
-                            />
+                            <PhoneAppIcon label="Settings" iconSrc={require("../../icons/settings_icon.png")} onClick={() => openApp("settings", "Settings")} />
+                            <PhoneAppIcon label="Contacts" iconSrc={require("../../icons/contacts.png")} onClick={() => openApp("friends", "Contacts")} badge={friends.length} />
+                            <PhoneAppIcon label="Messages" iconSrc={require("../../icons/messages.png")} onClick={() => openApp("messages", "Messages")} />
+                            <PhoneAppIcon label="YouTube" iconSrc={require("../../icons/camera.png")} onClick={() => openApp("youtube", "YouTube")} />
+                            <PhoneAppIcon label="DoorDash" iconSrc={require("../../icons/doordash.png")} badge={doorDashBadge} onClick={() => openApp("doordash", "DoorDash")} />
                         </div>
                     </div>
                 )}
 
                 {activeApp === "friends" && (
-                    <div
-                        key={`app-${appAnimKey}`}
-                        className="phone-app-animate"
-                    >
-                        <FriendsApp
-                            friends={friends}
-                            onBack={() => setActiveApp("home")}
-                            onMessageFriend={handleMessageFriendFromFriendsApp}
-                        />
-                    </div>
+                    <FriendsApp friends={friends} onBack={() => setActiveApp("home")} onMessageFriend={handleMessageFriendFromFriendsApp} />
                 )}
-                {activeApp === "messages" && (
-                    <div
-                        key={`app-${appAnimKey}`}
-                        className="phone-app-animate"
-                    >
-                        <MessagesApp onBack={() => setActiveApp("home")} />
-                    </div>
-                )}
+
+                {activeApp === "messages" && <MessagesApp onBack={() => setActiveApp("home")} />}
+
                 {activeApp === "settings" && (
-                    <div
-                        key={`app-${appAnimKey}`}
-                        className="phone-app-animate"
-                    >
-                        <SettingsApp onBack={() => setActiveApp("home")} />
-                    </div>
+                    <SettingsApp
+                        onBack={() => setActiveApp("home")}
+
+                        darkMode={darkMode}
+                        setDarkMode={setDarkMode}
+                    />
                 )}
+
                 {activeApp === "doordash" && (
-                    <div
-                        key={`app-${appAnimKey}`}
-                        className="phone-app-animate"
-                    >
-                        <DoorDashApp
-                            onBack={() => setActiveApp("home")}
-                            onOrdersUpdated={handleDoorDashOrdersUpdated}
-                            onOrderAccepted={handleDoorDashOrderAccepted}
-                        />
-                    </div>
+                    <DoorDashApp
+                        onBack={() => setActiveApp("home")}
+                        onOrdersUpdated={handleDoorDashOrdersUpdated}
+                        onOrderAccepted={handleDoorDashOrderAccepted}
+                    />
                 )}
+
+                {activeApp === "youtube" && <YouTubeApp onBack={() => setActiveApp("home")} />}
+
+                <div className="phone-home-indicator" />
             </div>
         </div>
     );
@@ -248,37 +259,21 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onClose }) => {
 
 interface PhoneAppIconProps {
     label: string;
-    iconSrc: string; // ✅ image path
+    iconSrc: string;
     badge?: number;
     onClick: () => void;
 }
 
-const PhoneAppIcon: React.FC<PhoneAppIconProps> = ({
-    label,
-    iconSrc,
-    badge,
-    onClick,
-}) => (
-    <button className="phone-app-icon" onClick={onClick}>
+const PhoneAppIcon: React.FC<PhoneAppIconProps> = ({ label, iconSrc, badge, onClick }) => (
+    <button className="phone-app-icon" type="button" onClick={onClick}>
         <div className="phone-app-icon-inner">
             <span className="phone-app-icon-shine" />
-            <img
-                className="phone-app-icon-img"
-                src={iconSrc}
-                alt={label}
-                draggable={false}
-            />
-            {badge !== undefined && badge > 0 && (
-                <span className="phone-app-icon-badge">{badge}</span>
-            )}
+            <img className="phone-app-icon-img" src={iconSrc} alt={label} draggable={false} />
+            {badge !== undefined && badge > 0 && <span className="phone-app-icon-badge">{badge}</span>}
         </div>
         <span className="phone-app-icon-label">{label}</span>
     </button>
 );
-
-/* =========================================================================
-DOORDASH APP – customer order + driver order list
-========================================================================= */
 
 type DoorDashAppProps = {
     onBack: () => void;
@@ -286,34 +281,21 @@ type DoorDashAppProps = {
     onOrderAccepted?: (orders: DoorDashOrderData[]) => void;
 };
 
-const DoorDashApp: React.FC<DoorDashAppProps> = ({
-    onBack,
-    onOrdersUpdated,
-    onOrderAccepted,
-}) => {
+const DoorDashApp: React.FC<DoorDashAppProps> = ({ onBack, onOrdersUpdated, onOrderAccepted }) => {
     const [isOrdering, setIsOrdering] = useState(false);
     const [status, setStatus] = useState<string | null>(null);
-
-    // active open orders for drivers (from bridge)
     const [orders, setOrders] = useState<DoorDashOrderData[]>([]);
 
-    // listen to bridge events from Nitro (like ATM)
     useEffect(() => {
         const handler = (event: Event) => {
             const custom = event as CustomEvent<DoorDashOrderData[]>;
             const list = custom.detail || [];
 
             setOrders((prev) => {
-                // detect if any *new* order ids appeared
                 const prevIds = new Set(prev.map((o) => o.orderId));
                 const hasNew = list.some((o) => !prevIds.has(o.orderId));
 
-                if (hasNew) {
-                    // ask the phone to shake & vibrate
-                    window.dispatchEvent(new CustomEvent("phone_shake"));
-                }
-
-                // notify PhoneView so badge can update
+                if (hasNew) window.dispatchEvent(new CustomEvent("phone_shake"));
                 if (onOrdersUpdated) onOrdersUpdated(list);
 
                 return list;
@@ -321,10 +303,7 @@ const DoorDashApp: React.FC<DoorDashAppProps> = ({
         };
 
         window.addEventListener("doordash_orders", handler);
-
-        return () => {
-            window.removeEventListener("doordash_orders", handler);
-        };
+        return () => window.removeEventListener("doordash_orders", handler);
     }, [onOrdersUpdated]);
 
     const handlePizzaOrder = () => {
@@ -334,7 +313,6 @@ const DoorDashApp: React.FC<DoorDashAppProps> = ({
         setStatus("Placing your pizza order…");
 
         try {
-            // 1 = pizza delivery (you can add more types later)
             SendMessageComposer(new DoorDashOrderComposer(1));
             setStatus("Order sent! Waiting for a delivery driver…");
         } catch (e) {
@@ -348,7 +326,6 @@ const DoorDashApp: React.FC<DoorDashAppProps> = ({
         try {
             SendMessageComposer(new AcceptDoorDashOrderComposer(orderId));
 
-            // optimistic local update so badge clears immediately
             setOrders((prev) => {
                 const next = prev.filter((o) => o.orderId !== orderId);
 
@@ -362,84 +339,44 @@ const DoorDashApp: React.FC<DoorDashAppProps> = ({
         }
     };
 
-    const minutesAgo = (ageSeconds: number) =>
-        Math.floor(Math.max(0, ageSeconds || 0) / 60);
+    const minutesAgo = (ageSeconds: number) => Math.floor(Math.max(0, ageSeconds || 0) / 60);
 
     return (
         <div className="phone-app phone-doordash">
-            <div className="phone-subheader">
-                <button onClick={onBack} className="phone-back-btn">
-                    ‹ Home
-                </button>
-                <span className="phone-subtitle">DoorDash</span>
-            </div>
+            <PhoneSubHeader title="DoorDash" onBack={onBack} />
 
-            <div className="phone-list">
-                {/* CUSTOMER SIDE – place pizza order */}
+            <div className="phone-list phone-scrollable-body">
                 <div className="phone-card dd-card-customer">
                     <div className="phone-card-title">Pizza Delivery</div>
                     <div className="phone-card-body">
-                        <p className="dd-card-text-main">
-                            Get a hot pizza delivered to your current location.
-                        </p>
+                        <p className="dd-card-text-main">Get a hot pizza delivered to your current location.</p>
                         <p className="hint dd-pricing">
-                            Base price: <b>3 credits</b> + <b>1 credit</b> per
-                            room of travel.
+                            Base price: <b>3 credits</b> + <b>1 credit</b> per room of travel.
                         </p>
-                        <button
-                            className="phone-primary-btn dd-primary-btn"
-                            disabled={isOrdering}
-                            onClick={handlePizzaOrder}
-                        >
+                        <button className="phone-primary-btn dd-primary-btn" disabled={isOrdering} onClick={handlePizzaOrder}>
                             {isOrdering ? "Ordering…" : "Order Pizza"}
                         </button>
-                        {status && (
-                            <div className="phone-status-text dd-status">
-                                {status}
-                            </div>
-                        )}
+                        {status && <div className="phone-status-text dd-status">{status}</div>}
                     </div>
                 </div>
 
-                {/* DRIVER SIDE – list of orders */}
                 <div className="phone-card dd-card-driver">
-                    <div className="phone-card-title">
-                        Active Orders (Driver)
-                    </div>
+                    <div className="phone-card-title">Active Orders</div>
                     <div className="phone-card-body">
-                        {!orders.length && (
-                            <p className="hint dd-empty">
-                                No active orders right now. Stay clocked in as a
-                                delivery driver to receive new jobs.
-                            </p>
-                        )}
+                        {!orders.length && <p className="hint dd-empty">No active orders right now.</p>}
 
                         {!!orders.length && (
                             <div className="dd-order-list">
                                 {orders.map((o) => (
-                                    <div
-                                        key={o.orderId}
-                                        className="dd-order-row"
-                                    >
+                                    <div key={o.orderId} className="dd-order-row">
                                         <div className="dd-order-main">
-                                            <div className="dd-order-customer">
-                                                {o.username}
-                                            </div>
-                                            <div className="dd-order-location">
-                                                {o.virtualRoomName ||
-                                                    `vRoom ${o.virtualRoomId}`}
-                                            </div>
+                                            <div className="dd-order-customer">{o.username}</div>
+                                            <div className="dd-order-location">{o.virtualRoomName || `vRoom ${o.virtualRoomId}`}</div>
                                             <div className="dd-order-meta">
-                                                {minutesAgo(o.ageSeconds)} min
-                                                ago • #{o.orderId}
+                                                {minutesAgo(o.ageSeconds)} min ago • #{o.orderId}
                                             </div>
                                         </div>
-                                        <button
-                                            className="dd-order-accept-btn"
-                                            onClick={() =>
-                                                handleAcceptOrder(o.orderId)
-                                            }
-                                        >
+                                        <button className="dd-order-accept-btn" onClick={() => handleAcceptOrder(o.orderId)}>
                                             Accept
                                         </button>
                                     </div>
@@ -453,122 +390,126 @@ const DoorDashApp: React.FC<DoorDashAppProps> = ({
     );
 };
 
-/* =========================================================================
-MESSAGES APP – list + chat views (clean UI, using MessengerThread.groups)
-========================================================================= */
+const PhoneSubHeader: React.FC<{ title: string; onBack: () => void; rightContent?: React.ReactNode; avatarFigure?: string | null }> = ({ title, onBack, rightContent, avatarFigure = null }) => {
+    const [isBacking, setIsBacking] = useState(false);
+
+    const handleBack = () => {
+        if (isBacking) return;
+
+        setIsBacking(true);
+        window.setTimeout(() => onBack(), 140);
+    };
+
+    return (
+        <div className={`phone-subheader ${isBacking ? "is-backing" : ""}`}>
+            <button type="button" onClick={handleBack} className="phone-back-btn">
+                ‹
+            </button>
+
+            <div className="phone-subheader-main">
+                {avatarFigure && (
+                    <div className="phone-subheader-avatar">
+                        <LayoutAvatarImageView figure={avatarFigure} headOnly={true} direction={2} />
+                    </div>
+                )}
+
+                <span className="phone-subtitle">{title}</span>
+            </div>
+
+            <div className="phone-subheader-right">{rightContent || <span className="phone-subheader-spacer" />}</div>
+        </div>
+    );
+};
 
 interface MessagesAppProps {
-    onBack: () => void; // back to Phone home
+    onBack: () => void;
 }
 
 const MessagesApp: React.FC<MessagesAppProps> = ({ onBack }) => {
-    const {
-        visibleThreads = [],
-        activeThread = null,
-        sendMessage = null,
-        setActiveThreadId = null,
-        closeThread = null,
-    } = useMessenger();
-
+    const { visibleThreads = [], activeThread = null, sendMessage = null, setActiveThreadId = null, closeThread = null } = useMessenger();
     const [mode, setMode] = useState<"list" | "chat">("list");
     const [messageText, setMessageText] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const messagesBoxRef = useRef<HTMLDivElement | null>(null);
-
     const sessionUserId = GetSessionDataManager().userId;
-
-    // ---- Helpers ---------------------------------------------------------
 
     const openThread = (threadId: number) => {
         if (setActiveThreadId) setActiveThreadId(threadId);
         setMode("chat");
     };
 
-    const backToList = () => {
-        setMode("list");
-    };
-
     const handleSend = () => {
         if (!activeThread || !sendMessage || !messageText.trim()) return;
-
         sendMessage(activeThread, sessionUserId, messageText.trim());
         setMessageText("");
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "Enter") handleSend();
-    };
-
-    // preview text for list rows – uses groups/chats
     const getLastMessagePreview = (thread: any): string => {
         const groups = (thread?.groups || []) as any[];
-
         if (!groups.length) return "New conversation";
 
         const lastGroup = groups[groups.length - 1];
         const chats = (lastGroup?.chats || []) as any[];
-
         if (!chats.length) return "New conversation";
 
-        const lastChat = chats[chats.length - 1];
-        return lastChat?.message || "New conversation";
+        return chats[chats.length - 1]?.message || "New conversation";
     };
 
-    // search on participant name
     const filteredThreads = visibleThreads.filter((thread: any) =>
-        thread?.participant?.name
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase())
+        thread?.participant?.name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // does this thread have any chats?
     const hasMessages =
         !!activeThread &&
         Array.isArray((activeThread as any).groups) &&
-        (activeThread as any).groups.some(
-            (g: any) => Array.isArray(g.chats) && g.chats.length > 0
-        );
+        (activeThread as any).groups.some((g: any) => Array.isArray(g.chats) && g.chats.length > 0);
 
-    // scroll chat to bottom when opening a thread / switching to chat mode
     useEffect(() => {
         if (mode !== "chat" || !messagesBoxRef.current) return;
         messagesBoxRef.current.scrollTop = messagesBoxRef.current.scrollHeight;
     }, [mode, activeThread, (activeThread as any)?.groups?.length]);
 
-    // ---- Render ----------------------------------------------------------
+    if (mode === "chat" && activeThread) {
+        return (
+            <div className="phone-app phone-messages">
+                <PhoneSubHeader title={activeThread.participant?.name || "Messages"} avatarFigure={getAvatarFigure(activeThread.participant)} onBack={() => setMode("list")} />
+
+                <div className="phone-messages-chat-view">
+                    <div className="phone-chat-body" ref={messagesBoxRef}>
+                        {hasMessages ? (
+                            <FriendsMessengerThreadView thread={activeThread as any} />
+                        ) : (
+                            <div className="phone-empty-state chat-empty">
+                                <div className="phone-empty-state__bubble" />
+                                <div className="phone-empty-state__title">No messages yet</div>
+                                <div className="phone-empty-state__text">Start a conversation with {activeThread.participant?.name}.</div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="phone-chat-input">
+                        <input
+                            type="text"
+                            placeholder="Message"
+                            value={messageText}
+                            onChange={(e) => setMessageText(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                        />
+                        <button type="button" onClick={handleSend}>
+                            Send
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="phone-app phone-messages">
-            {/* HEADER */}
-            <div className="phone-subheader">
-                {mode === "list" && (
-                    <>
-                        <button onClick={onBack} className="phone-back-btn">
-                            ‹ Home
-                        </button>
-                        <span className="phone-subtitle">Messages</span>
-                    </>
-                )}
+            <PhoneSubHeader title="Messages" onBack={onBack} />
 
-                {mode === "chat" && activeThread && (
-                    <>
-                        <button onClick={backToList} className="phone-back-btn">
-                            ‹ Messages
-                        </button>
-                        <div className="phone-chat-title">
-                            <div className="phone-chat-avatar" />
-                            <span className="phone-subtitle">
-                                {activeThread.participant?.name}
-                            </span>
-                        </div>
-                    </>
-                )}
-
-                <span style={{ flex: 1 }} />
-            </div>
-
-            {/* SEARCH BAR (both modes) */}
             <div className="phone-searchbar">
+                <span className="phone-search-icon">⌕</span>
                 <input
                     type="text"
                     placeholder="Search"
@@ -578,107 +519,51 @@ const MessagesApp: React.FC<MessagesAppProps> = ({ onBack }) => {
                 />
             </div>
 
-            {/* LIST MODE ==================================================== */}
-            {mode === "list" && (
-                <div className="phone-messages-list-view">
-                    <div className="phone-messages-list">
-                        {filteredThreads.map((thread: any) => (
-                            <div
-                                key={thread.threadId}
-                                className="phone-thread-row"
-                                onClick={() => openThread(thread.threadId)}
-                            >
-                                <div className="phone-thread-avatar" />
-
-                                <div className="phone-thread-main">
-                                    <div className="phone-thread-top">
-                                        <div className="phone-thread-name">
-                                            {thread.participant?.name}
-                                        </div>
-                                        <div className="phone-thread-time">
-                                            now
-                                        </div>
-                                    </div>
-
-                                    <div className="phone-thread-bottom">
-                                        <div className="phone-thread-preview">
-                                            {getLastMessagePreview(thread)}
-                                        </div>
-                                        <span className="phone-thread-unread" />
-                                    </div>
-                                </div>
-
-                                {closeThread && (
-                                    <button
-                                        className="phone-thread-delete"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            closeThread(thread.threadId);
-                                        }}
-                                        title="Delete conversation"
-                                    />
-                                )}
-                            </div>
-                        ))}
-
-                        {!filteredThreads.length && (
-                            <div className="phone-empty centered">
-                                No conversations yet.
-                            </div>
-                        )}
+            <div className="phone-thread-list">
+                {!filteredThreads.length && (
+                    <div className="phone-empty-state">
+                        <div className="phone-empty-state__bubble" />
+                        <div className="phone-empty-state__title">No conversations</div>
+                        <div className="phone-empty-state__text">
+                            Start a conversation by messaging someone from your friends list if you have any.
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* CHAT MODE ==================================================== */}
-            {mode === "chat" && activeThread && (
-                <div className="phone-messages-chat-view">
-                    <div className="phone-chat-body" ref={messagesBoxRef}>
-                        {hasMessages ? (
-                            // ✅ use the same renderer as the old UI
-                            <FriendsMessengerThreadView
-                                thread={activeThread as any}
+                {filteredThreads.map((thread: any) => (
+                    <button key={thread.threadId} type="button" className="phone-thread-row" onClick={() => openThread(thread.threadId)}>
+                        <div className="phone-thread-avatar">
+                            {getAvatarFigure(thread.participant) ? (
+                                <LayoutAvatarImageView figure={getAvatarFigure(thread.participant)} headOnly={true} direction={2} />
+                            ) : (
+                                <span className="phone-thread-avatar-fallback">{(thread.participant?.name || "?").charAt(0)}</span>
+                            )}
+                        </div>
+                        <div className="phone-thread-main">
+                            <div className="phone-thread-top">
+                                <div className="phone-thread-name">{thread.participant?.name}</div>
+                                <div className="phone-thread-time">now</div>
+                            </div>
+                            <div className="phone-thread-bottom">
+                                <div className="phone-thread-preview">{getLastMessagePreview(thread)}</div>
+                            </div>
+                        </div>
+                        {closeThread && (
+                            <span
+                                className="phone-thread-delete"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    closeThread(thread.threadId);
+                                }}
                             />
-                        ) : (
-                            <div className="phone-chat-empty">
-                                <div className="phone-chat-empty-icon" />
-                                <div className="phone-chat-empty-title">
-                                    No messages yet
-                                </div>
-                                <div className="phone-chat-empty-subtitle">
-                                    Start a conversation with{" "}
-                                    {activeThread.participant?.name}!
-                                </div>
-                            </div>
                         )}
-                    </div>
-
-                    <div className="phone-chat-input">
-                        <input
-                            type="text"
-                            placeholder="Click here to message…"
-                            value={messageText}
-                            onChange={(e) => setMessageText(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                        />
-                        <button onClick={handleSend}>Send</button>
-                    </div>
-                </div>
-            )}
-
-            {/* safety net */}
-            {mode === "chat" && !activeThread && (
-                <div className="phone-empty centered">
-                    Select a conversation from the list.
-                </div>
-            )}
+                    </button>
+                ))}
+            </div>
         </div>
     );
 };
-
-/* =========================================================================
-FRIENDS (CONTACTS) APP – uses real MessengerFriend[]
-======================================================================== */
 
 interface FriendsAppProps {
     friends: MessengerFriend[];
@@ -686,129 +571,156 @@ interface FriendsAppProps {
     onMessageFriend: (friendId: number) => void;
 }
 
-const FriendsApp: React.FC<FriendsAppProps> = ({
-    friends,
-    onBack,
-    onMessageFriend,
-}) => {
-    const [tab, setTab] = useState<"list" | "search">("list");
+const FriendsApp: React.FC<FriendsAppProps> = ({ friends, onBack, onMessageFriend }) => {
     const [searchTerm, setSearchTerm] = useState("");
-    const [searchResults, setSearchResults] = useState<MessengerFriend[]>([]);
     const [selectedFriendsIds, setSelectedFriendsIds] = useState<number[]>([]);
-
-    const { getMessageThread = null, setActiveThreadId = null } =
-        useMessenger();
-
-    const handleSearch = () => {
-        if (!searchTerm.trim()) {
-            setSearchResults([]);
-            return;
-        }
-
-        const lower = searchTerm.toLowerCase();
-        const matches = friends.filter((f) =>
-            f.name.toLowerCase().includes(lower)
-        );
-
-        setSearchResults(matches);
-    };
+    const filteredFriends = useMemo(() => {
+        const term = searchTerm.trim().toLowerCase();
+        if (!term.length) return friends;
+        return friends.filter((f) => f.name.toLowerCase().includes(term));
+    }, [friends, searchTerm]);
 
     const selectFriend = (id: number) => {
         setSelectedFriendsIds([id]);
-
-        // open / create thread for this friend in the messenger store
-        if (getMessageThread && setActiveThreadId) {
-            const thread = getMessageThread(id);
-            if (thread) setActiveThreadId(thread.threadId);
-        }
-
-        // switch Phone to Messages app
         onMessageFriend(id);
     };
 
-    const listToShow = tab === "list" ? friends : searchResults;
-
     return (
         <div className="phone-app phone-friends">
-            <div className="phone-subheader">
-                <button onClick={onBack} className="phone-back-btn">
-                    ‹ Home
-                </button>
-                <span className="phone-subtitle">Contacts</span>
-            </div>
-
-            <div className="phone-tabs">
-                <button
-                    className={tab === "list" ? "active" : ""}
-                    onClick={() => setTab("list")}
-                >
-                    All
-                </button>
-                <button
-                    className={tab === "search" ? "active" : ""}
-                    onClick={() => setTab("search")}
-                >
-                    Search
-                </button>
-            </div>
+            <PhoneSubHeader title="Contacts" onBack={onBack} />
 
             <div className="phone-searchbar">
-                <input
-                    type="text"
-                    placeholder={
-                        tab === "search"
-                            ? "Search by username…"
-                            : "Filter friends…"
-                    }
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyDown={(e) =>
-                        e.key === "Enter" ? handleSearch() : null
-                    }
-                />
-                <button onClick={handleSearch}>Go</button>
+                <span className="phone-search-icon">⌕</span>
+                <input type="text" placeholder="Search contacts" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
 
-            <div className="phone-list">
-                {!listToShow.length && (
-                    <div className="phone-empty">
-                        {tab === "list" ? "No friends yet." : "No users found."}
-                    </div>
-                )}
+            <div className="phone-list phone-scrollable-body">
+                {!filteredFriends.length && <div className="phone-empty centered">No users found.</div>}
 
-                {!!listToShow.length && (
-                    <FriendsListGroupView
-                        list={listToShow}
-                        selectedFriendsIds={selectedFriendsIds}
-                        selectFriend={selectFriend}
-                    />
+                {!!filteredFriends.length && (
+                    <FriendsListGroupView list={filteredFriends} selectedFriendsIds={selectedFriendsIds} selectFriend={selectFriend} />
                 )}
             </div>
         </div>
     );
 };
 
-/* =========================================================================
-SETTINGS
-======================================================================== */
+const wallpaperOptions: Array<{ id: WallpaperOption; label: string }> = [
+    { id: "classic", label: "Classic" },
+    { id: "night", label: "Night" },
+    { id: "sunset", label: "Sunset" },
+];
 
-const SettingsApp: React.FC<{ onBack: () => void }> = ({ onBack }) => (
-    <div className="phone-app phone-settings">
-        <div className="phone-subheader">
-            <button onClick={onBack} className="phone-back-btn">
-                ‹ Home
-            </button>
-            <span className="phone-subtitle">Settings</span>
-        </div>
-        <div className="phone-list">
-            <div className="phone-setting-row">
-                <span>Do Not Disturb</span>
-                <span className="phone-toggle placeholder" />
+
+const SettingsApp: React.FC<{
+    onBack: () => void;
+    darkMode: boolean;
+    setDarkMode: (value: boolean) => void;
+}> = ({ onBack, darkMode, setDarkMode }) => {
+    return (
+        <div className="phone-app phone-settings">
+            <PhoneSubHeader title="Settings" onBack={onBack} />
+
+            <div className="phone-settings-list phone-scrollable-body">
+                <details className="phone-settings-group" open>
+                    <summary className="phone-settings-nav-item">
+                        <span>Wallpaper</span>
+                        <span>›</span>
+                    </summary>
+                    <div className="phone-settings-panel">
+                       
+                    </div>
+                </details>
+
+                <details className="phone-settings-group" open>
+                    <summary className="phone-settings-nav-item">
+                        <span>Display</span>
+                        <span>›</span>
+                    </summary>
+                    <div className="phone-settings-panel">
+                        <label className="phone-switch-row">
+                            <span>Dark Mode</span>
+                            <input type="checkbox" checked={darkMode} onChange={(e) => setDarkMode(e.target.checked)} />
+                        </label>
+                    </div>
+                </details>
+
+                <button type="button" className="phone-settings-nav-item static-row">
+                    <span>Privacy</span>
+                    <span>›</span>
+                </button>
             </div>
-            <div className="phone-setting-row">
-                <span>Show Online Status</span>
-                <span className="phone-toggle placeholder" />
+        </div>
+    );
+};
+
+const YouTubeApp: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+    const [search, setSearch] = useState("");
+    const [videoUrl, setVideoUrl] = useState("");
+
+    const playVideo = () => {
+        const value = search.trim();
+        if (!value.length) return;
+
+        if (value.includes("watch?v=")) {
+            const id = value.split("watch?v=")[1]?.split("&")[0];
+            if (id) {
+                setVideoUrl(`https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1`);
+                return;
+            }
+        }
+
+        if (value.includes("youtu.be/")) {
+            const id = value.split("youtu.be/")[1]?.split("?")[0];
+            if (id) {
+                setVideoUrl(`https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1`);
+                return;
+            }
+        }
+
+        setVideoUrl(`https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(value)}&autoplay=1&playsinline=1`);
+    };
+
+    return (
+        <div className="phone-app phone-youtube">
+            <PhoneSubHeader
+                title="YouTube"
+                onBack={onBack}
+                rightContent={
+                    <button type="button" className="phone-youtube-close" onClick={onBack}>
+                        ✕
+                    </button>
+                }
+            />
+
+            <div className="phone-youtube-searchbar">
+                <div className="phone-youtube-search-input">
+                    <span className="phone-search-icon">⌕</span>
+                    <input
+                        type="text"
+                        value={search}
+                        placeholder="Search YouTube videos"
+                        onChange={(e) => setSearch(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && playVideo()}
+                    />
+                </div>
+                <button type="button" className="phone-youtube-search-button" onClick={playVideo}>
+                    Search
+                </button>
+            </div>
+
+            <div className="phone-youtube-player-wrap">
+                {videoUrl ? (
+                    <iframe
+                        src={videoUrl}
+                        title="Phone YouTube Player"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                    />
+                ) : (
+                    <div className="phone-youtube-placeholder">Search for a YouTube video by name or paste a link.</div>
+                )}
             </div>
         </div>
-    </div>
-);
+    );
+};

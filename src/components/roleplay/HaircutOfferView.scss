@@ -49,7 +49,8 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 }
 
 .haircut-header {
-    background: #1e7295;
+    background: linear-gradient(180deg, var(--rp-tab-top), var(--rp-tab-bottom));
+    border: 2px solid var(--rp-primary-border);
     color: #fff;
     display: flex;
     align-items: center;
@@ -468,7 +469,8 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     height: 34px;
     border-radius: 8px;
     border: 1px solid rgba(0, 0, 0, 0.25);
-    background: #1e7295;
+    background: linear-gradient(180deg, var(--rp-tab-top), var(--rp-tab-bottom));
+    border: 2px solid var(--rp-primary-border);
     color: #fff;
     font-weight: 900;
     cursor: pointer;
@@ -491,8 +493,9 @@ $shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     }
 
     &.secondary {
-        background: rgba(255, 255, 255, 0.85);
+        background: linear-gradient(180deg, #ffffff, #e7e7e7);
         color: #111;
+        border-color: rgba(0, 0, 0, 0.18);
         font-weight: 900;
     }
 }

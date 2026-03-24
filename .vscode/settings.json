@@ -24,4 +24,7 @@
     "eslint.workingDirectories": [
         "./src"
     ]
+
+    
 }
+
