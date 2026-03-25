@@ -13,7 +13,7 @@ interface ChatWidgetMessageViewProps {
 }
 
 /** Base for name icons (same as store) */
-const NAME_ICON_BASE = "/nitro-react/src/assets/images/chat/nameicons";
+const NAME_ICON_BASE = "/nitro/icons/nameicons";
 
 /** Mention ping sound */
 const MENTION_PING_URL = "/assets/sounds/mention-ping.mp3";

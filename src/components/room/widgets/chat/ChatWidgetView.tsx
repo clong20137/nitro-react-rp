@@ -1,4 +1,5 @@
 import { IWorkerEventTracker, RoomChatSettings } from "@nitrots/nitro-renderer";
+import { NameIconEquippedEvent } from "@nitrots/nitro-renderer/src/nitro/communication/messages/incoming/roleplay/NameIconEquippedEvent";
 import { FC, useEffect, useRef, useState } from "react";
 import {
     AddWorkerEventTracker,
@@ -8,26 +9,27 @@ import {
     RemoveWorkerEventTracker,
     SendWorkerEvent,
 } from "../../../../api";
-import { useChatWidget } from "../../../../hooks";
+import { useChatWidget, useMessageEvent } from "../../../../hooks";
 import { ChatWidgetMessageView } from "./ChatWidgetMessageView";
 
-/**
- * Cache: userId -> name icon "key" (string) or numeric id (we stringify).
- * Filled by lightweight bridge events from server:
- * - 'name_icon_equipped_for_user' { userId:number, iconKey?:string, iconId?:number }
- * - optional bulk: 'name_icon_equipped_bulk' { users: Array<{userId, iconKey|iconId}> }
- */
 const nameIconByUserId = new Map<number, string>();
+(window as any).__nameIconByUserId = nameIconByUserId;
 
 function upsertUserIcon(userId: number, iconKey?: string, iconId?: number) {
     const key =
         (iconKey && String(iconKey)) ||
-        (typeof iconId === "number" ? String(iconId) : null);
-    if (!userId || !key) return;
+        (typeof iconId === "number" && iconId > 0 ? String(iconId) : null);
+
+    if (!userId) return;
+
+    if (!key) {
+        nameIconByUserId.delete(userId);
+        return;
+    }
+
     nameIconByUserId.set(userId, key);
 }
 
-/** resolve -> "key" string or null */
 function resolveNameIconKeyFor(userId: number): string | null {
     const k = nameIconByUserId.get(userId);
     return k ? String(k) : null;
@@ -48,7 +50,42 @@ export const ChatWidgetView: FC<{}> = () => {
 
     const elementRef = useRef<HTMLDivElement>();
 
-    /** --- name-icon listeners (populate cache) --- */
+    useMessageEvent<NameIconEquippedEvent>(NameIconEquippedEvent, event => {
+        const parser = event.getParser();
+
+        if (!parser) return;
+
+        upsertUserIcon(parser.userId, parser.iconKey, parser.iconId);
+
+        window.dispatchEvent(
+            new CustomEvent("name_icon_equipped_for_user", {
+                detail: {
+                    userId: parser.userId,
+                    iconId: parser.iconId,
+                    iconKey: parser.iconKey,
+                },
+            })
+        );
+
+        setChatMessages(prev => {
+            if (!prev?.length) return prev;
+
+            let changed = false;
+
+            for (const msg of prev) {
+                if (!msg || msg.senderId !== parser.userId) continue;
+
+                (msg as any).nameIconKey =
+                    parser.iconKey ||
+                    (parser.iconId > 0 ? String(parser.iconId) : null);
+                (msg as any).showNameIcon = parser.iconId > 0;
+                changed = true;
+            }
+
+            return changed ? [...prev] : prev;
+        });
+    });
+
     useEffect(() => {
         const onSingle = (e: Event) => {
             const { detail } = e as CustomEvent<{
@@ -56,7 +93,9 @@ export const ChatWidgetView: FC<{}> = () => {
                 iconKey?: string;
                 iconId?: number;
             }>;
+
             if (!detail) return;
+
             upsertUserIcon(detail.userId, detail.iconKey, detail.iconId);
         };
 
@@ -68,9 +107,12 @@ export const ChatWidgetView: FC<{}> = () => {
                     iconId?: number;
                 }>;
             }>;
+
             if (!detail?.users) return;
-            for (const u of detail.users)
+
+            for (const u of detail.users) {
                 upsertUserIcon(u.userId, u.iconKey, u.iconId);
+            }
         };
 
         window.addEventListener(
@@ -94,25 +136,21 @@ export const ChatWidgetView: FC<{}> = () => {
         };
     }, []);
 
-    /** When a ChatBubbleMessage appears, attach the sender's icon key */
     useEffect(() => {
-        // Any new messages without a nameIconKey get one looked up.
-        setChatMessages((prev) => {
+        setChatMessages(prev => {
             if (!prev) return prev;
+
             let changed = false;
 
             for (const msg of prev) {
-                if (
-                    msg &&
-                    msg.senderId &&
-                    (msg as any).nameIconKey === undefined
-                ) {
-                    (msg as any).nameIconKey = resolveNameIconKeyFor(
-                        msg.senderId
-                    );
-                    (msg as any).showNameIcon = true;
-                    changed = true;
-                }
+                if (!msg || !msg.senderId || (msg as any).nameIconKey !== undefined)
+                    continue;
+
+                const resolved = resolveNameIconKeyFor(msg.senderId);
+
+                (msg as any).nameIconKey = resolved;
+                (msg as any).showNameIcon = !!resolved;
+                changed = true;
             }
 
             return changed ? [...prev] : prev;
@@ -164,7 +202,7 @@ export const ChatWidgetView: FC<{}> = () => {
             const amount = requiredSpace - spaceAvailable;
 
             if (spaceAvailable < requiredSpace) {
-                chatMessages.forEach((existing) => {
+                chatMessages.forEach(existing => {
                     if (existing === chat) return;
                     existing.top -= amount;
                 });
@@ -185,10 +223,10 @@ export const ChatWidgetView: FC<{}> = () => {
             );
             elementRef.current.style.height = `${newHeight}px`;
 
-            setChatMessages((prev) => {
+            setChatMessages(prev => {
                 if (prev)
                     prev.forEach(
-                        (chat) => (chat.top -= currentHeight - newHeight)
+                        chat => (chat.top -= currentHeight - newHeight)
                     );
                 return prev;
             });
@@ -224,18 +262,32 @@ export const ChatWidgetView: FC<{}> = () => {
             SendWorkerEvent({ type: "REMOVE_INTERVAL", timerId });
             RemoveWorkerEventTracker(workerTracker);
         };
-    }, [timerId, getScrollSpeed, moveAllChatsUp]);
+    }, [getScrollSpeed, moveAllChatsUp, timerId]);
 
-    return (
-        <div ref={elementRef} className="nitro-chat-widget">
-            {chatMessages.map((chat) => (
-                <ChatWidgetMessageView
-                    key={chat.id}
-                    chat={chat}
-                    makeRoom={makeRoom}
-                    bubbleWidth={chatSettings.weight}
-                />
-            ))}
-        </div>
-    );
+    useEffect(() => {
+        if (!chatMessages.length) return;
+
+        const chat = chatMessages[chatMessages.length - 1];
+
+        if (!chat || chat.visible) return;
+
+        chat.visible = true;
+        makeRoom(chat);
+    }, [chatMessages]);
+
+return (
+    <div
+        ref={elementRef}
+        className="chat-widget"
+        style={{ pointerEvents: "none" }}
+    >
+        {chatMessages.map((chat) => (
+            <ChatWidgetMessageView
+                key={chat.id}
+                chat={chat}
+                makeRoom={makeRoom}
+            />
+        ))}
+    </div>
+);
 };

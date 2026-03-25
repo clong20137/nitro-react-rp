@@ -8,6 +8,17 @@ const avatarColorCache: Map<string, number> = new Map();
 const avatarImageCache: Map<string, string> = new Map();
 const petImageCache: Map<string, string> = new Map();
 
+
+const getEquippedNameIconKey = (userId: number): string | null =>
+{
+    const cache = (window as any).__nameIconByUserId as Map<number, string>;
+
+    if(!cache || !userId) return null;
+
+    return (cache.get(userId) || null);
+}
+
+
 const useChatWidgetState = () =>
 {
     const [ chatMessages, setChatMessages ] = useState<ChatBubbleMessage[]>([]);
@@ -229,8 +240,11 @@ const useChatWidgetState = () =>
             }
         }
 
+        const speakerUserId = (userData as any).webID || userData.roomIndex;
+        const nameIconKey = getEquippedNameIconKey(speakerUserId);
+
         const chatMessage = new ChatBubbleMessage(
-            userData.roomIndex,
+            speakerUserId,
             RoomObjectCategory.UNIT,
             roomSession.roomId,
             text,
@@ -240,7 +254,9 @@ const useChatWidgetState = () =>
             chatType,
             styleId,
             imageUrl,
-            (avatarColor && (('#' + (avatarColor.toString(16).padStart(6, '0'))) || null)));
+            (avatarColor && (('#' + (avatarColor.toString(16).padStart(6, '0'))) || null)),
+            nameIconKey,
+            !!nameIconKey);
 
         setChatMessages(prevValue => [ ...prevValue, chatMessage ]);
     });

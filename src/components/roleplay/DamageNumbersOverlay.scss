@@ -4,7 +4,6 @@
     pointer-events: none;
     transform: translate(-50%, -50%);
     will-change: transform, opacity;
-    animation: rp-damage-float 1.05s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
 }
 
 .rp-damage-number__text {
@@ -16,12 +15,56 @@
     font-size: 28px;
     line-height: 1;
     letter-spacing: 0.02em;
-    color: #b70d0d;
-    text-shadow: 0 0 2px rgba(0, 0, 0, 0.95), 0 1px 0 rgba(0, 0, 0, 0.95), 0 2px 0 rgba(0, 0, 0, 0.85), 0 0 8px lab(48.06% 71.07 54.5 / 0.75), 0 0 16px rgba(229, 21, 21, 0.45);
-    filter: drop-shadow(0 0 7px rgba(255, 193, 7, 0.5));
 }
 
-@keyframes rp-damage-float {
+
+/* Successful hits */
+
+.rp-damage-number--hit {
+    animation: rp-damage-hit-float 1.05s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+.rp-damage-number--hit .rp-damage-number__text {
+    color: #2ecb71;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.95), 0 1px 0 rgba(0, 0, 0, 0.95), 0 2px 0 rgba(0, 0, 0, 0.85), 0 0 10px rgba(46, 203, 113, 0.65), 0 0 18px rgba(46, 203, 113, 0.45);
+    filter: drop-shadow(0 0 8px rgba(46, 203, 113, 0.45));
+}
+
+
+/* Misses */
+
+.rp-damage-number--miss {
+    animation: rp-damage-miss-float 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+.rp-damage-number--miss .rp-damage-number__text {
+    color: #ff4d4d;
+    font-size: 24px;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.95), 0 1px 0 rgba(0, 0, 0, 0.95), 0 0 10px rgba(255, 77, 77, 0.55);
+    filter: drop-shadow(0 0 8px rgba(255, 77, 77, 0.4));
+}
+
+
+/* KO special */
+
+.rp-damage-number--ko {
+    animation: rp-damage-ko-burst 1.2s cubic-bezier(0.15, 0.8, 0.2, 1) forwards;
+}
+
+.rp-damage-number--ko .rp-damage-number__text {
+    color: #ffd24a;
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 1), 1px 0 0 rgba(0, 0, 0, 0.95), -1px 0 0 rgba(0, 0, 0, 0.95), 0 1px 0 rgba(0, 0, 0, 0.95), 0 -1px 0 rgba(0, 0, 0, 0.95), 0 0 12px rgba(255, 210, 74, 0.75), 0 0 26px rgba(255, 120, 0, 0.55);
+    filter: drop-shadow(0 0 12px rgba(255, 170, 0, 0.55));
+}
+
+
+/* Hit animation */
+
+@keyframes rp-damage-hit-float {
     0% {
         opacity: 0;
         transform: translate(-50%, -50%) scale(0.45) rotate(0deg);
@@ -37,5 +80,53 @@
     100% {
         opacity: 0;
         transform: translate(calc(-50% + var(--damage-drift-x, 0px)), calc(-50% - 58px)) scale(0.92) rotate(var(--damage-rotate, 0deg));
+    }
+}
+
+
+/* Miss animation */
+
+@keyframes rp-damage-miss-float {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.7);
+    }
+    15% {
+        opacity: 1;
+        transform: translate(-50%, calc(-50% - 4px)) scale(1.05);
+    }
+    45% {
+        opacity: 1;
+        transform: translate(-50%, calc(-50% - 12px)) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, calc(-50% - 30px)) scale(0.9);
+    }
+}
+
+
+/* KO special animation */
+
+@keyframes rp-damage-ko-burst {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.2) rotate(-10deg);
+    }
+    12% {
+        opacity: 1;
+        transform: translate(-50%, calc(-50% - 10px)) scale(1.45) rotate(4deg);
+    }
+    28% {
+        opacity: 1;
+        transform: translate(-50%, calc(-50% - 22px)) scale(1.1) rotate(-3deg);
+    }
+    58% {
+        opacity: 1;
+        transform: translate(-50%, calc(-50% - 38px)) scale(1.2) rotate(2deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, calc(-50% - 78px)) scale(0.9) rotate(0deg);
     }
 }

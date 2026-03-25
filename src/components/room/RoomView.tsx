@@ -47,6 +47,7 @@ import { MythicalBlueprintView } from "../roleplay/MythicalBlueprintView";
 import { HaircutOfferView } from "../roleplay/HaircutOfferView";
 import TargetOutlineOverlay from "../roleplay/TargetOutlineOverlay";
 import PassiveIndicatorOverlay from "../roleplay/PassiveIndicatorOverlay";
+import DamageNumbersOverlay from "../roleplay/DamageNumbersOverlay";
 /* -----------------------------------------------------------
 Click-through helpers
 ----------------------------------------------------------- */
@@ -240,6 +241,7 @@ Render
                     <TradeView></TradeView>
                     <MythicalBlueprintView></MythicalBlueprintView>
                     <HaircutOfferView></HaircutOfferView>
+                    <DamageNumbersOverlay></DamageNumbersOverlay>
                     {/*
                     <ArenaQueueView visible={true}></ArenaQueueView>
                     */}
