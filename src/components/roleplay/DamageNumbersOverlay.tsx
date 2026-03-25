@@ -14,15 +14,13 @@ type DamageEventDetail = {
     maxHealth?: number;
 };
 
-type FloatingDamageType = "hit" | "ko";
-
 type FloatingDamage = {
     id: number;
     value: number | string;
     left: number;
     top: number;
     style: CSSProperties;
-    type: FloatingDamageType;
+    isKo?: boolean;
 };
 
 const MAX_POPUPS = 12;
@@ -58,17 +56,17 @@ export const DamageNumbersOverlay: FC = () => {
 
             healthByUserRef.current.set(userId, health);
 
-            const damage = Math.max(0, Math.round(previousHealth - health));
+            const damage = Math.round(previousHealth - health);
             const isKo = health <= 0 && previousHealth > 0;
-            const isMiss = damage <= 0 && !isKo;
+
+            if (damage <= 0 && !isKo) return;
 
             try {
                 const roomSession = GetRoomSession();
 
                 if (!roomSession) return;
 
-                const userData =
-                    roomSession.userDataManager?.getUserData?.(userId);
+                const userData = roomSession.userDataManager?.getUserData?.(userId);
 
                 if (!userData || userData.roomIndex < 0) return;
 
@@ -80,6 +78,7 @@ export const DamageNumbersOverlay: FC = () => {
                     RoomObjectCategory.UNIT,
                     1,
                 );
+
                 const loc = GetRoomObjectScreenLocation(
                     roomSession.roomId,
                     roomIndex,
@@ -92,24 +91,18 @@ export const DamageNumbersOverlay: FC = () => {
                 const popupId = ++sequenceRef.current;
                 const left = Math.round(loc.x + (popupId % 2 === 0 ? -10 : 12));
                 const top = Math.round(
-                    loc.y -
-                        Math.max(56, bounds.height * 0.78) -
-                        (popupId % 3) * 8,
+                    loc.y - Math.max(56, bounds.height * 0.78) - (popupId % 3) * 8,
                 );
 
                 const driftX = `${popupId % 2 === 0 ? -14 : 14}px`;
                 const driftRotate = `${popupId % 2 === 0 ? -7 : 7}deg`;
 
-                const popupType: FloatingDamageType = isKo
-                    ? "ko"
-                      : "hit";
-
                 const nextItem: FloatingDamage = {
                     id: popupId,
-                    value: isKo ? "K.O!" : isMiss ? "MISS" : damage,
+                    value: isKo ? "K.O!" : damage,
                     left,
                     top,
-                    type: popupType,
+                    isKo,
                     style: {
                         ["--damage-drift-x" as any]: driftX,
                         ["--damage-rotate" as any]: driftRotate,
@@ -127,29 +120,17 @@ export const DamageNumbersOverlay: FC = () => {
                         current.filter((item) => item.id !== popupId),
                     );
                 }, POPUP_LIFETIME_MS);
-            } catch (error) {
-                console.error(
-                    "[DamageNumbersOverlay] failed to place popup",
-                    error,
-                );
+            } catch {
+                return;
             }
         };
 
-        window.addEventListener(
-            "open-opponent-stats",
-            onStats as EventListener,
-        );
+        window.addEventListener("open-opponent-stats", onStats as EventListener);
         window.addEventListener("user_inspect_stats", onStats as EventListener);
 
         return () => {
-            window.removeEventListener(
-                "open-opponent-stats",
-                onStats as EventListener,
-            );
-            window.removeEventListener(
-                "user_inspect_stats",
-                onStats as EventListener,
-            );
+            window.removeEventListener("open-opponent-stats", onStats as EventListener);
+            window.removeEventListener("user_inspect_stats", onStats as EventListener);
         };
     }, []);
 
@@ -160,7 +141,11 @@ export const DamageNumbersOverlay: FC = () => {
             {items.map((item) => (
                 <div
                     key={item.id}
-                    className={`rp-damage-number rp-damage-number--${item.type}`}
+                    className={
+                        item.isKo
+                            ? "rp-damage-number rp-damage-number--ko"
+                            : "rp-damage-number"
+                    }
                     style={{
                         left: `${item.left}px`,
                         top: `${item.top}px`,
