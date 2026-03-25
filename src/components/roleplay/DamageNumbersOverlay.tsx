@@ -144,7 +144,7 @@ export const DamageNumbersOverlay: FC = () => {
                     className={
                         item.isKo
                             ? "rp-damage-number rp-damage-number--ko"
-                            : "rp-damage-number"
+                            : "rp-damage-number rp-damage-number--hit"
                     }
                     style={{
                         left: `${item.left}px`,
