@@ -8,10 +8,13 @@ import {
 } from "../../api";
 import "./DamageNumbersOverlay.scss";
 
-type DamageEventDetail = {
+type CombatPopupDetail = {
     userId?: number;
-    health?: number;
-    maxHealth?: number;
+    damage?: number;
+    isMiss?: boolean;
+    isKo?: boolean;
+    isCrit?: boolean;
+    isStun?: boolean;
 };
 
 type FloatingDamage = {
@@ -21,6 +24,9 @@ type FloatingDamage = {
     top: number;
     style: CSSProperties;
     isKo?: boolean;
+    isMiss?: boolean;
+    isCrit?: boolean;
+    isStun?: boolean;
 };
 
 const MAX_POPUPS = 12;
@@ -28,45 +34,31 @@ const POPUP_LIFETIME_MS = 1150;
 
 export const DamageNumbersOverlay: FC = () => {
     const [items, setItems] = useState<FloatingDamage[]>([]);
-    const healthByUserRef = useRef<Map<number, number>>(new Map());
     const sequenceRef = useRef(0);
 
     useEffect(() => {
-        const onStats = (event: Event) => {
-            const detail = (event as CustomEvent<DamageEventDetail>)?.detail;
+        const onCombatPopup = (event: Event) => {
+            const detail = (event as CustomEvent<CombatPopupDetail>)?.detail;
 
             if (!detail) return;
 
             const userId = Number(detail.userId || 0);
-            const health = Number(detail.health);
-            const maxHealth = Number(detail.maxHealth);
+            const damage = Number(detail.damage || 0);
+            const isMiss = Boolean(detail.isMiss);
+            const isKo = Boolean(detail.isKo);
+            const isCrit = Boolean(detail.isCrit);
+            const isStun = Boolean(detail.isStun);
 
-            if (!userId || !Number.isFinite(health)) return;
-
-            let previousHealth = healthByUserRef.current.get(userId);
-
-            if (previousHealth === undefined) {
-                if (Number.isFinite(maxHealth) && maxHealth > 0) {
-                    previousHealth = maxHealth;
-                } else {
-                    healthByUserRef.current.set(userId, health);
-                    return;
-                }
-            }
-
-            healthByUserRef.current.set(userId, health);
-
-            const damage = Math.round(previousHealth - health);
-            const isKo = health <= 0 && previousHealth > 0;
-
-            if (damage <= 0 && !isKo) return;
+            if (!userId) return;
+            if (!isMiss && !isKo && damage <= 0) return;
 
             try {
                 const roomSession = GetRoomSession();
 
                 if (!roomSession) return;
 
-                const userData = roomSession.userDataManager?.getUserData?.(userId);
+                const userData =
+                    roomSession.userDataManager?.getUserData?.(userId);
 
                 if (!userData || userData.roomIndex < 0) return;
 
@@ -91,7 +83,9 @@ export const DamageNumbersOverlay: FC = () => {
                 const popupId = ++sequenceRef.current;
                 const left = Math.round(loc.x + (popupId % 2 === 0 ? -10 : 12));
                 const top = Math.round(
-                    loc.y - Math.max(56, bounds.height * 0.78) - (popupId % 3) * 8,
+                    loc.y -
+                        Math.max(56, bounds.height * 0.78) -
+                        (popupId % 3) * 8,
                 );
 
                 const driftX = `${popupId % 2 === 0 ? -14 : 14}px`;
@@ -99,10 +93,13 @@ export const DamageNumbersOverlay: FC = () => {
 
                 const nextItem: FloatingDamage = {
                     id: popupId,
-                    value: isKo ? "K.O!" : damage,
+                    value: isKo ? "K.O!" : isMiss ? "MISS" : damage,
                     left,
                     top,
                     isKo,
+                    isMiss,
+                    isCrit,
+                    isStun,
                     style: {
                         ["--damage-drift-x" as any]: driftX,
                         ["--damage-rotate" as any]: driftRotate,
@@ -125,12 +122,16 @@ export const DamageNumbersOverlay: FC = () => {
             }
         };
 
-        window.addEventListener("open-opponent-stats", onStats as EventListener);
-        window.addEventListener("user_inspect_stats", onStats as EventListener);
+        window.addEventListener(
+            "rp-combat-popup",
+            onCombatPopup as EventListener,
+        );
 
         return () => {
-            window.removeEventListener("open-opponent-stats", onStats as EventListener);
-            window.removeEventListener("user_inspect_stats", onStats as EventListener);
+            window.removeEventListener(
+                "rp-combat-popup",
+                onCombatPopup as EventListener,
+            );
         };
     }, []);
 
@@ -144,7 +145,15 @@ export const DamageNumbersOverlay: FC = () => {
                     className={
                         item.isKo
                             ? "rp-damage-number rp-damage-number--ko"
-                            : "rp-damage-number rp-damage-number--hit"
+                            : item.isMiss
+                              ? "rp-damage-number rp-damage-number--miss"
+                              : item.isCrit && item.isStun
+                                ? "rp-damage-number rp-damage-number--crit-stun"
+                                : item.isCrit
+                                  ? "rp-damage-number rp-damage-number--crit"
+                                  : item.isStun
+                                    ? "rp-damage-number rp-damage-number--stun"
+                                    : "rp-damage-number rp-damage-number--hit"
                     }
                     style={{
                         left: `${item.left}px`,
