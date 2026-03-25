@@ -95,11 +95,6 @@ export const App: FC = () => {
                 setMessage("WebGL Required");
                 return;
 
-            case Nitro.WEBGL_CONTEXT_LOST:
-                setIsError(true);
-                setMessage("WebGL Context Lost - Reloading");
-                setTimeout(() => window.location.reload(), 1500);
-                return;
 
             case NitroCommunicationDemoEvent.CONNECTION_HANDSHAKING:
                 setPercent((prev) => prev + 20);
@@ -182,18 +177,11 @@ export const App: FC = () => {
     useLocalizationEvent(NitroLocalizationEvent.LOADED, handler);
     useConfigurationEvent(ConfigurationEvent.LOADED, handler);
     useConfigurationEvent(ConfigurationEvent.FAILED, handler);
-
-    /* ==============================================
-Init bridges (ClickThrough + EventBridge)
-===============================================*/
     useEffect(() => {
-        initClickThroughUsers(); // ✅ initializes click-through bridge once
+        initClickThroughUsers();
         initEventBridge();
     }, []);
 
-    /* ==============================================
-WebGL check & resize
-===============================================*/
     useEffect(() => {
         if (!WebGL.isWebGLAvailable()) {
             DispatchUiEvent(new NitroEvent(Nitro.WEBGL_UNAVAILABLE));
@@ -208,24 +196,6 @@ WebGL check & resize
         return () => window.removeEventListener("resize", resize);
     }, []);
 
-    /* ==============================================
-Disconnect overlay countdown
-===============================================*/
-    useEffect(() => {
-        if (!dcVisible) return;
-        if (dcSeconds <= 0) {
-            window.location.reload();
-            return;
-        }
-        const id = setTimeout(() => setDcSeconds((s) => s - 1), 1000);
-        return () => clearTimeout(id);
-    }, [dcVisible, dcSeconds]);
-
-    const reloadNow = () => window.location.reload();
-
-    /* ==============================================
-Render
-===============================================*/
     return (
         <PreloadProvider>
             <Base
