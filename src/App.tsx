@@ -11,7 +11,7 @@ import {
     WebGL,
 } from "@nitrots/nitro-renderer";
 
-import { FC, useCallback, useEffect, useState } from "react";
+import { FC, useCallback, useEffect, useRef, useState } from "react";
 import {
     DispatchUiEvent,
     GetCommunication,
@@ -65,18 +65,26 @@ export const App: FC = () => {
     const [percent, setPercent] = useState(0);
     const [imageRendering, setImageRendering] = useState<boolean>(true);
 
-    /* Disconnect overlay */
     const [dcVisible, setDcVisible] = useState(false);
-    const [dcSeconds, setDcSeconds] = useState(15);
 
-    if (!GetNitroInstance()) {
+    const bootstrappedRef = useRef(false);
+
+    useEffect(() => {
+        if (bootstrappedRef.current) return;
+        if (GetNitroInstance()) {
+            bootstrappedRef.current = true;
+            return;
+        }
+
         //@ts-ignore
         if (!NitroConfig) throw new Error("NitroConfig is not defined!");
 
         Nitro.bootstrap();
         const worker = new WorkerBuilder(IntervalWebWorker);
         Nitro.instance.setWorker(worker);
-    }
+
+        bootstrappedRef.current = true;
+    }, []);
 
     const handler = useCallback((event: NitroEvent) => {
         switch (event.type) {
@@ -97,8 +105,7 @@ export const App: FC = () => {
 
             case Nitro.WEBGL_CONTEXT_LOST:
                 setIsError(true);
-                setMessage("WebGL Context Lost - Reloading");
-                setTimeout(() => window.location.reload(), 1500);
+                setMessage("WebGL Context Lost");
                 return;
 
             case NitroCommunicationDemoEvent.CONNECTION_HANDSHAKING:
@@ -119,7 +126,7 @@ export const App: FC = () => {
                         "legacyTrack",
                         "authentication",
                         "authok",
-                        []
+                        [],
                     );
                 return;
 
@@ -128,7 +135,6 @@ export const App: FC = () => {
                 setIsError(true);
                 setMessage("Connection Error");
                 setDcVisible(true);
-                setDcSeconds(15);
                 return;
 
             case RoomEngineEvent.ENGINE_INITIALIZED:
@@ -138,7 +144,7 @@ export const App: FC = () => {
 
             case NitroLocalizationEvent.LOADED: {
                 const assetUrls = GetConfiguration<string[]>(
-                    "preload.assets.urls"
+                    "preload.assets.urls",
                 );
                 const urls: string[] = [];
 
@@ -146,8 +152,8 @@ export const App: FC = () => {
                     for (const url of assetUrls)
                         urls.push(
                             GetNitroInstance().core.configuration.interpolate(
-                                url
-                            )
+                                url,
+                            ),
                         );
 
                 GetNitroInstance().core.asset.downloadAssets(
@@ -160,20 +166,19 @@ export const App: FC = () => {
                             setIsError(true);
                             setMessage("Assets Failed");
                         }
-                    }
+                    },
                 );
                 return;
             }
         }
     }, []);
 
-    /* Event bindings */
     useMainEvent(Nitro.WEBGL_UNAVAILABLE, handler);
     useMainEvent(Nitro.WEBGL_CONTEXT_LOST, handler);
     useMainEvent(NitroCommunicationDemoEvent.CONNECTION_HANDSHAKING, handler);
     useMainEvent(
         NitroCommunicationDemoEvent.CONNECTION_HANDSHAKE_FAILED,
-        handler
+        handler,
     );
     useMainEvent(NitroCommunicationDemoEvent.CONNECTION_AUTHENTICATED, handler);
     useMainEvent(NitroCommunicationDemoEvent.CONNECTION_ERROR, handler);
@@ -183,17 +188,11 @@ export const App: FC = () => {
     useConfigurationEvent(ConfigurationEvent.LOADED, handler);
     useConfigurationEvent(ConfigurationEvent.FAILED, handler);
 
-    /* ==============================================
-Init bridges (ClickThrough + EventBridge)
-===============================================*/
     useEffect(() => {
-        initClickThroughUsers(); // ✅ initializes click-through bridge once
+        initClickThroughUsers();
         initEventBridge();
     }, []);
 
-    /* ==============================================
-WebGL check & resize
-===============================================*/
     useEffect(() => {
         if (!WebGL.isWebGLAvailable()) {
             DispatchUiEvent(new NitroEvent(Nitro.WEBGL_UNAVAILABLE));
@@ -208,24 +207,8 @@ WebGL check & resize
         return () => window.removeEventListener("resize", resize);
     }, []);
 
-    /* ==============================================
-Disconnect overlay countdown
-===============================================*/
-    useEffect(() => {
-        if (!dcVisible) return;
-        if (dcSeconds <= 0) {
-            window.location.reload();
-            return;
-        }
-        const id = setTimeout(() => setDcSeconds((s) => s - 1), 1000);
-        return () => clearTimeout(id);
-    }, [dcVisible, dcSeconds]);
-
     const reloadNow = () => window.location.reload();
 
-    /* ==============================================
-Render
-===============================================*/
     return (
         <PreloadProvider>
             <Base
@@ -262,7 +245,6 @@ Render
                 <DiscordVerificationView></DiscordVerificationView>
                 <PoliceCallView />
 
-                {/* Disconnect overlay */}
                 {dcVisible && (
                     <div
                         style={{
@@ -301,11 +283,11 @@ Render
                             </div>
 
                             <Text variant="white">
-                                Reloading in {dcSeconds}s
+                                Please reload to reconnect.
                             </Text>
 
                             <LayoutProgressBar
-                                progress={((15 - dcSeconds) / 15) * 100}
+                                progress={100}
                                 className="mt-2 large oly-progress"
                             />
 

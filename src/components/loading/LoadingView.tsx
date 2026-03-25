@@ -6,7 +6,6 @@ interface LoadingViewProps {
     isError: boolean;
     message: string;
     percent: number;
-    /** Optional: replace default logo path at runtime */
     logoSrc?: string;
 }
 
@@ -16,13 +15,14 @@ export const LoadingView: FC<LoadingViewProps> = ({
     percent = 0,
     logoSrc,
 }) => {
+    const safePercent = Math.max(0, Math.min(100, percent));
+
     return (
         <Column
             fullHeight
             position="relative"
             className="nitro-loading olympus"
         >
-            {/* Olympus background scene */}
             <div className="oly-sky" />
             <div className="oly-stars" />
             <div className="oly-clouds back" />
@@ -30,42 +30,77 @@ export const LoadingView: FC<LoadingViewProps> = ({
             <div className="oly-temple" />
             <div className="oly-clouds front" />
 
-            {/* Centerpiece logo */}
             <div className="oly-logo-wrap">
                 <div className="oly-glow" />
-                <div className="oly-logo" />
+                <div
+                    className="oly-logo"
+                    style={
+                        logoSrc
+                            ? { backgroundImage: `url(${logoSrc})` }
+                            : undefined
+                    }
+                />
                 <div className="oly-lightning" aria-hidden />
             </div>
-            {/* HUD / progress */}
+
             <Base fullHeight className="container h-100">
                 <Column fullHeight alignItems="center" justifyContent="end">
                     <Column size={6} className="oly-panel text-center py-4">
                         {isError && message ? (
-                            <Base className="fs-4 text-shadow">{message}</Base>
+                            <>
+                                <Text
+                                    fontSize={4}
+                                    variant="white"
+                                    className="text-shadow oly-status"
+                                >
+                                    Connection Issue
+                                </Text>
+                                <Text
+                                    fontSize={6}
+                                    variant="white"
+                                    className="text-shadow oly-substatus"
+                                >
+                                    {message}
+                                </Text>
+                            </>
                         ) : (
                             <>
                                 <Text
                                     fontSize={4}
                                     variant="white"
-                                    className="text-shadow"
+                                    className="text-shadow oly-status"
                                 >
-                                    {Math.max(
-                                        0,
-                                        Math.min(100, percent)
-                                    ).toFixed()}
-                                    %
+                                    Entering OlympusRP
                                 </Text>
-                                <LayoutProgressBar
-                                    progress={percent}
-                                    className="mt-2 large oly-progress"
-                                />
+
+                                <Text
+                                    fontSize={6}
+                                    variant="white"
+                                    className="text-shadow oly-substatus"
+                                >
+                                    {safePercent < 100
+                                        ? "Loading world assets..."
+                                        : "Finalizing connection..."}
+                                </Text>
+
+                                <div className="oly-progress-wrap">
+                                    <LayoutProgressBar
+                                        progress={safePercent}
+                                        className="oly-progress"
+                                    />
+                                </div>
+
+                                <div className="oly-progress-meta">
+                                    <span className="oly-progress-percent">
+                                        {safePercent.toFixed()}%
+                                    </span>
+                                </div>
                             </>
                         )}
                     </Column>
                 </Column>
             </Base>
 
-            {/* Greek key border */}
             <div className="oly-border top" />
             <div className="oly-border right" />
             <div className="oly-border bottom" />
