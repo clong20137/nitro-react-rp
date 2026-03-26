@@ -1,13 +1,12 @@
 import { RoomObjectCategory } from "@nitrots/nitro-renderer";
-import { FC, useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
+import { FC, useEffect, useMemo, useRef, useState } from "react";
 import {
     GetNitroInstance,
-    GetRoomObjectBounds,
-    GetRoomObjectScreenLocation,
     GetRoomSession,
     GetSessionDataManager,
 } from "../../api";
+import { ObjectLocationView } from "../room/widgets/object-location/ObjectLocationView";
+import passiveIcon from "../../icons/passive.png";
 import "./PassiveIndicatorOverlay.scss";
 
 declare global {
@@ -16,13 +15,21 @@ declare global {
     }
 }
 
-interface PassiveIndicatorItem {
+interface PassiveEntry {
     userId: number;
-    left: number;
-    top: number;
+    objectId: number;
+    visible: boolean;
+    fadingOut: boolean;
 }
 
-const PASSIVE_KEYS = ["passive", "isPassive", "passiveMode", "passive_mode"] as const;
+const PASSIVE_KEYS = [
+    "passive",
+    "isPassive",
+    "passiveMode",
+    "passive_mode",
+] as const;
+
+const FADE_OUT_MS = 180;
 
 const readPassiveValue = (payload: any): boolean | null => {
     if (!payload || typeof payload !== "object") return null;
@@ -36,20 +43,53 @@ const readPassiveValue = (payload: any): boolean | null => {
 
 const readUserId = (payload: any): number => {
     const value = Number(payload?.userId ?? payload?.webID ?? payload?.id ?? 0);
+
     return Number.isFinite(value) && value > 0 ? value : 0;
 };
 
 export const PassiveIndicatorOverlay: FC = () => {
     const [version, setVersion] = useState(0);
-    const [items, setItems] = useState<PassiveIndicatorItem[]>([]);
+    const [entries, setEntries] = useState<PassiveEntry[]>([]);
+    const fadeTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(
+        new Map()
+    );
 
     const passiveUsers = useMemo(() => {
         if (!window.__rpPassiveUsers) window.__rpPassiveUsers = {};
         return window.__rpPassiveUsers;
     }, []);
 
+    const clearFadeTimer = (userId: number) => {
+        const timer = fadeTimersRef.current.get(userId);
+
+        if (timer) {
+            clearTimeout(timer);
+            fadeTimersRef.current.delete(userId);
+        }
+    };
+
+    const resolveObjectId = (userId: number): number => {
+        try {
+            const roomSession = GetRoomSession();
+
+            if (!roomSession) return -1;
+
+            const userData = roomSession.userDataManager?.getUserData?.(userId);
+            const roomIndex = Number(userData?.roomIndex ?? -1);
+
+            if (roomIndex < 0) return -1;
+
+            return roomIndex;
+        } catch {
+            return -1;
+        }
+    };
+
     useEffect(() => {
-        const syncPassive = (userId: number, passive: boolean | null | undefined) => {
+        const syncPassive = (
+            userId: number,
+            passive: boolean | null | undefined
+        ) => {
             if (!userId || passive == null) return;
 
             if (passive) passiveUsers[userId] = true;
@@ -80,102 +120,179 @@ export const PassiveIndicatorOverlay: FC = () => {
         const onRoomLeave = () => {
             const selfUserId = Number(GetSessionDataManager().userId || 0);
             const keepSelf = selfUserId > 0 && !!passiveUsers[selfUserId];
+
             window.__rpPassiveUsers = keepSelf ? { [selfUserId]: true } : {};
             setVersion((value) => value + 1);
         };
 
-        window.addEventListener("rp_passive_state", onExplicitState as EventListener);
+        window.addEventListener(
+            "rp_passive_state",
+            onExplicitState as EventListener
+        );
         window.addEventListener("user_stats", onSelfStats as EventListener);
-        window.addEventListener("user_stats_update", onSelfStats as EventListener);
-        window.addEventListener("user_inspect_stats", onInspectStats as EventListener);
-        window.addEventListener("opponent_stats_update", onInspectStats as EventListener);
-        window.addEventListener("open-opponent-stats", onInspectStats as EventListener);
+        window.addEventListener(
+            "user_stats_update",
+            onSelfStats as EventListener
+        );
+        window.addEventListener(
+            "user_inspect_stats",
+            onInspectStats as EventListener
+        );
+        window.addEventListener(
+            "opponent_stats_update",
+            onInspectStats as EventListener
+        );
+        window.addEventListener(
+            "open-opponent-stats",
+            onInspectStats as EventListener
+        );
         window.addEventListener("room_leave", onRoomLeave as EventListener);
 
         return () => {
-            window.removeEventListener("rp_passive_state", onExplicitState as EventListener);
-            window.removeEventListener("user_stats", onSelfStats as EventListener);
-            window.removeEventListener("user_stats_update", onSelfStats as EventListener);
-            window.removeEventListener("user_inspect_stats", onInspectStats as EventListener);
-            window.removeEventListener("opponent_stats_update", onInspectStats as EventListener);
-            window.removeEventListener("open-opponent-stats", onInspectStats as EventListener);
-            window.removeEventListener("room_leave", onRoomLeave as EventListener);
+            window.removeEventListener(
+                "rp_passive_state",
+                onExplicitState as EventListener
+            );
+            window.removeEventListener(
+                "user_stats",
+                onSelfStats as EventListener
+            );
+            window.removeEventListener(
+                "user_stats_update",
+                onSelfStats as EventListener
+            );
+            window.removeEventListener(
+                "user_inspect_stats",
+                onInspectStats as EventListener
+            );
+            window.removeEventListener(
+                "opponent_stats_update",
+                onInspectStats as EventListener
+            );
+            window.removeEventListener(
+                "open-opponent-stats",
+                onInspectStats as EventListener
+            );
+            window.removeEventListener(
+                "room_leave",
+                onRoomLeave as EventListener
+            );
         };
     }, [passiveUsers]);
 
     useEffect(() => {
-        const update = () => {
-            const roomSession = GetRoomSession();
-            const activeEntries = Object.entries(window.__rpPassiveUsers || {}).filter(([, passive]) => !!passive);
+        const updateEntries = () => {
+            const activeUserIds = new Set(
+                Object.entries(window.__rpPassiveUsers || {})
+                    .filter(([, passive]) => !!passive)
+                    .map(([userId]) => Number(userId))
+                    .filter((userId) => userId > 0)
+            );
 
-            if (!roomSession || !activeEntries.length) {
-                setItems((previous) => (previous.length ? [] : previous));
-                return;
-            }
+            setEntries((previous) => {
+                const next: PassiveEntry[] = [];
+                const seen = new Set<number>();
 
-            const nextItems: PassiveIndicatorItem[] = [];
+                for (const userId of activeUserIds) {
+                    const objectId = resolveObjectId(userId);
 
-            for (const [userIdKey] of activeEntries) {
-                const userId = Number(userIdKey);
-                if (!userId) continue;
+                    if (objectId < 0) continue;
 
-                try {
-                    const userData = roomSession.userDataManager?.getUserData?.(userId);
-                    const roomIndex = Number(userData?.roomIndex ?? -1);
-                    if (roomIndex < 0) continue;
+                    seen.add(userId);
+                    clearFadeTimer(userId);
 
-                    const objectBounds = GetRoomObjectBounds(roomSession.roomId, roomIndex, RoomObjectCategory.UNIT, 1);
-                    const screenLocation = GetRoomObjectScreenLocation(roomSession.roomId, roomIndex, RoomObjectCategory.UNIT, 1);
+                    const existing = previous.find(
+                        (entry) => entry.userId === userId
+                    );
 
-                    if (!objectBounds || !screenLocation || objectBounds.width <= 0 || objectBounds.height <= 0) continue;
+                    next.push({
+                        userId,
+                        objectId,
+                        visible: true,
+                        fadingOut: false,
+                    });
 
-                    const left = Math.round(screenLocation.x - 40);
-                    const top = Math.round(screenLocation.y - objectBounds.height - 28);
-
-                    nextItems.push({ userId, left, top });
-                } catch {}
-            }
-
-            setItems((previous) => {
-                if (previous.length !== nextItems.length) return nextItems;
-
-                for (let index = 0; index < nextItems.length; index++) {
-                    const a = previous[index];
-                    const b = nextItems[index];
-
-                    if (!a || a.userId !== b.userId || a.left !== b.left || a.top !== b.top) {
-                        return nextItems;
+                    if (
+                        existing &&
+                        (existing.objectId !== objectId || existing.fadingOut)
+                    ) {
+                        next[next.length - 1] = {
+                            ...next[next.length - 1],
+                            objectId,
+                        };
                     }
                 }
 
-                return previous;
+                for (const entry of previous) {
+                    if (seen.has(entry.userId)) continue;
+
+                    if (entry.fadingOut) {
+                        next.push(entry);
+                        continue;
+                    }
+
+                    const fadingEntry: PassiveEntry = {
+                        ...entry,
+                        visible: true,
+                        fadingOut: true,
+                    };
+
+                    next.push(fadingEntry);
+
+                    if (!fadeTimersRef.current.has(entry.userId)) {
+                        const timer = setTimeout(() => {
+                            fadeTimersRef.current.delete(entry.userId);
+                            setEntries((current) =>
+                                current.filter(
+                                    (item) => item.userId !== entry.userId
+                                )
+                            );
+                        }, FADE_OUT_MS);
+
+                        fadeTimersRef.current.set(entry.userId, timer);
+                    }
+                }
+
+                return next;
             });
         };
 
-        update();
-        GetNitroInstance().ticker.add(update);
+        updateEntries();
+        GetNitroInstance().ticker.add(updateEntries);
 
         return () => {
-            GetNitroInstance().ticker.remove(update);
+            GetNitroInstance().ticker.remove(updateEntries);
+
+            for (const timer of fadeTimersRef.current.values()) {
+                clearTimeout(timer);
+            }
+
+            fadeTimersRef.current.clear();
         };
     }, [version]);
 
-    if (!items.length) return null;
+    if (!entries.length) return null;
 
-    return createPortal(
+    return (
         <>
-            {items.map((item) => (
-                <div
-                    key={item.userId}
-                    className="rp-passive-indicator"
-                    style={{ left: `${item.left}px`, top: `${item.top}px` }}
+            {entries.map((entry) => (
+                <ObjectLocationView
+                    key={entry.userId}
+                    objectId={entry.objectId}
+                    category={RoomObjectCategory.UNIT}
                 >
-                    <span className="rp-passive-indicator__icon">🛡</span>
-                    <span className="rp-passive-indicator__label">PASSIVE</span>
-                </div>
+                    <div
+                        className={`rp-passive-indicator ${entry.fadingOut ? "fade-out" : "fade-in"}`}
+                    >
+                        <img
+                            className="rp-passive-indicator__image"
+                            src={passiveIcon}
+                            alt="Passive"
+                        />
+                    </div>
+                </ObjectLocationView>
             ))}
-        </>,
-        document.body,
+        </>
     );
 };
 

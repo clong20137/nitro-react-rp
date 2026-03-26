@@ -244,6 +244,7 @@ Render
                     <MythicalBlueprintView></MythicalBlueprintView>
                     <HaircutOfferView></HaircutOfferView>
                     <DamageNumbersOverlay></DamageNumbersOverlay>
+                    <PassiveIndicatorOverlay></PassiveIndicatorOverlay>
                     {/*
                     <ArenaQueueView visible={true}></ArenaQueueView>
                     */}
