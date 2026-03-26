@@ -672,7 +672,7 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                 <div className="corporations-body">
                     {/* LEFT: corporation tiles */}
                     <div className="corporations-list">
-                        <div className="corp-list-title">Corporations</div>
+
 
                         <div
                             className="corp-list"
@@ -710,7 +710,10 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                                             aria-pressed={selected}
                                             aria-label={`${corp.name}, ${stock} in stock`}
                                         >
-                                            <div className="tile-icon">
+                                            <div
+                                                className="tile-icon"
+                                                title={corp.name}
+                                            >
                                                 {iconUrl ? (
                                                     <img
                                                         src={iconUrl}
@@ -725,20 +728,13 @@ export const CorporationsView: FC<CorporationsViewProps> = ({
                                                         🏢
                                                     </span>
                                                 )}
-                                            </div>
 
-                                            <div
-                                                className="tile-name"
-                                                title={corp.name}
-                                            >
-                                                {corp.name}
-                                            </div>
-
-                                            <div
-                                                className={`tile-stock ${tone}`}
-                                                aria-hidden="true"
-                                            >
-                                                {stock}
+                                                <div
+                                                    className={`tile-stock ${tone}`}
+                                                    aria-hidden="true"
+                                                >
+                                                    {stock}
+                                                </div>
                                             </div>
 
                                             <div

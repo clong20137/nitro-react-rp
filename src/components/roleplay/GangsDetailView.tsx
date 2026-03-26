@@ -943,7 +943,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                     <div className="popup-header">
                         <span>Confirm Disband</span>
                         <button
-                            className="close-button"
+                            className="c-button close-button"
                             onClick={() => setShowConfirmDeleteModal(false)}
                         />
                     </div>
@@ -1114,7 +1114,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                     <div className="popup-header">
                         <span>Edit Role</span>
                         <button
-                            className="close-button"
+                            className="c-button close-button"
                             onClick={() => setShowEditRoleModal(false)}
                         />
                     </div>
@@ -1210,7 +1210,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                     <div className="popup-header">
                         <span>Confirm Deletion</span>
                         <button
-                            className="close-button"
+                            className="c-button close-button"
                             onClick={() => setShowConfirmRoleDeleteModal(false)}
                         />
                     </div>
@@ -1307,7 +1307,7 @@ export const GangsDetailView: FC<GangsDetailViewProps> = ({ onClose }) => {
                     <div className="gang-name-text">{gangName}</div>
                 </div>
 
-                <button className="close-button" onClick={handleClose} />
+                <button className="c-button close-button" onClick={handleClose} />
             </div>
 
             {/* Tabs */}

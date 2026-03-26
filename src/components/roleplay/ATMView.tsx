@@ -5,19 +5,24 @@ import { ATMWithdrawComposer } from "@nitrots/nitro-renderer/src/nitro/communica
 import "./ATMView.scss";
 
 type Mode = "menu" | "deposit" | "withdraw";
+type Stage = "insert" | Mode;
 type ATMPayload = { username?: string; cash?: number; bank?: number };
 
 const LS_KEY_POS = "atm_view_pos_v1";
+const OPEN_CLASS_MS = 220;
+const CLOSE_CLASS_MS = 180;
+const CARD_INSERT_MS = 700;
 
 export const ATMView: FC = () => {
     const [visible, setVisible] = useState(false);
-    const [mode, setMode] = useState<Mode>("menu");
+    const [isClosing, setIsClosing] = useState(false);
+    const [stage, setStage] = useState<Stage>("insert");
     const [bank, setBank] = useState(0);
     const [cash, setCash] = useState(0);
     const [amount, setAmount] = useState(0);
     const [username, setUsername] = useState<string>("");
+    const [isCardAnimating, setIsCardAnimating] = useState(false);
 
-    // draggable state
     const [pos, setPos] = useState<{ x: number; y: number }>(() => {
         try {
             const saved = localStorage.getItem(LS_KEY_POS);
@@ -25,97 +30,111 @@ export const ATMView: FC = () => {
         } catch {}
         return { x: 40, y: 80 };
     });
+
     const dragRef = useRef<HTMLDivElement | null>(null);
     const dragging = useRef({ active: false, offX: 0, offY: 0 });
+    const closeTimer = useRef<number | null>(null);
+    const cardTimer = useRef<number | null>(null);
 
-    // helpers
-    const clamp = (v: number, min: number, max: number) =>
-        Math.max(min, Math.min(max, v));
-    const nz = (n: any) => (Number.isFinite(n) ? Number(n) : 0);
+    const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+    const nz = (value: unknown) => (Number.isFinite(value) ? Number(value) : 0);
 
-    // ----- EVENT SYNC -----
+    const clearTimers = () => {
+        if (closeTimer.current) {
+            window.clearTimeout(closeTimer.current);
+            closeTimer.current = null;
+        }
+
+        if (cardTimer.current) {
+            window.clearTimeout(cardTimer.current);
+            cardTimer.current = null;
+        }
+    };
+
+    useEffect(() => () => clearTimers(), []);
+
     useEffect(() => {
-        const apply = (d: ATMPayload | undefined) => {
-            if (!d) return;
-            if (typeof d.username === "string") setUsername(d.username);
-            if (typeof d.bank === "number") setBank(Math.max(0, nz(d.bank)));
-            if (typeof d.cash === "number") setCash(Math.max(0, nz(d.cash)));
+        const apply = (payload?: ATMPayload) => {
+            if (!payload) return;
+            if (typeof payload.username === "string") setUsername(payload.username);
+            if (typeof payload.bank === "number") setBank(Math.max(0, nz(payload.bank)));
+            if (typeof payload.cash === "number") setCash(Math.max(0, nz(payload.cash)));
         };
 
-        // Open -> set & show
-        const onOpen = (e: Event) => {
-            apply((e as CustomEvent<ATMPayload>).detail);
+        const onOpen = (event: Event) => {
+            apply((event as CustomEvent<ATMPayload>).detail);
+            clearTimers();
             setAmount(0);
-            setMode("menu");
+            setStage("insert");
+            setIsCardAnimating(false);
+            setIsClosing(false);
             setVisible(true);
         };
 
-        // Live ATM updates (e.g., after server confirms a txn or on login fanout)
-        const onATMUpdate = (e: Event) =>
-            apply((e as CustomEvent<ATMPayload>).detail);
-
-        // Global stats fanout (make sure your bridge fires these from UserStatsEvent)
-        const onStats = (e: Event) =>
-            apply((e as CustomEvent<ATMPayload>).detail);
-        const onStatsUpdate = (e: Event) =>
-            apply((e as CustomEvent<ATMPayload>).detail);
+        const onATMUpdate = (event: Event) => apply((event as CustomEvent<ATMPayload>).detail);
+        const onStats = (event: Event) => apply((event as CustomEvent<ATMPayload>).detail);
+        const onStatsUpdate = (event: Event) => apply((event as CustomEvent<ATMPayload>).detail);
 
         window.addEventListener("atm_open", onOpen as EventListener);
         window.addEventListener("atm_update", onATMUpdate as EventListener);
         window.addEventListener("user_stats", onStats as EventListener);
-        window.addEventListener(
-            "user_stats_update",
-            onStatsUpdate as EventListener
-        );
+        window.addEventListener("user_stats_update", onStatsUpdate as EventListener);
 
         return () => {
             window.removeEventListener("atm_open", onOpen as EventListener);
-            window.removeEventListener(
-                "atm_update",
-                onATMUpdate as EventListener
-            );
+            window.removeEventListener("atm_update", onATMUpdate as EventListener);
             window.removeEventListener("user_stats", onStats as EventListener);
-            window.removeEventListener(
-                "user_stats_update",
-                onStatsUpdate as EventListener
-            );
+            window.removeEventListener("user_stats_update", onStatsUpdate as EventListener);
         };
     }, []);
 
-    // Close on Esc
     useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") setVisible(false);
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === "Escape") close();
         };
+
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
+    });
+
+    const close = useCallback(() => {
+        clearTimers();
+        setIsClosing(true);
+        closeTimer.current = window.setTimeout(() => {
+            setVisible(false);
+            setIsClosing(false);
+            setStage("insert");
+            setAmount(0);
+            setIsCardAnimating(false);
+        }, CLOSE_CLASS_MS);
     }, []);
 
-    // ----- DRAG -----
-    const onHeaderDown = (ev: React.MouseEvent) => {
+    const beginCardInsert = useCallback(() => {
+        if (isCardAnimating) return;
+
+        setIsCardAnimating(true);
+        cardTimer.current = window.setTimeout(() => {
+            setStage("menu");
+            setIsCardAnimating(false);
+        }, CARD_INSERT_MS);
+    }, [isCardAnimating]);
+
+    const onHeaderDown = (event: React.MouseEvent) => {
         if (!dragRef.current) return;
         dragging.current.active = true;
-        dragging.current.offX = ev.clientX - pos.x;
-        dragging.current.offY = ev.clientY - pos.y;
-        (ev.currentTarget as HTMLElement).style.cursor = "grabbing";
+        dragging.current.offX = event.clientX - pos.x;
+        dragging.current.offY = event.clientY - pos.y;
+        (event.currentTarget as HTMLElement).style.cursor = "grabbing";
         window.addEventListener("mousemove", onHeaderMove);
         window.addEventListener("mouseup", onHeaderUp);
     };
 
-    const onHeaderMove = (ev: MouseEvent) => {
+    const onHeaderMove = (event: MouseEvent) => {
         if (!dragging.current.active || !dragRef.current) return;
         const root = dragRef.current;
-        const x = clamp(
-            ev.clientX - dragging.current.offX,
-            0,
-            window.innerWidth - root.offsetWidth
-        );
-        const y = clamp(
-            ev.clientY - dragging.current.offY,
-            0,
-            window.innerHeight - root.offsetHeight
-        );
-        setPos({ x, y });
+        const nextX = clamp(event.clientX - dragging.current.offX, 0, window.innerWidth - root.offsetWidth);
+        const nextY = clamp(event.clientY - dragging.current.offY, 0, window.innerHeight - root.offsetHeight);
+        setPos({ x: nextX, y: nextY });
     };
 
     const onHeaderUp = () => {
@@ -123,33 +142,28 @@ export const ATMView: FC = () => {
         try {
             localStorage.setItem(LS_KEY_POS, JSON.stringify(pos));
         } catch {}
-        const header = document.querySelector(
-            ".atm-header"
-        ) as HTMLElement | null;
+        const header = document.querySelector(".atm-header") as HTMLElement | null;
         if (header) header.style.cursor = "grab";
         window.removeEventListener("mousemove", onHeaderMove);
         window.removeEventListener("mouseup", onHeaderUp);
     };
 
-    // ----- UI actions -----
-    const close = useCallback(() => {
-        setVisible(false);
-        setAmount(0);
-    }, []);
-
-    const appendDigit = (d: number) => {
+    const appendDigit = (digit: number) => {
         setAmount((prev) => {
-            let next = prev * 10 + d;
+            let next = prev * 10 + digit;
             if (next > 1_000_000) next = 1_000_000;
             return next;
         });
     };
+
     const clearAmount = () => setAmount(0);
+
+    const mode = stage === "deposit" || stage === "withdraw" ? stage : "menu";
 
     const quicks = useMemo(() => {
         const base = [3, 15, 100, 150, 500];
         base.push(mode === "withdraw" ? bank : cash);
-        return Array.from(new Set(base.filter((v) => v > 0))).slice(0, 6);
+        return Array.from(new Set(base.filter((value) => value > 0))).slice(0, 6);
     }, [bank, cash, mode]);
 
     const canEnter = useMemo(() => {
@@ -164,19 +178,19 @@ export const ATMView: FC = () => {
 
         if (mode === "withdraw") {
             SendMessageComposer(new ATMWithdrawComposer(amount));
-            // optimistic (will auto-correct on next user_stats/atm_update)
-            setBank((b) => Math.max(0, b - amount));
-            setCash((c) => Math.max(0, c + amount));
-        } else if (mode === "deposit") {
+            setBank((prev) => Math.max(0, prev - amount));
+            setCash((prev) => Math.max(0, prev + amount));
+        }
+
+        if (mode === "deposit") {
             SendMessageComposer(new ATMDepositComposer(amount));
-            // optimistic (will auto-correct on next user_stats/atm_update)
-            setCash((c) => Math.max(0, c - amount));
-            setBank((b) => Math.max(0, b + amount));
+            setCash((prev) => Math.max(0, prev - amount));
+            setBank((prev) => Math.max(0, prev + amount));
         }
 
         setAmount(0);
-        setMode("menu");
-    }, [canEnter, amount, mode]);
+        setStage("menu");
+    }, [amount, canEnter, mode]);
 
     if (!visible) return null;
 
@@ -184,52 +198,62 @@ export const ATMView: FC = () => {
         <div className="atm-view-overlay">
             <div
                 ref={dragRef}
-                className={`atm-view wanted-skin enter-br ${
-                    mode !== "menu" ? "is-io" : "is-menu"
-                }`}
+                className={`atm-view ${isClosing ? "is-exiting" : "is-entering"}`}
                 style={{ left: pos.x, top: pos.y }}
             >
-                {/* Header */}
                 <div className="atm-header" onMouseDown={onHeaderDown}>
-                    <span className="atm-title">
-                        ATM {username ? ` Welcome, ${username}` : ""}
-                    </span>
-                    <button
-                        className="close-button"
-                        onClick={close}
-                        aria-label="Close"
-                    />
+                    <span className="atm-title">ATM</span>
+                    <button className="atm-close" onClick={close} aria-label="Close" />
                 </div>
 
-                {/* Content */}
                 <div className="atm-content">
-                    {mode === "menu" && (
+                    {stage === "insert" && (
+                        <div className="atm-insert-screen">
+                            <div className="atm-insert-prompt">Click your card to insert</div>
+                            <div className="atm-slot-area">
+                                <div className="atm-card-slot" />
+                                <button
+                                    className={`atm-card ${isCardAnimating ? "is-inserting" : ""}`}
+                                    onClick={beginCardInsert}
+                                    disabled={isCardAnimating}
+                                >
+                                    <span className="atm-card-chip" />
+                                    <span className="atm-card-tier">STANDARD</span>
+                                    <span className="atm-card-number">4000 1200 0900 0008</span>
+                                    <span className="atm-card-name">{username || "MAVERICK"}</span>
+                                    <span className="atm-card-expiry">27/2069</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {stage === "menu" && (
                         <div className="atm-menu">
-                            <div className="info-cards">
-                                <div className="card">
-                                    <div className="label">BANK BALANCE</div>
-                                    <div className="value">${bank}</div>
+                            <div className="atm-balance-list">
+                                <div className="atm-balance-card">
+                                    <span className="atm-balance-label">BANK BALANCE</span>
+                                    <span className="atm-balance-value">${bank}</span>
                                 </div>
-                                <div className="card">
-                                    <div className="label">CASH BALANCE</div>
-                                    <div className="value">${cash}</div>
+                                <div className="atm-balance-card">
+                                    <span className="atm-balance-label">CASH ON HAND</span>
+                                    <span className="atm-balance-value">${cash}</span>
                                 </div>
                             </div>
 
-                            <div className="menu-actions">
+                            <div className="atm-menu-actions">
                                 <button
-                                    className="btn primary"
+                                    className="atm-theme-button"
                                     onClick={() => {
-                                        setMode("deposit");
+                                        setStage("deposit");
                                         setAmount(0);
                                     }}
                                 >
                                     Deposit
                                 </button>
                                 <button
-                                    className="btn success"
+                                    className="atm-theme-button atm-theme-button--accent"
                                     onClick={() => {
-                                        setMode("withdraw");
+                                        setStage("withdraw");
                                         setAmount(0);
                                     }}
                                 >
@@ -239,115 +263,77 @@ export const ATMView: FC = () => {
                         </div>
                     )}
 
-                    {(mode === "deposit" || mode === "withdraw") && (
+                    {(stage === "deposit" || stage === "withdraw") && (
                         <div className="atm-io">
-                            <div className="io-top">
+                            <div className="atm-io-header-row">
                                 <button
-                                    className="link"
+                                    className="atm-back-button"
                                     onClick={() => {
-                                        setMode("menu");
+                                        setStage("menu");
                                         setAmount(0);
                                     }}
                                 >
-                                    ← Back
+                                    ←
                                 </button>
-                                <div className="io-title">
-                                    {mode === "withdraw"
-                                        ? "Withdraw"
-                                        : "Deposit"}
-                                </div>
-                                <div className="io-who">{username}</div>
+                                <div className="atm-io-title">{stage === "withdraw" ? "WITHDRAW" : "DEPOSIT"}</div>
                             </div>
 
-                            <div className="readout">
-                                <div className="row">
-                                    <div className="label">
-                                        {mode === "withdraw"
-                                            ? "BANK BALANCE"
-                                            : "CASH AVAILABLE"}
-                                    </div>
-                                    <div className="value">
-                                        ${mode === "withdraw" ? bank : cash}
-                                    </div>
-                                </div>
+                            <div className="atm-amount-display">
+                                <span className="atm-amount-label">AMOUNT</span>
+                                <span className="atm-amount-value">${amount}</span>
                             </div>
 
-                            <div className="readout amount">
-                                <div className="label">
-                                    AMOUNT TO{" "}
-                                    {mode === "withdraw"
-                                        ? "WITHDRAW"
-                                        : "DEPOSIT"}
-                                </div>
-                                <div className="big">${amount}</div>
-                            </div>
+                            <div className="atm-quick-grid">
+                                {quicks.map((quickValue, index) => {
+                                    const disabled =
+                                        (stage === "withdraw" && quickValue > bank) ||
+                                        (stage === "deposit" && quickValue > cash);
 
-                            <div className="io-grid">
-                                <div className="pad">
-                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                                    return (
                                         <button
-                                            key={n}
-                                            className="key"
-                                            onClick={() => appendDigit(n)}
+                                            key={`${quickValue}-${index}`}
+                                            className="atm-quick-button"
+                                            disabled={disabled}
+                                            onClick={() => setAmount(quickValue)}
                                         >
-                                            {n}
+                                            +${quickValue}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="atm-keypad-wrap">
+                                <div className="atm-keypad-grid">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
+                                        <button key={digit} className="atm-key" onClick={() => appendDigit(digit)}>
+                                            {digit}
                                         </button>
                                     ))}
-                                    <button
-                                        className="key wide"
-                                        onClick={() => appendDigit(0)}
-                                    >
+                                    <button className="atm-key atm-key--wide" onClick={() => appendDigit(0)}>
                                         0
                                     </button>
-                                    <button
-                                        className="key warn"
-                                        onClick={clearAmount}
-                                    >
-                                        Clear
-                                    </button>
-                                    <button
-                                        className="key ok"
-                                        disabled={!canEnter}
-                                        onClick={onEnter}
-                                    >
-                                        Enter
-                                    </button>
-                                    <button
-                                        className="key danger wide"
-                                        onClick={() => {
-                                            setMode("menu");
-                                            setAmount(0);
-                                        }}
-                                    >
-                                        Cancel
+                                    <button className="atm-key atm-key--back" onClick={() => setStage("menu")}>
+                                        BACK
                                     </button>
                                 </div>
 
-                                <div className="quick">
-                                    {quicks.map((q, i) => {
-                                        const disabled =
-                                            (mode === "withdraw" && q > bank) ||
-                                            (mode === "deposit" && q > cash);
-                                        return (
-                                            <button
-                                                key={i}
-                                                className={`btn quick-btn ${
-                                                    disabled ? "disabled" : ""
-                                                }`}
-                                                disabled={disabled}
-                                                onClick={() => setAmount(q)}
-                                            >
-                                                ${q}
-                                            </button>
-                                        );
-                                    })}
+                                <div className="atm-side-actions">
+                                    <button className="atm-theme-button atm-theme-button--danger" onClick={clearAmount}>
+                                        C
+                                    </button>
+                                    <button className="atm-theme-button atm-theme-button--accent atm-ok-button" disabled={!canEnter} onClick={onEnter}>
+                                        OK
+                                    </button>
                                 </div>
+                            </div>
+
+                            <div className="atm-footer-balance">
+                                <span className="atm-footer-label">{stage === "withdraw" ? "BANK BALANCE" : "CASH ON HAND"}</span>
+                                <span className="atm-footer-value">${stage === "withdraw" ? bank : cash}</span>
                             </div>
                         </div>
                     )}
                 </div>
-
-                <div className="resize-handle" />
             </div>
         </div>
     );
