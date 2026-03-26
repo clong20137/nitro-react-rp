@@ -48,6 +48,7 @@ import { HaircutOfferView } from "../roleplay/HaircutOfferView";
 import TargetOutlineOverlay from "../roleplay/TargetOutlineOverlay";
 import PassiveIndicatorOverlay from "../roleplay/PassiveIndicatorOverlay";
 import DamageNumbersOverlay from "../roleplay/DamageNumbersOverlay";
+import { InteractiveFurnitureIconsOverlay } from '../roleplay/InteractiveFurnitureIconsOverlay';
 /* -----------------------------------------------------------
 Click-through helpers
 ----------------------------------------------------------- */
@@ -221,6 +222,7 @@ Render
                         />
                     )}
 
+                    <InteractiveFurnitureIconsOverlay />
                     <LeftSidebarView />
                     <GangInviteContainer />
                     <ItemOfferPopupManager />
