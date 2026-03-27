@@ -49,6 +49,7 @@ import TargetOutlineOverlay from "../roleplay/TargetOutlineOverlay";
 import PassiveIndicatorOverlay from "../roleplay/PassiveIndicatorOverlay";
 import DamageNumbersOverlay from "../roleplay/DamageNumbersOverlay";
 import { InteractiveFurnitureIconsOverlay } from '../roleplay/InteractiveFurnitureIconsOverlay';
+import MobileVitalsView from "../roleplay/MobileVitalsView";
 /* -----------------------------------------------------------
 Click-through helpers
 ----------------------------------------------------------- */
@@ -244,6 +245,7 @@ Render
                     <MythicalBlueprintView></MythicalBlueprintView>
                     <HaircutOfferView></HaircutOfferView>
                     <DamageNumbersOverlay></DamageNumbersOverlay>
+                    <MobileVitalsView></MobileVitalsView>
                     <PassiveIndicatorOverlay></PassiveIndicatorOverlay>
                     {/*
                     <ArenaQueueView visible={true}></ArenaQueueView>

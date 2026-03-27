@@ -8,7 +8,7 @@
     border-radius: 16px;
     background: var(--rp-primary);
     border: 3px solid var(--rp-primary-border);
-    box-shadow: 0 2px #000000b3, 0 0 0 1px #000000b3;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
     z-index: 1000;
 }
 
@@ -26,15 +26,8 @@
     outline: none;
     cursor: pointer;
     position: relative; // needed for badge + tooltip positioning
-
     /* smooth hover/press animation */
-    transition:
-        transform 120ms ease-out,
-        box-shadow 120ms ease-out,
-        filter 120ms ease-out,
-        background 120ms ease-out,
-        border-color 120ms ease-out;
-
+    transition: transform 120ms ease-out, box-shadow 120ms ease-out, filter 120ms ease-out, background 120ms ease-out, border-color 120ms ease-out;
     &:hover {
         filter: brightness(1.12);
         transform: translateY(-1px);
@@ -42,7 +35,6 @@
         border-color: var(--rp-primary-light);
         background: var(--rp-primary-dark);
     }
-
     &:active {
         transform: translateY(1px);
         box-shadow: 0 0 3px rgba(0, 0, 0, .6);
@@ -50,7 +42,10 @@
     }
 }
 
+
 /* ===== Tooltip (like “Current Room”) ===== */
+
+
 /* Uses data-label from the button */
 
 .dock-tile::before,
@@ -63,7 +58,9 @@
     z-index: 20;
 }
 
+
 /* bubble */
+
 .dock-tile::before {
     content: attr(data-label);
     bottom: 64px; // above tile
@@ -78,7 +75,9 @@
     box-shadow: 0 3px 8px rgba(0, 0, 0, .6);
 }
 
+
 /* arrow pointing down to tile */
+
 .dock-tile::after {
     content: "";
     bottom: 56px;
@@ -90,7 +89,9 @@
     border-top: 6px solid #000;
 }
 
+
 /* show on hover/focus */
+
 .dock-tile:hover::before,
 .dock-tile:hover::after,
 .dock-tile:focus-visible::before,
@@ -99,14 +100,19 @@
     transform: translateX(-50%) translateY(0);
 }
 
+
 /* ===== Icons & specific tiles ===== */
 
+
 /* PHONE tile */
+
 .phone-tile {
     background: var(--rp-panel);
 }
 
+
 /* actual phone image – shrink so it fits nicely */
+
 .phone-icon {
     width: 40px;
     height: 40px;
@@ -116,12 +122,16 @@
     transition: filter 120ms ease-out;
 }
 
+
 /* extra pop on hover */
+
 .phone-tile:hover .phone-icon {
     filter: brightness(1.2);
 }
 
+
 /* generic sprite icons inside other tiles (like sidebar chips) */
+
 .dock-icon {
     display: block;
     width: 40px;
@@ -139,12 +149,16 @@
     filter: brightness(1.06) drop-shadow(0 1px 0 rgba(0, 0, 0, .35));
 }
 
+
 /* Arena icon (CSS sprite) */
+
 .dock-icon-arena {
     background-image: url('../../icons/kills.png');
 }
 
+
 /* Clothing store icon (CSS sprite) */
+
 .dock-icon-clothing {
     background-image: url('../../icons/clothing.png');
 }
@@ -153,7 +167,9 @@
     background-image: url('../../icons/phone.png');
 }
 
+
 /* Little red badge in the top-right corner of the tile */
+
 .dock-notification-badge {
     position: absolute;
     top: -4px;
@@ -173,7 +189,9 @@
     font-weight: 700;
 }
 
+
 /* Shake animation for the phone tile when new orders arrive */
+
 .dock-shake {
     animation: dock-shake 0.4s ease;
 }
@@ -182,32 +200,30 @@
     0% {
         transform: translateX(0);
     }
-
     20% {
         transform: translateX(-2px);
     }
-
     40% {
         transform: translateX(2px);
     }
-
     60% {
         transform: translateX(-2px);
     }
-
     80% {
         transform: translateX(2px);
     }
-
     100% {
         transform: translateX(0);
     }
 }
 
+
 /* old glyph no longer used, safe to keep or delete */
+
 .phone-glyph {
     display: none;
 }
+
 
 /* =========================================================
 Bottom Right Dock — Mobile Friendly Upgrade
@@ -215,13 +231,16 @@ Bottom Right Dock — Mobile Friendly Upgrade
 no hover-tooltips on touch, optional compact mode)
 ========================================================= */
 
+
 /* Desktop stays as-is (your current code) */
+
 
 /* =========================
 MOBILE RULES
 ========================= */
+
 @media (max-width: 768px) {
-    :root {
+     :root {
         --chatbar-h: 60px;
         /* should match your mobile chatbar var */
         --chatbar-gap: 8px;
@@ -229,7 +248,6 @@ MOBILE RULES
         --dock-gap: 10px;
         /* gap above chatbar */
     }
-
     /* Dock becomes a bottom-centered pill above chatbar */
     .bottom-right-dock {
         right: -28px;
@@ -237,56 +255,43 @@ MOBILE RULES
         display: flex;
         flex-direction: column;
         transform: translateX(-50%);
-
         /* sit above chatbar + iOS home indicator */
         bottom: calc(env(safe-area-inset-bottom) + var(--chatbar-gap) + var(--chatbar-h) + var(--dock-gap));
-
         /* prevent taking full width but allow fitting on small screens */
         max-width: calc(100vw - 16px);
         width: auto;
-
         padding: 6px 8px;
         gap: 6px;
-
         /* slightly more translucent on mobile */
-        background: rgba(13, 96, 145, 0.92);
+        background: var(--rp-primary);
         border-width: 2px;
         border-radius: 14px;
-
         /* one-line row; scroll horizontally if more tiles appear */
         overflow-x: auto;
         overflow-y: hidden;
         -webkit-overflow-scrolling: touch;
         white-space: nowrap;
-
         /* hide scrollbar (still scrolls) */
         scrollbar-width: none;
-
         &::-webkit-scrollbar {
             display: none;
         }
-
         z-index: 3200;
     }
-
     .dock-tile {
         /* Apple tap target friendly, but tighter than desktop */
         width: 44px;
         height: 44px;
         border-width: 2px;
         border-radius: 10px;
-
         flex: 0 0 auto;
         /* don’t shrink in scroll container */
-
         /* less “floaty” motion on mobile */
         transition: transform 100ms ease-out, filter 100ms ease-out, background 100ms ease-out, border-color 100ms ease-out;
-
         /* prevent 300ms delay behaviors & highlight */
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
     }
-
     /* reduce hover effects on mobile (they can cause weird “stuck” states) */
     .dock-tile:hover {
         transform: none;
@@ -295,19 +300,16 @@ MOBILE RULES
         border-color: #2077ab;
         background: var(--rp-panel);
     }
-
     .dock-tile:active {
         transform: translateY(1px);
         filter: brightness(0.98);
     }
-
     /* icons scale down */
     .dock-icon,
     .phone-icon {
         width: 28px;
         height: 28px;
     }
-
     /* badges scale down */
     .dock-notification-badge {
         top: -3px;
@@ -318,7 +320,6 @@ MOBILE RULES
         line-height: 14px;
         box-shadow: 0 0 0 2px rgba(0, 103, 179, 0.9);
     }
-
     /* Tooltips are hover-based; disable on touch */
     .dock-tile::before,
     .dock-tile::after {
@@ -326,21 +327,21 @@ MOBILE RULES
     }
 }
 
+
 /* =========================
 EXTRA SMALL PHONES (optional)
 If someone is on a smaller iPhone, tighten a bit more.
 ========================= */
+
 @media (max-width: 390px) {
     .bottom-right-dock {
         padding: 6px 6px;
         gap: 5px;
     }
-
     .dock-tile {
         width: 42px;
         height: 42px;
     }
-
     .dock-icon,
     .phone-icon {
         width: 26px;
@@ -348,11 +349,13 @@ If someone is on a smaller iPhone, tighten a bit more.
     }
 }
 
+
 /* =========================
 iOS Keyboard Open Safety (optional, CSS-only best-effort)
 When the keyboard is open, fixed UI can feel cramped.
 If you add a class to body like .keyboard-open, it can tuck.
 ========================= */
+
 @media (max-width: 768px) {
     body.keyboard-open .bottom-right-dock {
         /* slide dock down a bit (still above safe area) */

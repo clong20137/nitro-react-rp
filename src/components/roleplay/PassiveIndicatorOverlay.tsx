@@ -51,7 +51,7 @@ export const PassiveIndicatorOverlay: FC = () => {
     const [version, setVersion] = useState(0);
     const [entries, setEntries] = useState<PassiveEntry[]>([]);
     const fadeTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(
-        new Map()
+        new Map(),
     );
 
     const passiveUsers = useMemo(() => {
@@ -88,7 +88,7 @@ export const PassiveIndicatorOverlay: FC = () => {
     useEffect(() => {
         const syncPassive = (
             userId: number,
-            passive: boolean | null | undefined
+            passive: boolean | null | undefined,
         ) => {
             if (!userId || passive == null) return;
 
@@ -127,55 +127,55 @@ export const PassiveIndicatorOverlay: FC = () => {
 
         window.addEventListener(
             "rp_passive_state",
-            onExplicitState as EventListener
+            onExplicitState as EventListener,
         );
         window.addEventListener("user_stats", onSelfStats as EventListener);
         window.addEventListener(
             "user_stats_update",
-            onSelfStats as EventListener
+            onSelfStats as EventListener,
         );
         window.addEventListener(
             "user_inspect_stats",
-            onInspectStats as EventListener
+            onInspectStats as EventListener,
         );
         window.addEventListener(
             "opponent_stats_update",
-            onInspectStats as EventListener
+            onInspectStats as EventListener,
         );
         window.addEventListener(
             "open-opponent-stats",
-            onInspectStats as EventListener
+            onInspectStats as EventListener,
         );
         window.addEventListener("room_leave", onRoomLeave as EventListener);
 
         return () => {
             window.removeEventListener(
                 "rp_passive_state",
-                onExplicitState as EventListener
+                onExplicitState as EventListener,
             );
             window.removeEventListener(
                 "user_stats",
-                onSelfStats as EventListener
+                onSelfStats as EventListener,
             );
             window.removeEventListener(
                 "user_stats_update",
-                onSelfStats as EventListener
+                onSelfStats as EventListener,
             );
             window.removeEventListener(
                 "user_inspect_stats",
-                onInspectStats as EventListener
+                onInspectStats as EventListener,
             );
             window.removeEventListener(
                 "opponent_stats_update",
-                onInspectStats as EventListener
+                onInspectStats as EventListener,
             );
             window.removeEventListener(
                 "open-opponent-stats",
-                onInspectStats as EventListener
+                onInspectStats as EventListener,
             );
             window.removeEventListener(
                 "room_leave",
-                onRoomLeave as EventListener
+                onRoomLeave as EventListener,
             );
         };
     }, [passiveUsers]);
@@ -186,7 +186,7 @@ export const PassiveIndicatorOverlay: FC = () => {
                 Object.entries(window.__rpPassiveUsers || {})
                     .filter(([, passive]) => !!passive)
                     .map(([userId]) => Number(userId))
-                    .filter((userId) => userId > 0)
+                    .filter((userId) => userId > 0),
             );
 
             setEntries((previous) => {
@@ -202,7 +202,7 @@ export const PassiveIndicatorOverlay: FC = () => {
                     clearFadeTimer(userId);
 
                     const existing = previous.find(
-                        (entry) => entry.userId === userId
+                        (entry) => entry.userId === userId,
                     );
 
                     next.push({
@@ -244,8 +244,8 @@ export const PassiveIndicatorOverlay: FC = () => {
                             fadeTimersRef.current.delete(entry.userId);
                             setEntries((current) =>
                                 current.filter(
-                                    (item) => item.userId !== entry.userId
-                                )
+                                    (item) => item.userId !== entry.userId,
+                                ),
                             );
                         }, FADE_OUT_MS);
 

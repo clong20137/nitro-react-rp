@@ -6,21 +6,20 @@
     max-width: 340px;
     pointer-events: none;
     z-index: 1000;
-
     * {
         pointer-events: auto;
     }
 }
 
+
 /* Cards + layout */
+
 .rs-card {
     background: var(--rp-primary);
     border: 3px solid var(--rp-primary-border);
     border-radius: 12px;
     padding: 4px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
-        0 2px 0 rgba(0, 0, 0, 0.25),
-        inset 0 -4px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22), 0 2px 0 rgba(0, 0, 0, 0.25), inset 0 -4px rgba(0, 0, 0, 0.12);
     display: grid;
     grid-template-columns: 1fr auto;
     grid-gap: 10px;
@@ -37,9 +36,7 @@
     justify-content: space-between;
     background: var(--rp-primary);
     border: 3px solid var(--rp-primary-border);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22),
-        0 2px 0 rgba(0, 0, 0, 0.25),
-        inset 0 -4px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22), 0 2px 0 rgba(0, 0, 0, 0.25), inset 0 -4px rgba(0, 0, 0, 0.12);
     border-radius: 12px;
     padding: 4px;
     margin-bottom: 8px;
@@ -81,7 +78,9 @@
     word-break: break-word;
 }
 
+
 /* ---- CHIP STYLING ---- */
+
 .chip {
     background: var(--rp-panel);
     border: solid 1px var(--rp-primary-border);
@@ -92,9 +91,7 @@
     font-size: 14px;
     gap: 6px;
     color: #fff;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, .22),
-        0 2px 0 rgba(0, 0, 0, .25),
-        inset 0 -4px rgba(0, 0, 0, .12);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
     transition: filter 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
 }
 
@@ -120,24 +117,26 @@
     line-height: 0;
 }
 
+
 /* hover lift + glow */
+
 .chip:hover:not(.chip--static),
 .chip:focus-visible:not(.chip--static) {
     filter: brightness(1.08);
     transform: translateY(-1px);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
-        0 2px 6px rgba(0, 0, 0, 0.24);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 6px rgba(0, 0, 0, 0.24);
     cursor: pointer;
     outline: none;
 }
 
 .chip:focus-visible {
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85),
-        0 0 0 4px rgba(34, 66, 93, 0.85);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 0 0 4px rgba(34, 66, 93, 0.85);
     transform: none;
 }
 
+
 /* static (non-interactive) chips */
+
 .chip--static {
     cursor: default;
     pointer-events: none;
@@ -147,7 +146,9 @@
     pointer-events: auto;
 }
 
+
 /* Icons */
+
 .ico {
     display: inline-block;
     width: 24px;
@@ -205,9 +206,11 @@
     filter: brightness(1.15);
 }
 
+
 /* =======================================================
 TOOLTIP FIX: BELOW CHIP, ARROW POINTS UP
 ======================================================= */
+
 .has-tip {
     position: relative;
     z-index: 1020;
@@ -224,7 +227,9 @@ TOOLTIP FIX: BELOW CHIP, ARROW POINTS UP
     z-index: 1030;
 }
 
+
 /* tooltip box BELOW the chip */
+
 .has-tip[data-tip]::after {
     content: attr(data-tip);
     top: calc(100% + 10px);
@@ -234,11 +239,12 @@ TOOLTIP FIX: BELOW CHIP, ARROW POINTS UP
     padding: 6px 10px;
     border-radius: 8px;
     white-space: nowrap;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35),
-        inset 0 1px rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), inset 0 1px rgba(255, 255, 255, 0.08);
 }
 
+
 /* arrow under tooltip, pointing UP toward chip */
+
 .has-tip[data-tip]::before {
     content: "";
     top: calc(100% + 4px);
@@ -254,116 +260,146 @@ TOOLTIP FIX: BELOW CHIP, ARROW POINTS UP
     transform: translateX(-50%) translateY(2px);
 }
 
+
 /* =======================================================
 RESPONSIVE
 ======================================================= */
+
 @media (max-width: 480px) {
     .rs-title-text {
         overflow: visible;
         text-overflow: clip;
         white-space: normal;
     }
-
     .nitro-right-compact {
         max-width: 300px;
     }
 }
 
-/* =======================================================
-RIGHT SIDE: MOBILE COMPACT / VERTICAL
-======================================================= */
 @media (max-width: 600px) {
     .nitro-right-compact {
-        right: 6px;
-        top: 6px;
+        position: fixed;
+        top: max(6px, env(safe-area-inset-top));
+        right: max(6px, env(safe-area-inset-right));
+        left: auto;
+        bottom: auto;
+        width: auto;
+        max-width: calc(100vw - 12px - env(safe-area-inset-left) - env(safe-area-inset-right));
         display: flex;
-        flex-direction: column;
-        /* clears compact stats pill */
-        width: 100px;
-        /* ↓ from ~180–340 */
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: flex-end;
         gap: 6px;
         z-index: 2200;
     }
-
-    .rs-mini {
-        gap: 4px;
-        padding: 6px;
+    .rs-mini,
+    .rs-card {
+        margin: 0;
+        padding: 4px;
+        border-radius: 12px;
         display: flex;
-        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        width: auto;
+        max-width: none;
+        min-width: 0;
     }
-
-    .rs-mini .chip {
-        width: 100%;
-        min-height: 28px;
-        padding: 5px 6px;
-        font-size: 11px;
+    .rs-mini {
+        flex-direction: row;
+    }
+    .rs-card {
+        flex-direction: row;
         justify-content: flex-start;
     }
-
-    .ico {
-        width: 16px;
-        height: 16px;
-    }
-
-    .rs-card {
-        display: flex;
-        flex-direction: column;
-        padding: 6px;
-        width: 100%;
-    }
-
-    .rs-title {
-        font-size: 12px;
+    .rs-mini .chip,
+    .rs-card .chip {
+        min-height: 30px;
+        padding: 5px 7px;
+        font-size: 11px;
+        border-radius: 10px;
         gap: 4px;
+        min-width: 0;
+        white-space: nowrap;
     }
-
-    .rs-title .chip-title {
-        width: 100%;
+    .rs-title {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+        width: auto;
+        font-size: 11px;
+        white-space: nowrap;
     }
-
+    .chip-title {
+        min-width: 0;
+        max-width: 88px;
+    }
     .rs-title-text {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        line-height: 1;
     }
-
     .rs-counter {
-        margin-top: 4px;
+        display: flex;
+        align-items: center;
         gap: 4px;
+        width: auto;
+        margin-top: 0;
     }
-
     .rs-counter .chip {
-        padding: 5px 6px;
-        font-size: 11px;
+        flex: 0 0 auto;
     }
-
-    .rs-counter .chip--icon {
+    .ico {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
+    }
+    .chip--icon {
         padding: 5px;
+        min-width: 30px;
+        min-height: 30px;
+        justify-content: center;
+    }
+    .chip--icon>button {
+        width: 16px;
+        height: 16px;
     }
 }
 
-/* ultra small */
 @media (max-width: 380px) {
     .nitro-right-compact {
-        width: 140px;
-        max-width: 140px;
+        gap: 4px;
+        top: max(4px, env(safe-area-inset-top));
+        right: max(4px, env(safe-area-inset-right));
+        max-width: calc(100vw - 8px - env(safe-area-inset-left) - env(safe-area-inset-right));
     }
-}
-
-
-/* Tiny phones: squeeze a bit more */
-@media (max-width: 380px) {
-    .nitro-right-compact {
-        width: 168px;
-        max-width: 168px;
+    .rs-mini,
+    .rs-card {
+        padding: 3px;
+        gap: 3px;
     }
-
     .rs-mini .chip,
     .rs-card .chip {
-        padding: 6px;
+        min-height: 28px;
+        padding: 4px 6px;
+        font-size: 10px;
+        gap: 3px;
     }
-
-    .rs-title {
-        font-size: 12px;
+    .chip-title {
+        max-width: 68px;
+    }
+    .ico {
+        width: 14px;
+        height: 14px;
+        flex: 0 0 14px;
+    }
+    .chip--icon {
+        min-width: 28px;
+        min-height: 28px;
+    }
+    .chip--icon>button {
+        width: 14px;
+        height: 14px;
     }
 }

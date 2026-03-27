@@ -1,24 +1,24 @@
 import React, {
+    FC,
     useCallback,
     useEffect,
     useMemo,
     useRef,
     useState,
 } from "react";
-import "./TaxiView.scss";
 import { SendMessageComposer } from "../../api";
 import { TaxiRequestComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/TaxiRequestComposer";
+import "./TaxiView.scss";
 
-type TaxiDestination = {
+interface TaxiDestination {
     roomId: number;
     virtualRoomId: number;
     name: string;
-    thumbnailUrl?: string;
     roomName?: string;
     occupants?: number;
-};
+}
 
-type TaxiOpenListDetailNew = {
+interface TaxiOpenListDetailNew {
     currentRoomId: number;
     currentVrid: number;
     destinations: {
@@ -26,19 +26,17 @@ type TaxiOpenListDetailNew = {
         virtualRoomId: number;
         virtualName: string;
         userCount?: number;
-        thumbnailUrl?: string;
         roomName?: string;
     }[];
-};
+}
 
-type TaxiOpenListDetailOld = {
+interface TaxiOpenListDetailOld {
     destinations: {
         roomId: number;
         virtualRoomId: number;
         roomName?: string;
         virtualName?: string;
         displayName?: string;
-        thumbnailUrl?: string;
         occupants?: number;
     }[];
     current?: {
@@ -46,206 +44,414 @@ type TaxiOpenListDetailOld = {
         virtualRoomId: number;
         virtualName?: string;
     };
-};
+}
 
 type TaxiOpenListDetail = TaxiOpenListDetailNew | TaxiOpenListDetailOld;
 
-const THUMB_RESOLVER = (d: TaxiDestination) => d.thumbnailUrl || `/icons/taxi/${d.virtualRoomId}.png`;
-
-function useDraggable<T extends HTMLElement>() {
-    const ref = useRef<T | null>(null);
-    const dragData = useRef<{ ox: number; oy: number; sx: number; sy: number } | null>(null);
-
-    const onMouseDown = useCallback((e: React.MouseEvent) => {
-        if (!ref.current) return;
-        const el = ref.current;
-        const rect = el.getBoundingClientRect();
-        dragData.current = { ox: e.clientX, oy: e.clientY, sx: rect.left, sy: rect.top };
-
-        const onMove = (ev: MouseEvent) => {
-            if (!dragData.current) return;
-            const dx = ev.clientX - dragData.current.ox;
-            const dy = ev.clientY - dragData.current.oy;
-            const vw = document.documentElement.clientWidth;
-            const vh = document.documentElement.clientHeight;
-            const newLeft = Math.min(Math.max(dragData.current.sx + dx, 8), vw - rect.width - 8);
-            const newTop = Math.min(Math.max(dragData.current.sy + dy, 8), vh - rect.height - 8);
-            el.style.left = `${newLeft}px`;
-            el.style.top = `${newTop}px`;
-            el.style.transform = `translate(0,0)`;
-        };
-
-        const onUp = () => {
-            dragData.current = null;
-            window.removeEventListener("mousemove", onMove);
-            window.removeEventListener("mouseup", onUp);
-        };
-
-        window.addEventListener("mousemove", onMove);
-        window.addEventListener("mouseup", onUp);
-    }, []);
-
-    return { ref, onMouseDown };
+interface TaxiViewProps {
+    onClose?: () => void;
 }
 
-export const TaxiView: React.FC = () => {
+const POPULATION_IMAGES = {
+    low: "/icons/taxi/population-low.png",
+    medium: "/icons/taxi/population-medium.png",
+    active: "/icons/taxi/population-active.png",
+    crowded: "/icons/taxi/population-crowded.png",
+};
+
+const getPopulationState = (occupants = 0) => {
+    if (occupants >= 26) {
+        return {
+            image: POPULATION_IMAGES.crowded,
+            className: "crowded",
+        };
+    }
+
+    if (occupants >= 16) {
+        return {
+            image: POPULATION_IMAGES.active,
+            className: "active",
+        };
+    }
+
+    if (occupants >= 6) {
+        return {
+            image: POPULATION_IMAGES.medium,
+            className: "medium",
+        };
+    }
+
+    return {
+        image: POPULATION_IMAGES.low,
+        className: "low",
+    };
+};
+
+export const TaxiView: FC<TaxiViewProps> = ({ onClose }) => {
     const [open, setOpen] = useState(false);
     const [destinations, setDestinations] = useState<TaxiDestination[]>([]);
-    const [query, setQuery] = useState("");
-    const [current, setCurrent] = useState<{ roomId: number; virtualRoomId: number; virtualName?: string } | null>(null);
+    const [current, setCurrent] = useState<{
+        roomId: number;
+        virtualRoomId: number;
+        virtualName?: string;
+    } | null>(null);
+    const [isOpen, setIsOpen] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
+    const [headerGrabbing, setHeaderGrabbing] = useState(false);
 
-    const { ref: dragRef, onMouseDown: startDrag } = useDraggable<HTMLDivElement>();
+    const winRef = useRef<HTMLDivElement>(null);
+    const closeTimerRef = useRef<number | null>(null);
+    const rafRef = useRef<number | null>(null);
+    const dragRef = useRef<{ dx: number; dy: number } | null>(null);
+
+    const [position, setPosition] = useState<{ x: number; y: number }>(() => {
+        try {
+            const saved = localStorage.getItem("taxiModulePos");
+            if (saved) return JSON.parse(saved);
+        } catch {}
+        return {
+            x: Math.round(window.innerWidth * 0.18),
+            y: 110,
+        };
+    });
+
+    const clamp = useCallback((x: number, y: number) => {
+        const w = winRef.current?.offsetWidth ?? 520;
+        const h = winRef.current?.offsetHeight ?? 540;
+        const pad = 8;
+        const maxX = Math.max(pad, window.innerWidth - w - pad);
+        const maxY = Math.max(pad, window.innerHeight - h - pad);
+
+        return {
+            x: Math.min(Math.max(pad, Math.round(x)), maxX),
+            y: Math.min(Math.max(pad, Math.round(y)), maxY),
+        };
+    }, []);
+
+    const startDrag = (cx: number, cy: number) => {
+        if (isClosing) return;
+
+        const rect = winRef.current?.getBoundingClientRect();
+        const curX = rect?.left ?? position.x;
+        const curY = rect?.top ?? position.y;
+
+        dragRef.current = {
+            dx: cx - curX,
+            dy: cy - curY,
+        };
+
+        setHeaderGrabbing(true);
+    };
+
+    const moveDrag = (cx: number, cy: number) => {
+        if (!dragRef.current || isClosing) return;
+
+        const nx = cx - dragRef.current.dx;
+        const ny = cy - dragRef.current.dy;
+        const clamped = clamp(nx, ny);
+
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => setPosition(clamped));
+    };
+
+    const stopDrag = () => {
+        dragRef.current = null;
+        setHeaderGrabbing(false);
+
+        if (rafRef.current) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+        }
+    };
+
+    useEffect(() => {
+        const frame = requestAnimationFrame(() => setIsOpen(true));
+        return () => cancelAnimationFrame(frame);
+    }, []);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem("taxiModulePos", JSON.stringify(position));
+        } catch {}
+    }, [position]);
 
     useEffect(() => {
         const onOpen = (e: Event) => {
             const ev = e as CustomEvent<TaxiOpenListDetail>;
-            const d = ev.detail;
-            const isNew = (x: any): x is TaxiOpenListDetailNew => typeof (x as TaxiOpenListDetailNew)?.currentRoomId === "number" && typeof (x as TaxiOpenListDetailNew)?.currentVrid === "number";
-            let list: TaxiDestination[] = [];
-            let cur: { roomId: number; virtualRoomId: number; virtualName?: string } | null = null;
+            const data = ev.detail;
 
-            if (isNew(d)) {
-                cur = { roomId: d.currentRoomId, virtualRoomId: d.currentVrid };
-                list = (d.destinations || []).map((it) => ({
-                    roomId: it.roomId,
-                    virtualRoomId: it.virtualRoomId,
-                    name: (it.virtualName || "").trim(),
-                    thumbnailUrl: it.thumbnailUrl,
-                    roomName: it.roomName?.trim(),
-                    occupants: typeof it.userCount === "number" ? it.userCount : undefined,
+            const isNew = (x: any): x is TaxiOpenListDetailNew =>
+                typeof x?.currentRoomId === "number" &&
+                typeof x?.currentVrid === "number";
+
+            let list: TaxiDestination[] = [];
+            let cur: {
+                roomId: number;
+                virtualRoomId: number;
+                virtualName?: string;
+            } | null = null;
+
+            if (isNew(data)) {
+                cur = {
+                    roomId: data.currentRoomId,
+                    virtualRoomId: data.currentVrid,
+                };
+
+                list = (data.destinations || []).map((dest) => ({
+                    roomId: dest.roomId,
+                    virtualRoomId: dest.virtualRoomId,
+                    name: (dest.virtualName || "").trim(),
+                    roomName: dest.roomName?.trim(),
+                    occupants:
+                        typeof dest.userCount === "number" ? dest.userCount : 0,
                 }));
             } else {
-                const old = d as TaxiOpenListDetailOld;
-                if (old.current) cur = { roomId: old.current.roomId, virtualRoomId: old.current.virtualRoomId, virtualName: old.current.virtualName };
-                list = (old.destinations || []).map((it) => ({
-                    roomId: it.roomId,
-                    virtualRoomId: it.virtualRoomId,
-                    name: it.virtualName?.trim() || it.displayName?.trim() || "",
-                    thumbnailUrl: it.thumbnailUrl,
-                    roomName: it.roomName?.trim(),
-                    occupants: it.occupants,
+                const oldData = data as TaxiOpenListDetailOld;
+
+                if (oldData.current) {
+                    cur = {
+                        roomId: oldData.current.roomId,
+                        virtualRoomId: oldData.current.virtualRoomId,
+                        virtualName: oldData.current.virtualName,
+                    };
+                }
+
+                list = (oldData.destinations || []).map((dest) => ({
+                    roomId: dest.roomId,
+                    virtualRoomId: dest.virtualRoomId,
+                    name:
+                        dest.virtualName?.trim() ||
+                        dest.displayName?.trim() ||
+                        "",
+                    roomName: dest.roomName?.trim(),
+                    occupants:
+                        typeof dest.occupants === "number" ? dest.occupants : 0,
                 }));
             }
 
             setDestinations(list);
             setCurrent(cur);
-            setQuery("");
             setOpen(true);
+            setIsClosing(false);
         };
 
         const onKey = (e: KeyboardEvent) => {
-            if (open && e.key === "Escape") setOpen(false);
+            if (open && e.key === "Escape") handleClose();
         };
 
         window.addEventListener("taxi_open_list", onOpen as EventListener);
         window.addEventListener("keydown", onKey);
+
         return () => {
-            window.removeEventListener("taxi_open_list", onOpen as EventListener);
+            window.removeEventListener(
+                "taxi_open_list",
+                onOpen as EventListener,
+            );
             window.removeEventListener("keydown", onKey);
         };
     }, [open]);
 
-    const filtered = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        if (!q) return destinations;
-        return destinations.filter((d) => d.name.toLowerCase().includes(q) || d.roomName?.toLowerCase().includes(q) || String(d.roomId).includes(q) || String(d.virtualRoomId).includes(q));
-    }, [query, destinations]);
+    const onMouseMove = useCallback((e: MouseEvent) => {
+        moveDrag(e.clientX, e.clientY);
+    }, []);
 
-    const isHere = useCallback((d: TaxiDestination) => !!current && d.roomId === current.roomId && d.virtualRoomId === current.virtualRoomId, [current]);
+    const onMouseUp = useCallback(() => {
+        stopDrag();
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+    }, [onMouseMove]);
 
-    const onPick = (d: TaxiDestination) => {
-        SendMessageComposer(new TaxiRequestComposer(d.roomId, d.virtualRoomId));
-        setOpen(false);
+    const onTouchMove = useCallback((e: TouchEvent) => {
+        e.preventDefault();
+        const t = e.touches[0];
+        if (t) moveDrag(t.clientX, t.clientY);
+    }, []);
+
+    const onTouchEnd = useCallback(() => {
+        stopDrag();
+        window.removeEventListener("touchmove", onTouchMove as EventListener);
+        window.removeEventListener("touchend", onTouchEnd as EventListener);
+    }, [onTouchMove]);
+
+    const onHeaderMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        startDrag(e.clientX, e.clientY);
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", onMouseUp);
     };
 
-    const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase() || "").join("");
+    const onHeaderTouchStart = (e: React.TouchEvent) => {
+        const t = e.touches[0];
+        if (!t) return;
+
+        startDrag(t.clientX, t.clientY);
+        window.addEventListener("touchmove", onTouchMove, { passive: false });
+        window.addEventListener("touchend", onTouchEnd);
+    };
+
+    useEffect(() => {
+        return () => {
+            window.removeEventListener("mousemove", onMouseMove);
+            window.removeEventListener("mouseup", onMouseUp);
+            window.removeEventListener(
+                "touchmove",
+                onTouchMove as EventListener,
+            );
+            window.removeEventListener("touchend", onTouchEnd as EventListener);
+
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+            if (closeTimerRef.current)
+                window.clearTimeout(closeTimerRef.current);
+        };
+    }, [onMouseMove, onMouseUp, onTouchMove, onTouchEnd]);
+
+    const isHere = useCallback(
+        (destination: TaxiDestination) => {
+            return (
+                !!current &&
+                destination.roomId === current.roomId &&
+                destination.virtualRoomId === current.virtualRoomId
+            );
+        },
+        [current],
+    );
+
+    const sortedDestinations = useMemo(() => {
+        const list = [...destinations];
+
+        list.sort((a, b) => {
+            const aHere = isHere(a) ? 1 : 0;
+            const bHere = isHere(b) ? 1 : 0;
+
+            if (aHere !== bHere) return bHere - aHere;
+
+            const aUsers = a.occupants || 0;
+            const bUsers = b.occupants || 0;
+
+            if (aUsers !== bUsers) return bUsers - aUsers;
+
+            return a.name.localeCompare(b.name);
+        });
+
+        return list;
+    }, [destinations, isHere]);
+
+    const handleDestinationClick = (destination: TaxiDestination) => {
+        if (isClosing) return;
+
+        SendMessageComposer(
+            new TaxiRequestComposer(
+                destination.roomId,
+                destination.virtualRoomId,
+            ),
+        );
+        handleClose();
+    };
+
+    const handleClose = () => {
+        if (isClosing) return;
+
+        stopDrag();
+        setIsOpen(false);
+        setIsClosing(true);
+
+        closeTimerRef.current = window.setTimeout(() => {
+            setOpen(false);
+            onClose?.();
+        }, 190);
+    };
 
     if (!open) return null;
 
     return (
-        <>
-            <div className="taxi-backdrop" onClick={ () => setOpen(false) } />
-
+        <div
+            ref={winRef}
+            className={`taxi-module ${isOpen ? "is-open" : ""} ${isClosing ? "is-closing" : ""}`}
+            style={{ position: "absolute", left: position.x, top: position.y }}
+            role="dialog"
+            aria-label="Taxi"
+        >
             <div
-                className="taxi-view enter"
-                ref={ dragRef }
-                style={ { left: "50%", top: "50%", transform: "translate(-50%, -50%)" } }
-                role="dialog"
-                aria-modal="true"
-                aria-label="Taxi destinations"
+                className={`taxi-header ${headerGrabbing ? "is-grabbing" : ""}`}
+                onMouseDown={onHeaderMouseDown}
+                onTouchStart={onHeaderTouchStart}
+                aria-grabbed={headerGrabbing}
             >
-                <div className="taxi-header" onMouseDown={ startDrag }>
-                    <div className="title">Call a Taxi</div>
-
-                    <button className="close-button" onClick={ () => setOpen(false) } aria-label="Close" title="Close" />
-                </div>
-
-                <div className="taxi-toolbar">
-                    <input
-                        className="search"
-                        placeholder="Search destinations..."
-                        value={ query }
-                        onChange={ (e) => setQuery(e.target.value) }
-                        autoFocus
+                Taxi
+                <div className="taxi-header-buttons">
+                    <button
+                        type="button"
+                        className="taxi-close"
+                        aria-label="Close taxi"
+                        onClick={handleClose}
                     />
-
-                    <div className="count">{ filtered.length } Stops</div>
-                </div>
-
-                {current && (
-                    <div className="taxi-current-strip">
-                        Current Location: <strong>{ current.virtualName || `#${current.virtualRoomId}` }</strong>
-                    </div>
-                )}
-
-                <div className="taxi-body">
-                    {filtered.length === 0 && <div className="empty">No matching destinations.</div>}
-
-                    <div className="taxi-grid" role="list">
-                        {filtered.map((d, idx) => {
-                            const src = THUMB_RESOLVER(d);
-                            const here = isHere(d);
-
-                            return (
-                                <button
-                                    role="listitem"
-                                    key={ `${d.roomId}:${d.virtualRoomId}:${idx}` }
-                                    className={ `tile${here ? " here" : ""}` }
-                                    title={ d.name }
-                                    onClick={ () => onPick(d) }
-                                >
-                                    {here && <div className="badge">You are here</div>}
-                                    {typeof d.occupants === "number" && <div className="count-badge">{ d.occupants }</div>}
-
-                                    <div className="thumbWrap">
-                                        <img
-                                            className="thumb"
-                                            src={ src }
-                                            loading="lazy"
-                                            alt=""
-                                            onError={ (e) => {
-                                                (e.target as HTMLImageElement).style.display = "none";
-                                                const host = (e.target as HTMLElement).parentElement;
-                                                host?.classList.add("thumb-fallback");
-                                                host?.setAttribute("data-initials", initials(d.name));
-                                            } }
-                                        />
-                                    </div>
-
-                                    <div className="tile-meta">
-                                        <div className="tile-name">{ d.name || `Stop #${d.virtualRoomId}` }</div>
-                                        <div className="tile-subtitle">{ d.roomName || `Virtual Room #${d.virtualRoomId}` }</div>
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                <div className="taxi-footer">
-                    <span className="hint">Tip: press <b>Esc</b> to close</span>
                 </div>
             </div>
-        </>
+
+            <div className="taxi-content">
+                <div className="taxi-list">
+                    {sortedDestinations.map((destination, index) => {
+                        const population = getPopulationState(
+                            destination.occupants || 0,
+                        );
+                        const here = isHere(destination);
+
+                        return (
+                            <button
+                                key={`${destination.roomId}-${destination.virtualRoomId}-${index}`}
+                                className={`taxi-row ${here ? "is-current" : ""}`}
+                                onClick={() =>
+                                    handleDestinationClick(destination)
+                                }
+                                type="button"
+                            >
+                                <div
+                                    className={`taxi-row-population ${population.className}`}
+                                >
+                                    <img
+                                        src={population.image}
+                                        alt=""
+                                        className="taxi-population-icon"
+                                        draggable={false}
+                                    />
+                                    <div className="taxi-user-count">
+                                        {destination.occupants || 0}
+                                    </div>
+                                </div>
+
+                                <div className="taxi-row-main">
+                                    <div className="taxi-room-title">
+                                        {destination.name || "Unknown Location"}
+                                        <span className="taxi-room-id">
+                                            #{destination.virtualRoomId}
+                                        </span>
+                                    </div>
+
+                                    {destination.roomName && (
+                                        <div className="taxi-room-subtitle">
+                                            {destination.roomName}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {here && (
+                                    <div className="taxi-current-pill">
+                                        Current
+                                    </div>
+                                )}
+                            </button>
+                        );
+                    })}
+
+                    {!sortedDestinations.length && (
+                        <div className="taxi-empty">
+                            No taxi destinations available.
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
     );
 };
+
+export default TaxiView;

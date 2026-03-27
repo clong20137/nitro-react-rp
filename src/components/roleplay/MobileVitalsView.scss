@@ -1,0 +1,44 @@
+.mobile-vitals {
+    width: 46px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transform: translateY(5px);
+    /* LOWER = smaller negative */
+    pointer-events: none;
+    align-items: center;
+}
+
+.mobile-vital {
+    width: 72px;
+    height: 12px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: rgba(18, 18, 18, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.mobile-vital-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 120ms linear;
+}
+
+.mobile-vital.health .mobile-vital-fill {
+    background: linear-gradient(180deg, #ff6b78 0%, #d93449 100%);
+}
+
+.mobile-vital.energy .mobile-vital-fill {
+    background: linear-gradient(180deg, #ffd25a 0%, #e4a818 100%);
+}
+
+.mobile-vital.hunger .mobile-vital-fill {
+    background: linear-gradient(180deg, #54b6ff 0%, #1f78d1 100%);
+}
+
+@media (min-width: 769px) {
+    .mobile-vitals {
+        display: none;
+    }
+}

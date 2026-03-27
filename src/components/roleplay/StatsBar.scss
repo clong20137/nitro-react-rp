@@ -944,12 +944,7 @@ Drop-in patch: add/replace these MOBILE blocks at bottom
 --------------------------------------------------------- */
 
 @media (max-width: 768px) {
-    .stats-bar-container,
-    .stats-bar-container * {
-        user-select: none;
-    }
-    /* allow textarea selection inside popover */
-    .qa-pop textarea {
-        user-select: text;
+    .stats-bar-container {
+        display: none !important;
     }
 }

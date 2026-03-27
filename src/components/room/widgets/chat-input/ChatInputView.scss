@@ -1,82 +1,66 @@
-/* =========================================================
-OlympusRP — iOS-safe Chatbar + Mobile Icon Dock
-(Full drop-in code: chatbar + improved mobile dock rules)
-========================================================= */
-
-/* ---------- Global vars (desktop defaults) ---------- */
 :root {
     --chatbar-h: 65px;
-    /* source of truth for chatbar height */
     --chatbar-gap: 10px;
-    /* gap from bottom edge */
     --dock-gap: 10px;
-    /* gap between chatbar and icon dock */
+    --chatbar-lift: 0px;
+    --combat-btn-size: 60px;
 }
 
-/* =========================================================
-CHATBAR (your existing styles, with iOS-safe bottom)
-========================================================= */
-
-.nitro-chat-input-container {
+.nitro-chat-mobile-wrap {
     position: fixed;
-
-    /* iOS safe area aware bottom placement */
-    bottom: calc(var(--chatbar-gap) + env(safe-area-inset-bottom));
-
     left: 50%;
     transform: translateX(-50%);
-
+    bottom: calc(var(--chatbar-gap) + env(safe-area-inset-bottom) + var(--chatbar-lift));
     display: flex;
     align-items: center;
-    justify-content: center; // center the input block
+    gap: 8px;
+    z-index: 3000;
+    width: auto;
+    max-width: calc(100vw - 16px);
+    transition: bottom 180ms ease, transform 180ms ease;
+}
 
-    width: 900px; // fixed shell width
+.nitro-chat-input-container {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    transform: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 900px;
     max-width: 95%;
-
     height: var(--chatbar-h);
-
     padding: 0 2px 2px 0px;
     background: var(--rp-primary);
     border: 3px solid var(--rp-primary-border);
     border-radius: 10px;
     box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
-
-    /* raise above room + below popovers */
     z-index: 3000;
-
     .input-sizer {
         flex: 1 1 auto;
         display: flex;
         align-items: center;
         height: 100%;
         padding: 2px 2px 0 2px;
-        position: relative; // so emoji can overlay inside here
-
+        position: relative;
         input.chat-input {
             width: 100%;
             font-size: 18px;
             padding-top: 6px;
             padding-left: 10px;
-            padding-right: 42px; // space so text doesn’t go under emoji
+            padding-right: 42px;
             height: 58px;
-            background: linear-gradient(180deg,
-                    #fff,
-                    #fff 50%,
-                    #e7e7e7 0,
-                    #e7e7e7);
+            background: linear-gradient(180deg, #fff, #fff 50%, #e7e7e7 0, #e7e7e7);
             border: solid 2px #000;
             border-radius: 12px;
             outline: none;
             line-height: 1.4;
             box-sizing: border-box;
         }
-
-        /* ❌ Kill the old auto-sizing hack so width stays stable */
         &::after {
             content: none;
         }
-
-        /* ✅ Emoji button overlaid on the far right of the input */
         .emoji-button {
             position: absolute;
             right: 16px;
@@ -91,29 +75,28 @@ CHATBAR (your existing styles, with iOS-safe bottom)
             cursor: pointer;
             border: none;
             font-size: 20px;
-            transition: transform 0.12s ease, background-color 0.12s ease,
-                box-shadow 0.12s ease;
+            transition: transform 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
             transform-origin: center center;
             border-radius: 6px;
         }
-
         .emoji-button:hover {
             transform: translateY(-50%) scale(1.05);
         }
-
         .emoji-button:active {
             transform: translateY(-49%) scale(0.96);
         }
-
         .emoji-button>span {
             display: block;
             line-height: 1;
-            font-size: 18px; // visually centers emoji
+            font-size: 18px;
         }
     }
 }
 
-/* Emoji popover */
+.mobile-combat-button {
+    display: none;
+}
+
 .emoji-popover {
     position: fixed;
     overflow: hidden;
@@ -122,7 +105,6 @@ CHATBAR (your existing styles, with iOS-safe bottom)
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
     padding: 10px;
     z-index: 4000;
-    /* above chatbar + dock */
     box-sizing: border-box;
     animation: popoverFadeIn 180ms cubic-bezier(0.22, 0.9, 0.24, 1);
     transform-origin: top center;
@@ -133,7 +115,6 @@ CHATBAR (your existing styles, with iOS-safe bottom)
         opacity: 0;
         transform: scale(0.9) translateY(-6px);
     }
-
     to {
         opacity: 1;
         transform: scale(1) translateY(0);
@@ -158,136 +139,87 @@ CHATBAR (your existing styles, with iOS-safe bottom)
     align-items: center;
     justify-content: center;
     transition: background-color 0.12s ease, transform 0.1s ease;
-
     &:hover {
         background: #f2f2f2;
     }
-
     &:active {
         transform: translateY(1px) scale(0.96);
     }
 }
 
-/* =========================================================
-MOBILE: chatbar width/typography + prevent iOS zoom
-========================================================= */
 @media (max-width: 768px) {
-    :root {
+     :root {
         --chatbar-h: 60px;
-        /* slightly slimmer on phones */
         --chatbar-gap: 8px;
         --dock-gap: 10px;
+        --combat-btn-size: 56px;
     }
-
-    .nitro-chat-input-container {
+    .nitro-chat-mobile-wrap {
         width: calc(100vw - 16px);
         max-width: calc(100vw - 16px);
+        align-items: stretch;
+    }
+    .nitro-chat-input-container {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        flex: 1 1 auto;
         border-radius: 14px;
     }
-
     .nitro-chat-input-container .input-sizer input.chat-input {
         height: calc(var(--chatbar-h) - 8px);
-
-        /* IMPORTANT: >=16px prevents Safari zoom-on-focus */
         font-size: 16px;
     }
-
     .nitro-chat-input-container .input-sizer .emoji-button {
         right: 14px;
     }
-}
-
-/* =========================================================
-MOBILE ICON DOCK (your left-sidebar becomes a bottom dock)
-Assumes your existing sidebar desktop styles remain.
-This ONLY improves mobile behavior/placement.
-========================================================= */
-
-@media (max-width: 768px) {
-    .left-sidebar-wrapper {
-        position: fixed;
-        left: 50%;
-        top: auto;
-        transform: translateX(-50%);
-        z-index: 3200;
-        pointer-events: none;
-
-        /* sits above chatbar + safe area reliably */
-        bottom: calc(env(safe-area-inset-bottom) + var(--chatbar-gap) + var(--chatbar-h) + var(--dock-gap));
-    }
-
-    .left-sidebar-container {
-        pointer-events: auto;
-        transform: none;
-        transition: transform 0.2s ease;
-
-        &.closed,
-        &.collapsed {
-            transform: translateY(calc(env(safe-area-inset-bottom) + var(--chatbar-gap) + var(--chatbar-h) + 24px));
-        }
-    }
-
-    .left-sidebar {
-        flex-direction: row;
+    .mobile-combat-button {
+        display: inline-flex;
         align-items: center;
-        gap: 8px;
-
-        width: auto;
-        max-width: calc(100vw - 16px);
-
-        padding: 8px 10px;
+        justify-content: center;
+        flex: 0 0 var(--combat-btn-size);
+        width: var(--combat-btn-size);
+        height: var(--combat-btn-size);
+        padding: 0;
+        border: 3px solid var(--rp-primary-border);
         border-radius: 14px;
-
-        /* mobile-friendly translucent theme */
         background: var(--rp-primary);
-        border: 2px solid var(--rp-primary-border);
-
-        /* one-line dock, scroll if needed */
-        overflow-x: auto;
-        overflow-y: hidden;
-        -webkit-overflow-scrolling: touch;
-        white-space: nowrap;
-
-        /* hide scrollbar */
-        scrollbar-width: none;
-
-        &::-webkit-scrollbar {
-            display: none;
-        }
-
-        /* no toggle tab on mobile */
-        &__toggle {
-            display: none !important;
-        }
-    }
-
-    .sidebar-chip {
-        width: 44px;
-        /* apple tap target */
-        height: 44px;
-        border-radius: 12px;
-        flex: 0 0 auto;
-        position: relative;
-
+        box-shadow: 0 10px 24px rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .25), inset 0 -4px rgba(0, 0, 0, .12);
+        color: #fff;
+        cursor: pointer;
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
+        transition: transform 0.12s ease, filter 0.12s ease;
     }
-
-    .sidebar-chip .chip-icon {
-        width: 26px;
-        height: 26px;
+    .mobile-combat-button:hover {
+        filter: brightness(1.05);
     }
-
-    /* Normalize chat icon height on mobile */
-    .chip-chat .chip-icon,
-    .chip-chat.is-on .chip-icon {
-        width: 26px;
-        height: 26px;
+    .mobile-combat-button:active {
+        transform: translateY(1px) scale(0.97);
     }
+    .mobile-combat-button__inner {
+        width: calc(var(--combat-btn-size) - 12px);
+        height: calc(var(--combat-btn-size) - 12px);
+        border-radius: 12px;
+        border: 2px solid rgba(0, 0, 0, 0.75);
+        background: linear-gradient(180deg, #fff6e8 0%, #e7d3b4 100%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-greek-theme);
+        font-size: 12px;
+        font-weight: 800;
+        color: #4e2b12;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+}
 
-    /* tooltips are hover-based; disable on touch */
-    .sidebar-chip[data-tip]::before,
-    .sidebar-chip[data-tip]::after {
-        display: none !important;
+@media (max-width: 420px) {
+     :root {
+        --combat-btn-size: 52px;
+    }
+    .mobile-combat-button__inner {
+        font-size: 11px;
     }
 }

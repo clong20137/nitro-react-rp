@@ -10,8 +10,10 @@ import { MyProfileView } from "./MyProfileView";
 import { StartWorkComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/StartWorkComposer";
 import { CallPoliceComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/CallPoliceComposer";
 import { PassiveModeComposer } from "@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/roleplay/PassiveModeComposer";
+import { MobileVitalsView } from "./MobileVitalsView";
 import { OpponentStatsOverlay } from "./OpponentStatsOverlay";
 import { FriendlyTime, UserProfileEvent } from "@nitrots/nitro-renderer";
+
 import { useMessageEvent } from "../../hooks";
 
 type AnchorEventDetail = { id: string; el: HTMLElement | null };
@@ -441,6 +443,121 @@ export const StatsBar: FC = () => {
                 onOpenOppProfile as EventListener
             );
     }, []);
+return (
+    <div ref={containerRef} className="stats-bar-container">
+        <div className="stats-left">
+            <div className="greek-circle">
+                {xpGained && <XPGainPopup amount={xpGained} />}
+
+                <div className="greek-xp-ring">
+                    <svg className="xp-ring-svg" viewBox="0 0 36 36">
+                        <path
+                            className="xp-ring-background"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <path
+                            className="xp-ring-progress"
+                            strokeDasharray={`${percent(xp, maxXP)}, 100`}
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                    </svg>
+
+                    <div
+                        className="avatar-tooltip-wrapper"
+                        onClick={() => {
+                            setProfileStats(buildSelfProfile());
+                            setShowProfile(true);
+                        }}
+                        onMouseEnter={() => setShowXPTooltip(true)}
+                        onMouseLeave={() => setShowXPTooltip(false)}
+                    >
+                        <img
+                            className="avatar-head"
+                            src={`https://imager.olympusrp.pw/?figure=${figure}&direction=2&head_direction=2&gesture=sml`}
+                            alt="Avatar"
+                        />
+                        {showXPTooltip && (
+                            <div className="xp-tooltip">
+                                XP: {xp} / {maxXP}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="level-badge">{level}</div>
+                </div>
+            </div>
+
+            <div className="avatar-name-wrapper">
+                <div className="avatar-name">{username}</div>
+            </div>
+        </div>
+
+        <div className="stats-right">
+            <div className="stat">
+                <div className="icons heart" />
+                <div className="bar health-bar">
+                    <div
+                        className="fill health"
+                        style={{ width: `${percent(health, maxHealth)}%` }}
+                    />
+                    <div className="bar-value">
+                        {health} / {maxHealth}
+                    </div>
+                </div>
+            </div>
+
+            <div className="stat">
+                <div className="icons bolt" />
+                <div className="bar energy-bar">
+                    <div
+                        className="fill energy"
+                        style={{ width: `${percent(energy, maxEnergy)}%` }}
+                    />
+                    <div className="bar-value">
+                        {energy} / {maxEnergy}
+                    </div>
+                </div>
+            </div>
+
+            <div className="stat">
+                <div className="icons apple" />
+                <div className="bar hunger-bar">
+                    <div
+                        className="fill hunger"
+                        style={{ width: `${percent(hunger, maxHunger)}%` }}
+                    />
+                    <div className="bar-value">
+                        {hunger} / {maxHunger}
+                    </div>
+                </div>
+            </div>
+
+            <div className="aggression-bar-wrapper">
+                <div
+                    className="aggression-fill"
+                    style={{ width: `${aggressionPercent}%` }}
+                />
+            </div>
+        </div>
+
+        <MobileVitalsView />
+
+        {showProfile && profileStats && (
+            <MyProfileView
+                onClose={() => setShowProfile(false)}
+                isOnline={profileStats.isOnline ?? true}
+                stats={profileStats}
+                onUpgrade={(stat) => console.log("Upgrade stat:", stat)}
+            />
+        )}
+
+        <OpponentStatsOverlay
+            onClose={() =>
+                window.dispatchEvent(new CustomEvent("user_inspect_clear"))
+            }
+        />
+    </div>
+);
 
     return (
         <div ref={containerRef} className="stats-bar-container">
