@@ -494,26 +494,23 @@ export const SettingsView: FC<Props> = ({ onClose }) => {
                         </div>
 
                         {/* Camera follow */}
-                        <div className="settings-row checkbox-row">
-                            <label>
-                                <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    checked={userSettings.cameraFollow}
-                                    onChange={(event) =>
-                                        processSetting(
-                                            "camera_follow",
-                                            event.target.checked
-                                        )
-                                    }
-                                />
-                                <span>
-                                    {LocalizeText(
-                                        "memenu.settings.other.disable.room.camera.follow"
-                                    )}
-                                </span>
-                            </label>
-                        </div>
+                      <div className="settings-row checkbox-row">
+<label>
+<input
+className="form-check-input"
+type="checkbox"
+checked={!userSettings.cameraFollow}
+onChange={(event) =>
+processSetting("camera_follow", !event.target.checked)
+}
+/>
+<span>
+{LocalizeText(
+"memenu.settings.other.disable.room.camera.follow"
+)}
+</span>
+</label>
+</div>
 
                         {/* Volume sections */}
                         <div className="settings-volume-block">
